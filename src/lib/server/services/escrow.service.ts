@@ -179,7 +179,13 @@ async function handleFundingCompleted(event: MonimeEvent) {
 		await notification.dispatch(owner.id, 'BOUNTY_FUNDED', {
 			title: 'Bounty funded',
 			message: `Escrow for "${bounty.title}" is now locked.`,
-			link: `/dashboard/company/bounties`
+			link: `/dashboard/company/bounties`,
+			email: {
+				bountyTitle: bounty.title,
+				bountyUrl: `${appUrl()}/bounties/${bounty.slug}`,
+				totalPrizePool: bounty.totalPrizePool,
+				currency: bounty.currency
+			}
 		});
 	}
 }

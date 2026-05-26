@@ -10,6 +10,8 @@ import {
 import { winnersAnnounced, type WinnersAnnouncedProps } from './templates/winners-announced';
 import { payoutCompleted, type PayoutCompletedProps } from './templates/payout-completed';
 import { bountyCancelled, type BountyCancelledProps } from './templates/bounty-cancelled';
+import { bountyPublished, type BountyPublishedProps } from './templates/bounty-published';
+import { bountyFunded, type BountyFundedProps } from './templates/bounty-funded';
 
 export type Templates = {
 	'verify-email': VerifyEmailProps;
@@ -20,6 +22,8 @@ export type Templates = {
 	'winners-announced': WinnersAnnouncedProps;
 	'payout-completed': PayoutCompletedProps;
 	'bounty-cancelled': BountyCancelledProps;
+	'bounty-published': BountyPublishedProps;
+	'bounty-funded': BountyFundedProps;
 };
 
 type SendInput<T extends keyof Templates> = {
@@ -36,7 +40,9 @@ const RENDERERS = {
 	'submission-shortlisted': submissionShortlisted,
 	'winners-announced': winnersAnnounced,
 	'payout-completed': payoutCompleted,
-	'bounty-cancelled': bountyCancelled
+	'bounty-cancelled': bountyCancelled,
+	'bounty-published': bountyPublished,
+	'bounty-funded': bountyFunded
 } as const;
 
 /**
