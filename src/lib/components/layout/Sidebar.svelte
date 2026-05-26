@@ -1,4 +1,4 @@
-<!-- Phase 1 shell — desktop counterpart to BottomNav. Filled out in Phase 2/4. -->
+<!-- Desktop counterpart to BottomNav. Phase 2 fills out COMPANY entries. -->
 <script lang="ts">
 	import type { AuthedUser } from '$lib/server/auth-helpers';
 
@@ -15,7 +15,19 @@
 		{:else}
 			<a class="block rounded px-3 py-2 hover:bg-zinc-100" href="/bounties">Browse</a>
 			{#if user}
-				<a class="block rounded px-3 py-2 hover:bg-zinc-100" href="/dashboard">Dashboard</a>
+				{#if user.role === 'COMPANY'}
+					<a class="block rounded px-3 py-2 hover:bg-zinc-100" href="/dashboard/company/bounties">
+						Your bounties
+					</a>
+					<a
+						class="block rounded bg-zinc-900 px-3 py-2 text-white hover:bg-zinc-800"
+						href="/bounties/create"
+					>
+						+ Create bounty
+					</a>
+				{:else}
+					<a class="block rounded px-3 py-2 hover:bg-zinc-100" href="/dashboard">Dashboard</a>
+				{/if}
 				<a class="block rounded px-3 py-2 hover:bg-zinc-100" href="/profile">Profile</a>
 			{/if}
 		{/if}
