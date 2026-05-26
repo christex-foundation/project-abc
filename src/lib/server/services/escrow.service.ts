@@ -7,6 +7,7 @@ import * as bountyRepo from '../repositories/bounty.repo';
 import * as paymentRepo from '../repositories/payment.repo';
 import * as companyRepo from '../repositories/company.repo';
 import * as userRepo from '../repositories/user.repo';
+import * as submissionRepo from '../repositories/submission.repo';
 import * as notification from './notification.service';
 
 function appUrl(): string {
@@ -196,7 +197,9 @@ export async function cancelBountyWithRefund(caller: AuthedUser, bountyId: strin
 	}
 
 	// DRAFT without funded escrow: just mark cancelled — no Monime call needed.
-	if (bounty.status === BountyStatus.DRAFT && bounty.escrowFundedAmount === 0) {
+	const isEmptyDraft = bounty.status === BountyStatus.DRAFT && bounty.escrowFundedAmount === 0;
+
+	if (isEmptyDraft) {
 		await bountyRepo.markCancelled(bounty.id);
 	} else {
 		const company = await companyRepo.findByUserId(caller.id);
@@ -238,13 +241,44 @@ export async function cancelBountyWithRefund(caller: AuthedUser, bountyId: strin
 		await notification.dispatch(caller.id, 'BOUNTY_CANCELLED', {
 			title: 'Refund initiated',
 			message: `Refund for "${bounty.title}" is on its way to your MoMo.`,
+			link: `/dashboard/company/bounties`,
+			email: {
+				bountyTitle: bounty.title,
+				refundedAmount: bounty.escrowFundedAmount,
+				currency: bounty.currency,
+				isSubmitter: false
+			}
+		});
+	}
+
+	if (isEmptyDraft) {
+		await notification.dispatch(caller.id, 'BOUNTY_CANCELLED', {
+			title: 'Bounty cancelled',
+			message: `"${bounty.title}" was cancelled.`,
 			link: `/dashboard/company/bounties`
 		});
-		// TODO Phase 4: dispatch BOUNTY_CANCELLED to all submitters.
 	}
+
+	await fanOutBountyCancelledToSubmitters(bounty.id, bounty.title);
 
 	const fresh = await bountyRepo.findBountyById(bounty.id);
 	return fresh!;
+}
+
+async function fanOutBountyCancelledToSubmitters(bountyId: string, bountyTitle: string) {
+	const submitters = await submissionRepo.listSubmittersForBounty(bountyId);
+	await Promise.all(
+		submitters.map((s) =>
+			notification.dispatch(s.freelancer.user.id, 'BOUNTY_CANCELLED', {
+				title: 'Bounty cancelled',
+				message: `"${bountyTitle}" was cancelled by the sponsor.`,
+				email: {
+					bountyTitle,
+					isSubmitter: true
+				}
+			})
+		)
+	);
 }
 
 async function handlePayoutTerminal(event: MonimeEvent) {
@@ -261,13 +295,94 @@ async function handlePayoutTerminal(event: MonimeEvent) {
 
 	if (event.type === 'payout.completed') {
 		await paymentRepo.markStatus(payment.id, PaymentStatus.COMPLETED);
-		// TODO Phase 4: on PRIZE_PAYOUT completion, mark Submission.isPaid and
-		// dispatch PAYOUT_COMPLETED to the winner.
+		if (payment.type === PaymentType.PRIZE_PAYOUT && payment.submissionId) {
+			await onPrizePayoutCompleted(payment.submissionId, payment.amount);
+		}
 	} else {
 		await paymentRepo.markStatus(payment.id, PaymentStatus.FAILED, {
 			failureCode: event.data?.failureCode,
 			failureMessage: event.data?.failureMessage
 		});
-		// TODO Phase 4: alert admins for manual intervention.
+		if (payment.type === PaymentType.PRIZE_PAYOUT) {
+			await onPrizePayoutFailed(payment.bountyId, payment.submissionId, {
+				failureCode: event.data?.failureCode ?? null,
+				failureMessage: event.data?.failureMessage ?? null
+			});
+		}
+	}
+}
+
+async function onPrizePayoutCompleted(submissionId: string, amount: number) {
+	const submission = await submissionRepo.findByIdForSponsor(submissionId);
+	if (!submission) {
+		console.warn('[escrow] payout completed for unknown submission', submissionId);
+		return;
+	}
+	const bounty = await bountyRepo.findBountyById(submission.bountyId);
+	if (!bounty) return;
+
+	// Decide isPaid: BOUNTY is single-payout; PROJECT is paid in tranches.
+	let markFinal = false;
+	if (bounty.type === 'BOUNTY') {
+		markFinal = true;
+	} else if (bounty.type === 'PROJECT') {
+		const totalPaid = await paymentRepo.sumCompletedPrizePayoutsForSubmission(submissionId);
+		markFinal = totalPaid >= bounty.totalPrizePool;
+	}
+	if (markFinal && !submission.isPaid) {
+		await submissionRepo.markPaid(submissionId);
+	}
+
+	const tranches = Array.isArray(submission.paymentDetails)
+		? (submission.paymentDetails as Array<{ tranche?: number }>)
+		: [];
+	const trancheNum = tranches.length > 0 ? (tranches[tranches.length - 1]?.tranche ?? null) : null;
+
+	await notification.dispatch(submission.freelancer.user.id, 'PAYOUT_COMPLETED', {
+		title: 'Payout settled',
+		message: `Your prize for "${bounty.title}" has been paid.`,
+		link: `/bounties/${bounty.slug}`,
+		email: {
+			bountyTitle: bounty.title,
+			amount,
+			currency: bounty.currency,
+			tranche: bounty.type === 'PROJECT' ? trancheNum : null,
+			totalTranches: null
+		}
+	});
+}
+
+async function onPrizePayoutFailed(
+	bountyId: string,
+	submissionId: string | null,
+	failure: { failureCode: string | null; failureMessage: string | null }
+) {
+	const bounty = await bountyRepo.findBountyById(bountyId);
+	if (!bounty) return;
+
+	const sponsor = await userRepo.findCompanyOwnerByBountyId(bountyId);
+	const admins = await userRepo.listActiveAdmins();
+	const recipients = new Set<string>();
+	if (sponsor) recipients.add(sponsor.id);
+	for (const a of admins) recipients.add(a.id);
+
+	const detail = failure.failureMessage ?? failure.failureCode ?? 'No detail provided.';
+	await Promise.all(
+		Array.from(recipients).map((userId) =>
+			notification.dispatch(userId, 'PAYOUT_FAILED', {
+				title: 'Payout failed',
+				message: `A payout for "${bounty.title}" failed: ${detail}`,
+				link: `/dashboard/company/bounties/${bountyId}/submissions`
+			})
+		)
+	);
+
+	// Reference submissionId so a downstream alert routes back to the affected row.
+	if (submissionId) {
+		console.error('[escrow] prize payout failed', {
+			bountyId,
+			submissionId,
+			failure
+		});
 	}
 }
