@@ -10,9 +10,9 @@ export const load: PageServerLoad = ({ locals }) => {
 	if (!locals.user) throw redirect(303, '/login');
 	switch (locals.user.role) {
 		case 'COMPANY':
-			throw redirect(303, '/dashboard/company/bounties');
+			throw redirect(303, '/dashboard/company');
 		case 'FREELANCER':
-			throw redirect(303, '/dashboard/freelancer/submissions');
+			throw redirect(303, '/dashboard/freelancer');
 		case 'ADMIN':
 			throw redirect(303, '/admin');
 	}
