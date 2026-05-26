@@ -56,5 +56,19 @@ export const handle: Handle = async ({ event, resolve }) => {
 	event.locals.settings = await getAllSettings();
 
 	// 4. Delegate to Better Auth for /api/auth/*, otherwise normal resolve.
-	return svelteKitHandler({ event, resolve, auth, building });
+	const response = await svelteKitHandler({ event, resolve, auth, building });
+
+	// 5. Security headers — applied to every response.
+	response.headers.set('X-Frame-Options', 'DENY');
+	response.headers.set('X-Content-Type-Options', 'nosniff');
+	response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+	response.headers.set(
+		'Permissions-Policy',
+		'geolocation=(), microphone=(), camera=(), payment=()'
+	);
+	if (url.protocol === 'https:') {
+		response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+	}
+
+	return response;
 };
