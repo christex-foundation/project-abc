@@ -24,3 +24,15 @@ export async function findByCompanyProfileId(companyProfileId: string): Promise<
 	});
 	return profile?.user ?? null;
 }
+
+export async function findCompanyOwnerByBountyId(bountyId: string): Promise<User | null> {
+	const bounty = await prisma.bounty.findUnique({
+		where: { id: bountyId },
+		select: { company: { select: { user: true } } }
+	});
+	return bounty?.company?.user ?? null;
+}
+
+export async function listActiveAdmins(): Promise<User[]> {
+	return prisma.user.findMany({ where: { role: 'ADMIN', isActive: true } });
+}

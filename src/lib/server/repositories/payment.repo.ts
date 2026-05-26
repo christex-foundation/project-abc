@@ -20,6 +20,66 @@ export async function listForBounty(bountyId: string): Promise<Payment[]> {
 	});
 }
 
+export async function listForSubmission(submissionId: string): Promise<Payment[]> {
+	return prisma.payment.findMany({
+		where: { submissionId },
+		orderBy: { createdAt: 'asc' }
+	});
+}
+
+/**
+ * Total amount of `COMPLETED` PRIZE_PAYOUT rows on a submission. Used by the
+ * payout webhook to decide whether the final PROJECT tranche has settled and
+ * `Submission.isPaid` can flip.
+ */
+export async function sumCompletedPrizePayoutsForSubmission(
+	submissionId: string,
+	tx: Prisma.TransactionClient = prisma
+): Promise<number> {
+	const agg = await tx.payment.aggregate({
+		where: {
+			submissionId,
+			type: PaymentType.PRIZE_PAYOUT,
+			status: PaymentStatus.COMPLETED
+		},
+		_sum: { amount: true }
+	});
+	return agg._sum.amount ?? 0;
+}
+
+export type FreelancerEarningRow = Payment & {
+	submission: {
+		id: string;
+		bounty: { id: string; slug: string; title: string; type: string; currency: string };
+	} | null;
+};
+
+/**
+ * Earnings rows for the freelancer dashboard. Joins through submission to
+ * surface the bounty title; only `PRIZE_PAYOUT` rows count toward earnings.
+ */
+export async function listEarningsForFreelancer(
+	freelancerProfileId: string
+): Promise<FreelancerEarningRow[]> {
+	return prisma.payment.findMany({
+		where: {
+			type: PaymentType.PRIZE_PAYOUT,
+			submission: { freelancerProfileId }
+		},
+		include: {
+			submission: {
+				select: {
+					id: true,
+					bounty: {
+						select: { id: true, slug: true, title: true, type: true, currency: true }
+					}
+				}
+			}
+		},
+		orderBy: { createdAt: 'desc' }
+	}) as Promise<FreelancerEarningRow[]>;
+}
+
 type CreateDepositInput = {
 	bountyId: string;
 	amount: number;

@@ -41,3 +41,19 @@ export async function markRead(id: string, userId: string): Promise<void> {
 		data: { isRead: true }
 	});
 }
+
+export type NotificationChannelPrefs = {
+	email?: Record<string, boolean>;
+	push?: Record<string, boolean>;
+};
+
+export async function getPreference(userId: string): Promise<NotificationChannelPrefs | null> {
+	const row = await prisma.notificationPreference.findUnique({
+		where: { userId },
+		select: { prefs: true }
+	});
+	if (!row) return null;
+	const p = row.prefs as unknown;
+	if (p && typeof p === 'object') return p as NotificationChannelPrefs;
+	return null;
+}

@@ -205,6 +205,20 @@ export async function markFunded(
 	});
 }
 
+export async function markCompletedAndAnnounced(id: string, tx: Prisma.TransactionClient = prisma) {
+	const now = new Date();
+	return tx.bounty.update({
+		where: { id },
+		data: {
+			status: BountyStatus.COMPLETED,
+			isWinnersAnnounced: true,
+			winnersAnnouncedAt: now,
+			completedAt: now
+		},
+		select: { id: true, status: true, isWinnersAnnounced: true }
+	});
+}
+
 export async function markCancelled(id: string, tx: Prisma.TransactionClient = prisma) {
 	return tx.bounty.update({
 		where: { id },
