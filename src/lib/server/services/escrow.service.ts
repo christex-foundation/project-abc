@@ -1,0 +1,273 @@
+import { BountyStatus, PaymentStatus, PaymentType } from '@prisma/client';
+import { prisma } from '../db';
+import { AppError } from '../http';
+import { requireRole, type AuthedUser } from '../auth-helpers';
+import { monime, verifyWebhookSignature } from '../monime/client';
+import * as bountyRepo from '../repositories/bounty.repo';
+import * as paymentRepo from '../repositories/payment.repo';
+import * as companyRepo from '../repositories/company.repo';
+import * as userRepo from '../repositories/user.repo';
+import * as notification from './notification.service';
+
+function appUrl(): string {
+	return process.env.PUBLIC_APP_URL?.trim() || 'http://localhost:5173';
+}
+
+async function loadOwnedBounty(caller: AuthedUser, bountyId: string) {
+	const bounty = await bountyRepo.findBountyById(bountyId);
+	if (!bounty) throw new AppError('NOT_FOUND', 'Bounty not found.');
+	if (caller.role !== 'ADMIN') {
+		const profile = await companyRepo.findByUserId(caller.id);
+		if (!profile || profile.id !== bounty.companyProfileId) {
+			throw new AppError('FORBIDDEN', 'You do not own this bounty.');
+		}
+	}
+	return bounty;
+}
+
+/**
+ * Lazy escrow-account creation. Returns the (possibly newly-persisted)
+ * financial account id. Callers that need to read it back should re-load
+ * the bounty.
+ */
+async function ensureEscrowAccount(bountyId: string, currentId: string | null, title: string) {
+	if (currentId) return currentId;
+	const account = await monime.financialAccounts.create({
+		name: `FOW Escrow – ${title}`.slice(0, 80),
+		currency: 'SLE'
+	});
+	await bountyRepo.setEscrowAccount(bountyId, account.id);
+	return account.id;
+}
+
+export async function createFundingCheckoutSession(
+	caller: AuthedUser,
+	bountyId: string
+): Promise<{ url: string }> {
+	requireRole(caller, 'COMPANY', 'ADMIN');
+	const bounty = await loadOwnedBounty(caller, bountyId);
+	if (bounty.status !== BountyStatus.DRAFT) {
+		throw new AppError('CONFLICT', 'Only DRAFT bounties can be funded.');
+	}
+
+	const escrowId = await ensureEscrowAccount(
+		bounty.id,
+		bounty.escrowFinancialAccountId,
+		bounty.title
+	);
+
+	const session = await monime.checkoutSessions.create({
+		financialAccountId: escrowId,
+		amount: bounty.totalPrizePool,
+		currency: bounty.currency,
+		reference: `bounty:${bounty.id}`,
+		successUrl: `${appUrl()}/dashboard/company/bounties?funded=${bounty.id}`,
+		cancelUrl: `${appUrl()}/dashboard/company/bounties/${bounty.id}/fund?cancelled=1`
+	});
+
+	await bountyRepo.setCheckoutSession(bounty.id, {
+		checkoutSessionId: session.id,
+		checkoutSessionUrl: session.url
+	});
+
+	return { url: session.url };
+}
+
+type MonimeEvent = {
+	type: string;
+	data?: {
+		id?: string;
+		reference?: string;
+		financialAccountId?: string;
+		amount?: { value?: number };
+		paymentId?: string;
+		payoutId?: string;
+		failureCode?: string;
+		failureMessage?: string;
+	};
+};
+
+function parseEvent(rawBody: string): MonimeEvent {
+	try {
+		return JSON.parse(rawBody) as MonimeEvent;
+	} catch {
+		throw new AppError('BAD_REQUEST', 'Webhook body is not valid JSON.');
+	}
+}
+
+export async function handleWebhook(rawBody: string, signatureHeader: string | null) {
+	if (!verifyWebhookSignature(rawBody, signatureHeader)) {
+		throw new AppError('UNAUTHENTICATED', 'Invalid webhook signature.');
+	}
+	const event = parseEvent(rawBody);
+
+	switch (event.type) {
+		case 'checkout_session.completed':
+			await handleFundingCompleted(event);
+			return;
+		case 'payout.completed':
+		case 'payout.failed':
+			await handlePayoutTerminal(event);
+			return;
+		default:
+			console.info('[monime] unhandled event', event.type);
+	}
+}
+
+async function handleFundingCompleted(event: MonimeEvent) {
+	const ref = event.data?.reference ?? '';
+	const match = /^bounty:(.+)$/.exec(ref);
+	if (!match) {
+		console.warn('[escrow] checkout.completed without bounty reference', ref);
+		return;
+	}
+	const bountyId = match[1];
+	const monimePaymentId = event.data?.paymentId ?? event.data?.id;
+	if (!monimePaymentId) {
+		throw new AppError('BAD_REQUEST', 'Webhook missing payment id.');
+	}
+
+	const existing = await paymentRepo.findByMonimePaymentId(monimePaymentId);
+	if (existing && existing.status === PaymentStatus.COMPLETED) return;
+
+	const bounty = await bountyRepo.findBountyById(bountyId);
+	if (!bounty) {
+		console.warn('[escrow] checkout for unknown bounty', bountyId);
+		return;
+	}
+	if (!bounty.escrowFinancialAccountId) {
+		console.warn('[escrow] bounty has no escrow account', bountyId);
+		return;
+	}
+
+	const balance = await monime.financialAccounts.getBalance(bounty.escrowFinancialAccountId);
+	if (balance.available < bounty.totalPrizePool) {
+		await paymentRepo.createDeposit({
+			bountyId: bounty.id,
+			amount: balance.available,
+			currency: bounty.currency,
+			checkoutSessionId: bounty.checkoutSessionId ?? '',
+			monimePaymentId,
+			status: PaymentStatus.FAILED
+		});
+		console.error('[escrow] funding amount mismatch', {
+			bountyId,
+			available: balance.available,
+			expected: bounty.totalPrizePool
+		});
+		return;
+	}
+
+	await prisma.$transaction(async (tx) => {
+		await paymentRepo.createDeposit(
+			{
+				bountyId: bounty.id,
+				amount: bounty.totalPrizePool,
+				currency: bounty.currency,
+				checkoutSessionId: bounty.checkoutSessionId ?? '',
+				monimePaymentId,
+				status: PaymentStatus.COMPLETED
+			},
+			tx
+		);
+		await bountyRepo.markFunded(bounty.id, bounty.totalPrizePool, tx);
+	});
+
+	const owner = await userRepo.findByCompanyProfileId(bounty.companyProfileId);
+	if (owner) {
+		await notification.dispatch(owner.id, 'BOUNTY_FUNDED', {
+			title: 'Bounty funded',
+			message: `Escrow for "${bounty.title}" is now locked.`,
+			link: `/dashboard/company/bounties`
+		});
+	}
+}
+
+export async function cancelBountyWithRefund(caller: AuthedUser, bountyId: string) {
+	requireRole(caller, 'COMPANY', 'ADMIN');
+	const bounty = await loadOwnedBounty(caller, bountyId);
+	const cancellable: BountyStatus[] = [
+		BountyStatus.DRAFT,
+		BountyStatus.FUNDED,
+		BountyStatus.ACTIVE
+	];
+	if (!cancellable.includes(bounty.status)) {
+		throw new AppError('CONFLICT', `Cannot cancel a bounty in status ${bounty.status}.`);
+	}
+
+	// DRAFT without funded escrow: just mark cancelled — no Monime call needed.
+	if (bounty.status === BountyStatus.DRAFT && bounty.escrowFundedAmount === 0) {
+		await bountyRepo.markCancelled(bounty.id);
+	} else {
+		const company = await companyRepo.findByUserId(caller.id);
+		const momo = company?.monimePayoutMomoNumber;
+		if (!momo) {
+			throw new AppError(
+				'CONFLICT',
+				'Set your company MoMo payout number before cancelling a funded bounty.'
+			);
+		}
+		if (!bounty.escrowFinancialAccountId) {
+			throw new AppError('INTERNAL', 'Funded bounty is missing its escrow account.');
+		}
+
+		const payout = await monime.payouts.create({
+			sourceAccountId: bounty.escrowFinancialAccountId,
+			destination: { type: 'MOMO', phoneNumber: momo },
+			amount: bounty.escrowFundedAmount,
+			currency: bounty.currency,
+			reference: `refund:${bounty.id}`
+		});
+
+		await prisma.$transaction(async (tx) => {
+			await paymentRepo.createPayout(
+				{
+					bountyId: bounty.id,
+					type: PaymentType.REFUND,
+					amount: bounty.escrowFundedAmount,
+					currency: bounty.currency,
+					monimePayoutId: payout.id,
+					toEntity: momo,
+					status: PaymentStatus.PROCESSING
+				},
+				tx
+			);
+			await bountyRepo.markCancelled(bounty.id, tx);
+		});
+
+		await notification.dispatch(caller.id, 'BOUNTY_CANCELLED', {
+			title: 'Refund initiated',
+			message: `Refund for "${bounty.title}" is on its way to your MoMo.`,
+			link: `/dashboard/company/bounties`
+		});
+		// TODO Phase 4: dispatch BOUNTY_CANCELLED to all submitters.
+	}
+
+	const fresh = await bountyRepo.findBountyById(bounty.id);
+	return fresh!;
+}
+
+async function handlePayoutTerminal(event: MonimeEvent) {
+	const monimePayoutId = event.data?.payoutId ?? event.data?.id;
+	if (!monimePayoutId) return;
+	const payment = await paymentRepo.findByMonimePayoutId(monimePayoutId);
+	if (!payment) {
+		console.warn('[escrow] payout webhook for unknown payment', monimePayoutId);
+		return;
+	}
+	if (payment.status === PaymentStatus.COMPLETED || payment.status === PaymentStatus.FAILED) {
+		return;
+	}
+
+	if (event.type === 'payout.completed') {
+		await paymentRepo.markStatus(payment.id, PaymentStatus.COMPLETED);
+		// TODO Phase 4: on PRIZE_PAYOUT completion, mark Submission.isPaid and
+		// dispatch PAYOUT_COMPLETED to the winner.
+	} else {
+		await paymentRepo.markStatus(payment.id, PaymentStatus.FAILED, {
+			failureCode: event.data?.failureCode,
+			failureMessage: event.data?.failureMessage
+		});
+		// TODO Phase 4: alert admins for manual intervention.
+	}
+}

@@ -244,4 +244,24 @@ export async function listForCompany(caller: AuthedUser) {
 	return bountyRepo.listForCompany(profile.id);
 }
 
+export async function publish(caller: AuthedUser, id: string) {
+	requireRole(caller, 'COMPANY', 'ADMIN');
+	const existing = await bountyRepo.findBountyById(id);
+	if (!existing) throw new AppError('NOT_FOUND', 'Bounty not found.');
+	if (caller.role !== 'ADMIN') {
+		const profile = await companyRepo.findByUserId(caller.id);
+		if (!profile || profile.id !== existing.companyProfileId) {
+			throw new AppError('FORBIDDEN', 'You do not own this bounty.');
+		}
+	}
+	if (existing.status !== BountyStatus.FUNDED) {
+		throw new AppError('CONFLICT', 'Only FUNDED bounties may be published.');
+	}
+	await bountyRepo.markPublished(id);
+	// TODO Phase 5: matching.service.recomputeBountyEmbedding(id).
+	const full = await bountyRepo.findBountyById(id);
+	if (!full) throw new AppError('INTERNAL', 'Failed to reload bounty.');
+	return full;
+}
+
 export type { UpdateBountyInput };
