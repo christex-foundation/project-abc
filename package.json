@@ -11,17 +11,51 @@
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"lint": "prettier --check .",
-		"format": "prettier --write ."
+		"format": "prettier --write .",
+		"db:generate": "prisma generate",
+		"db:migrate": "prisma migrate dev",
+		"db:push": "prisma db push",
+		"db:seed": "tsx prisma/seed.ts",
+		"db:studio": "prisma studio",
+		"seed:invite": "tsx scripts/seed-invite.ts"
+	},
+	"prisma": {
+		"seed": "tsx prisma/seed.ts"
 	},
 	"devDependencies": {
-		"@sveltejs/adapter-auto": "^7.0.1",
 		"@sveltejs/kit": "^2.57.0",
 		"@sveltejs/vite-plugin-svelte": "^7.0.0",
+		"@tailwindcss/vite": "^4.3.0",
+		"@types/node": "^25.9.1",
+		"@types/pg": "^8.20.0",
+		"@types/sanitize-html": "^2.16.1",
+		"dotenv": "^17.4.2",
 		"prettier": "^3.8.1",
 		"prettier-plugin-svelte": "^3.5.1",
+		"prettier-plugin-tailwindcss": "^0.8.0",
+		"prisma": "^7.8.0",
+		"super-sitemap": "^1.0.12",
 		"svelte": "^5.55.2",
 		"svelte-check": "^4.4.6",
+		"tailwindcss": "^4.3.0",
+		"tsx": "^4.22.3",
 		"typescript": "^6.0.2",
 		"vite": "^8.0.7"
+	},
+	"dependencies": {
+		"@prisma/adapter-pg": "^7.8.0",
+		"@prisma/client": "^7.8.0",
+		"@prosekit/core": "^0.12.2",
+		"@prosekit/extensions": "^0.17.3",
+		"@prosekit/svelte": "^0.9.5",
+		"@sveltejs/adapter-vercel": "^6.3.3",
+		"better-auth": "^1.6.11",
+		"clsx": "^2.1.1",
+		"pg": "^8.21.0",
+		"resend": "^6.12.4",
+		"sanitize-html": "^2.17.4",
+		"svelte-meta-tags": "^4.7.0",
+		"tailwind-variants": "^3.2.2",
+		"zod": "^4.4.3"
 	}
 }
