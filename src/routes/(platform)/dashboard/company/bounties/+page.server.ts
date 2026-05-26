@@ -21,12 +21,16 @@ function failureFor(action: 'publish' | 'cancel', bountyId: string, e: unknown) 
 }
 
 export const actions: Actions = {
-	publish: async ({ request, locals }) => {
+	publish: async ({ request, locals, platform }) => {
 		const caller = requireAuth(locals);
 		const form = await request.formData();
 		const bountyId = String(form.get('bountyId') ?? '');
 		try {
-			await bountyService.publish(caller, bountyId);
+			const waitUntil = platform?.context?.waitUntil;
+			const enqueue = waitUntil
+				? <T,>(p: Promise<T>) => waitUntil(p as Promise<unknown>)
+				: undefined;
+			await bountyService.publish(caller, bountyId, enqueue);
 			return { action: 'publish', bountyId, success: true };
 		} catch (e) {
 			return failureFor('publish', bountyId, e);

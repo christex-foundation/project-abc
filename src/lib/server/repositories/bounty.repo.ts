@@ -287,3 +287,20 @@ export async function findForEmbedding(id: string) {
 		}
 	});
 }
+
+/**
+ * Same as findForEmbedding but also returns the stored embedding vector.
+ * Used by matching.service.findMatchesForBounty (post-publish fan-out).
+ */
+export async function findForMatchingWithEmbedding(id: string) {
+	return prisma.bounty.findUnique({
+		where: { id },
+		select: {
+			id: true,
+			slug: true,
+			title: true,
+			aiEmbedding: true,
+			skills: { select: { skill: { select: { name: true } } } }
+		}
+	});
+}

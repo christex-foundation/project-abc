@@ -17,7 +17,9 @@ declare global {
 			isAdminHost: boolean;
 		}
 		// interface PageState {}
-		// interface Platform {}
+		interface Platform {
+			context?: { waitUntil?: (p: Promise<unknown>) => void };
+		}
 	}
 }
 

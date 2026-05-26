@@ -90,3 +90,26 @@ export async function setAiEmbedding(id: string, vector: number[]) {
 		data: { aiEmbedding: vector }
 	});
 }
+
+export type FreelancerForMatching = {
+	id: string;
+	userId: string;
+	displayName: string;
+	aiEmbedding: number[];
+};
+
+/**
+ * All freelancers that have an embedding computed. Used by
+ * matching.service.findMatchesForBounty to rank candidates for a newly
+ * published bounty.
+ *
+ * Postgres array filtering through Prisma is awkward; we filter empty
+ * embeddings in the service layer instead. At MVP scale (Sierra Leone,
+ * < 500 freelancers per §10) the in-memory pass is cheap. TODO: pgvector
+ * when > 5k profiles.
+ */
+export async function listAllWithEmbeddings(): Promise<FreelancerForMatching[]> {
+	return prisma.freelancerProfile.findMany({
+		select: { id: true, userId: true, displayName: true, aiEmbedding: true }
+	});
+}

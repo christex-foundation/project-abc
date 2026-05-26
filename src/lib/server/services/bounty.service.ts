@@ -9,6 +9,7 @@ import * as bountySkillRepo from '../repositories/bountySkill.repo';
 import * as companyRepo from '../repositories/company.repo';
 import * as skillRepo from '../repositories/skill.repo';
 import * as matchingService from './matching.service';
+import * as notification from './notification.service';
 import {
 	createBountyInput,
 	mergedBountyInput,
@@ -17,6 +18,15 @@ import {
 	type UpdateBountyInput,
 	type BountyListQuery
 } from '$lib/validators/bounty';
+
+function appUrl(): string {
+	return process.env.PUBLIC_APP_URL?.trim() || 'http://localhost:5173';
+}
+
+type Enqueue = <T>(p: Promise<T>) => void;
+const inlineEnqueue: Enqueue = (p) => {
+	void p.catch((err) => console.error('[bounty.service] background task failed', err));
+};
 
 const SLUG_MAX = 80;
 
@@ -245,7 +255,7 @@ export async function listForCompany(caller: AuthedUser) {
 	return bountyRepo.listForCompany(profile.id);
 }
 
-export async function publish(caller: AuthedUser, id: string) {
+export async function publish(caller: AuthedUser, id: string, enqueue: Enqueue = inlineEnqueue) {
 	requireRole(caller, 'COMPANY', 'ADMIN');
 	const existing = await bountyRepo.findBountyById(id);
 	if (!existing) throw new AppError('NOT_FOUND', 'Bounty not found.');
@@ -259,13 +269,46 @@ export async function publish(caller: AuthedUser, id: string) {
 		throw new AppError('CONFLICT', 'Only FUNDED bounties may be published.');
 	}
 	await bountyRepo.markPublished(id);
-	// Fire-and-forget — OpenAI latency or downtime must not block publish.
-	void matchingService
-		.recomputeBountyEmbedding(id)
-		.catch((e) => console.error('[bounty.service] embedding recompute failed:', e));
+
+	// Recompute the embedding, THEN fan out matched-freelancer notifications.
+	// Sequential because findMatchesForBounty depends on the freshly persisted
+	// embedding. Enqueued via `waitUntil` (when running on Vercel Edge) so the
+	// response returns immediately; in dev/Node the inline fallback handles it.
+	enqueue(
+		matchingService
+			.recomputeBountyEmbedding(id)
+			.then(() => fanOutBountyPublished(id))
+			.catch((e) => console.error('[bounty.service] publish fan-out failed', e))
+	);
+
 	const full = await bountyRepo.findBountyById(id);
 	if (!full) throw new AppError('INTERNAL', 'Failed to reload bounty.');
 	return full;
+}
+
+async function fanOutBountyPublished(bountyId: string) {
+	const bounty = await bountyRepo.findBountyById(bountyId);
+	if (!bounty) return;
+	const matches = await matchingService.findMatchesForBounty(bountyId, 30);
+	if (matches.length === 0) return;
+	const bountyUrl = `${appUrl()}/bounties/${bounty.slug}`;
+	const skillNames = bounty.skills.map((s) => s.skill.name).filter(Boolean);
+	const matchHint = skillNames.length > 0 ? skillNames.slice(0, 3).join(', ') : null;
+	await Promise.allSettled(
+		matches.map((m) =>
+			notification.dispatch(m.userId, 'BOUNTY_PUBLISHED', {
+				title: 'New bounty matched to you',
+				message: `"${bounty.title}" is now live on FOW.`,
+				link: `/bounties/${bounty.slug}`,
+				email: {
+					freelancerName: m.displayName,
+					bountyTitle: bounty.title,
+					bountyUrl,
+					matchHint
+				}
+			})
+		)
+	);
 }
 
 export type { UpdateBountyInput };

@@ -56,6 +56,42 @@ export async function recomputeBountyEmbedding(bountyId: string): Promise<void> 
 	await bountyRepo.setAiEmbedding(bountyId, vec);
 }
 
+export type FreelancerMatch = {
+	freelancerProfileId: string;
+	userId: string;
+	displayName: string;
+	matchScore: number;
+};
+
+/**
+ * Top-N freelancers (by cosine similarity) for a bounty's embedding. Used by
+ * `bounty.service.publish` to fan out BOUNTY_PUBLISHED notifications. Returns
+ * an empty array when the bounty has no embedding yet.
+ *
+ * In-memory ranking is fine at MVP scale (< 500 freelancers — plan §10).
+ * TODO: pgvector when > 5k profiles.
+ */
+export async function findMatchesForBounty(
+	bountyId: string,
+	limit = 30
+): Promise<FreelancerMatch[]> {
+	const bounty = await bountyRepo.findForMatchingWithEmbedding(bountyId);
+	if (!bounty?.aiEmbedding?.length) return [];
+	const freelancers = await freelancerRepo.listAllWithEmbeddings();
+	const scored: FreelancerMatch[] = [];
+	for (const f of freelancers) {
+		if (!f.aiEmbedding || f.aiEmbedding.length === 0) continue;
+		scored.push({
+			freelancerProfileId: f.id,
+			userId: f.userId,
+			displayName: f.displayName,
+			matchScore: cosineSimilarity(bounty.aiEmbedding, f.aiEmbedding)
+		});
+	}
+	scored.sort((a, b) => b.matchScore - a.matchScore);
+	return scored.slice(0, limit);
+}
+
 /**
  * Top-N ACTIVE bounties for the calling freelancer, ranked by cosine
  * similarity. Returns an empty array when the freelancer has no embedding
