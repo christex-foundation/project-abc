@@ -42,23 +42,23 @@ All other product decisions stand (link submissions, labels, sponsor notes, two-
 
 ## Tech Stack
 
-| Layer | Technology |
-| :---- | :---- |
-| Framework | **SvelteKit 2** (Svelte 5, Vite, `@sveltejs/adapter-vercel`) |
-| Language | TypeScript (strict) |
-| Database | PostgreSQL + **Prisma ORM** (provider-agnostic; `DATABASE_URL`) |
-| Auth | **Better Auth** + Prisma adapter |
-| UI | **shadcn-svelte** ([huntabyte/shadcn-svelte](https://github.com/huntabyte/shadcn-svelte)) + Tailwind CSS v4 |
-| Rich text | **ProseKit** ([prosekit/prosekit](https://github.com/prosekit/prosekit)) |
-| Validation | Zod |
-| Payments | Monime API (escrow via per-bounty Financial Accounts) |
-| AI matching | OpenAI `text-embedding-3-small`; Claude Sonnet ranking deferred |
-| File storage | Cloudinary (avatars/logos only) |
-| Email | **Resend** (`resend` SDK) |
-| Push | **Web Push** with VAPID (`web-push` server lib) |
-| PWA | `@vite-pwa/sveltekit` (Workbox) |
-| SEO | **svelte-meta-tags** ([oekazuma/svelte-meta-tags](https://oekazuma.github.io/svelte-meta-tags/)) + **super-sitemap** ([jasongitmail/super-sitemap](https://github.com/jasongitmail/super-sitemap)) |
-| Deployment | Vercel |
+| Layer        | Technology                                                                                                                                                                                         |
+| :----------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Framework    | **SvelteKit 2** (Svelte 5, Vite, `@sveltejs/adapter-vercel`)                                                                                                                                       |
+| Language     | TypeScript (strict)                                                                                                                                                                                |
+| Database     | PostgreSQL + **Prisma ORM** (provider-agnostic; `DATABASE_URL`)                                                                                                                                    |
+| Auth         | **Better Auth** + Prisma adapter                                                                                                                                                                   |
+| UI           | **shadcn-svelte** ([huntabyte/shadcn-svelte](https://github.com/huntabyte/shadcn-svelte)) + Tailwind CSS v4                                                                                        |
+| Rich text    | **ProseKit** ([prosekit/prosekit](https://github.com/prosekit/prosekit))                                                                                                                           |
+| Validation   | Zod                                                                                                                                                                                                |
+| Payments     | Monime API (escrow via per-bounty Financial Accounts)                                                                                                                                              |
+| AI matching  | OpenAI `text-embedding-3-small`; Claude Sonnet ranking deferred                                                                                                                                    |
+| File storage | Cloudinary (avatars/logos only)                                                                                                                                                                    |
+| Email        | **Resend** (`resend` SDK)                                                                                                                                                                          |
+| Push         | **Web Push** with VAPID (`web-push` server lib)                                                                                                                                                    |
+| PWA          | `@vite-pwa/sveltekit` (Workbox)                                                                                                                                                                    |
+| SEO          | **svelte-meta-tags** ([oekazuma/svelte-meta-tags](https://oekazuma.github.io/svelte-meta-tags/)) + **super-sitemap** ([jasongitmail/super-sitemap](https://github.com/jasongitmail/super-sitemap)) |
+| Deployment   | Vercel                                                                                                                                                                                             |
 
 ### Hosts
 
@@ -290,20 +290,20 @@ Every server-side feature follows this layering. **API handlers never touch Pris
 
 - Owns business rules, ordering of operations, cross-entity coordination, external API calls (Monime, Resend, OpenAI, Web Push).
 - Throws typed errors (`AppError` with `code` + `httpStatus`) that the API layer maps to HTTP responses.
-- Authorisation checks happen here — the service receives the *caller* (`AuthedUser` from session) as the first argument.
+- Authorisation checks happen here — the service receives the _caller_ (`AuthedUser` from session) as the first argument.
 - Example (`winner.service.ts`):
   ```ts
   export async function announceWinners(caller: AuthedUser, bountyId: string) {
-    const bounty = await bountyRepo.findBountyById(bountyId);
-    assertOwner(caller, bounty);                     // throws Forbidden
-    assertStatus(bounty, ['JUDGING']);               // throws Conflict
-    const winners = await submissionRepo.listWinners(bountyId);
-    validatePayoutMethods(winners);                  // throws BadRequest
-    validateEscrowCovers(bounty, winners);           // throws BadRequest
-    const payouts = await escrowService.payoutWinners(bounty, winners);
-    await bountyRepo.markWinnersAnnounced(bountyId);
-    await notificationService.notifyWinners(bounty, winners, payouts);
-    return { bounty, payouts };
+  	const bounty = await bountyRepo.findBountyById(bountyId);
+  	assertOwner(caller, bounty); // throws Forbidden
+  	assertStatus(bounty, ['JUDGING']); // throws Conflict
+  	const winners = await submissionRepo.listWinners(bountyId);
+  	validatePayoutMethods(winners); // throws BadRequest
+  	validateEscrowCovers(bounty, winners); // throws BadRequest
+  	const payouts = await escrowService.payoutWinners(bounty, winners);
+  	await bountyRepo.markWinnersAnnounced(bountyId);
+  	await notificationService.notifyWinners(bounty, winners, payouts);
+  	return { bounty, payouts };
   }
   ```
 
@@ -312,6 +312,7 @@ Every server-side feature follows this layering. **API handlers never touch Pris
 - **Thin.** Parse body via Zod, resolve session, call service, return JSON.
 - Map `AppError` codes to status codes via a single `respondError(e)` helper.
 - Template:
+
   ```ts
   // src/routes/api/bounties/[bountyId]/announce-winners/+server.ts
   import { json } from '@sveltejs/kit';
@@ -320,11 +321,13 @@ Every server-side feature follows this layering. **API handlers never touch Pris
   import { respondError } from '$lib/server/http';
 
   export const POST = async ({ params, locals }) => {
-    const user = requireAuth(locals);                // 401 if no session
-    try {
-      const result = await announceWinners(user, params.bountyId);
-      return json(result);
-    } catch (e) { return respondError(e); }
+  	const user = requireAuth(locals); // 401 if no session
+  	try {
+  		const result = await announceWinners(user, params.bountyId);
+  		return json(result);
+  	} catch (e) {
+  		return respondError(e);
+  	}
   };
   ```
 
@@ -335,7 +338,9 @@ Every server-side feature follows this layering. **API handlers never touch Pris
 - `assertOwner(user, resource)` — throws 403 when `resource.companyProfile.userId !== user.id` (unless admin).
 
 ### Layering audit
+
 Add a CI grep step:
+
 ```bash
 grep -r "prisma\." src/routes && exit 1   # routes must NOT import Prisma directly
 grep -r "fetch.*monime" src/routes && exit 1
@@ -407,7 +412,7 @@ enum InviteStatus     { PENDING  ACCEPTED  REVOKED }
 - **PushSubscription** — one row per device.
   - `id`, `userId`, `endpoint` (unique), `p256dh`, `auth`, `userAgent?`, `createdAt`.
 - **NotificationPreference** — one row per user; `Json` map of `{ eventType: { email: bool, push: bool, inApp: bool } }`. Defaults applied in code if missing.
-- **Notification** (revised) — `id`, `userId`, `eventType String` (e.g. `SUBMISSION_RECEIVED`, `WINNERS_ANNOUNCED`, `PAYOUT_COMPLETED`, `BOUNTY_PUBLISHED`, `BOUNTY_DEADLINE`, `WEEKLY_DIGEST`, …), `title`, `message?`, `link?`, `isRead` (default false), `createdAt`. The original `channel` column is dropped — channels are no longer 1:1 with rows; the notification *service* fans out to email + push + in-app.
+- **Notification** (revised) — `id`, `userId`, `eventType String` (e.g. `SUBMISSION_RECEIVED`, `WINNERS_ANNOUNCED`, `PAYOUT_COMPLETED`, `BOUNTY_PUBLISHED`, `BOUNTY_DEADLINE`, `WEEKLY_DIGEST`, …), `title`, `message?`, `link?`, `isRead` (default false), `createdAt`. The original `channel` column is dropped — channels are no longer 1:1 with rows; the notification _service_ fans out to email + push + in-app.
 
 ### Indexes
 
@@ -467,14 +472,17 @@ enum InviteStatus     { PENDING  ACCEPTED  REVOKED }
 ### Registration flows
 
 **Freelancer self-register** — always available.
+
 1. `/register` POSTs `{ role: 'FREELANCER', email, password, name }`.
 2. `auth.service.registerFreelancer()` calls `auth.api.signUpEmail()`, then patches `role` and creates the `FreelancerProfile`, and triggers verification email.
 
 **Company self-register** — only when `Setting.COMPANY_SELF_REGISTER.enabled === true`.
-1. `/register` reads `locals.settings.COMPANY_SELF_REGISTER`. When `false`, COMPANY is hidden from the role selector and the page shows: *"Companies join FOW by invitation only. Contact your admin."*
+
+1. `/register` reads `locals.settings.COMPANY_SELF_REGISTER`. When `false`, COMPANY is hidden from the role selector and the page shows: _"Companies join FOW by invitation only. Contact your admin."_
 2. Same path as freelancer but creates `CompanyProfile`.
 
 **Company invite (always available to admin)** — from `/admin/invites` or `scripts/seed-invite.ts`.
+
 1. Admin submits `{ email, companyName?, name? }`.
 2. `invite.service.createCompanyInvite(caller, input)`:
    - Inserts a `CompanyInvite` row (status `PENDING`).
@@ -482,7 +490,7 @@ enum InviteStatus     { PENDING  ACCEPTED  REVOKED }
    - Sets `role = COMPANY`, `isActive = true` directly via Prisma (because `input: false` blocks role on the public signup).
    - Pre-creates an empty `CompanyProfile` with the supplied `companyName`.
    - Calls `auth.api.requestPasswordReset({ email, redirectTo: '/accept-invite' })`.
-3. Resend delivers the invite email via the `invite-company` template (subject *"You've been invited to FOW"*).
+3. Resend delivers the invite email via the `invite-company` template (subject _"You've been invited to FOW"_).
 4. Invitee opens the link → `/accept-invite` → sets first password → on success, `invite.service.completeInvite()` marks `CompanyInvite.status = ACCEPTED` and stamps `acceptedUserId`.
 
 Both the UI and the CLI path call the **same** `invite.service` to avoid divergence. `scripts/seed-invite.ts` mirrors the supplied reference: re-issues the link if the user already exists, prints the dev-email URL to stdout.
@@ -516,10 +524,12 @@ The admin panel is served from a dedicated subdomain. Same codebase, host-based 
 ### Routing (`src/lib/server/host.ts` + `hooks.server.ts`)
 
 `src/lib/server/host.ts`:
+
 - `isAdminHost(url)` — returns true when `url.hostname` starts with `admin.` or equals `admin.localhost`.
 - `mainHostFor(url)` — strips the leading `admin.` for redirect targets, preserving port.
 
 `hooks.server.ts` (`handle` hook, running before any service code):
+
 1. Let Better Auth handle `/api/auth/*` on any host first.
 2. If `isAdminHost(url)`:
    - `pathname === "/"` → `302` to `/admin`.
@@ -531,6 +541,7 @@ The admin panel is served from a dedicated subdomain. Same codebase, host-based 
 ### Sessions (independent per host)
 
 Better Auth `advanced.cookies.sessionToken.attributes`:
+
 - The `domain` field is **omitted** so the cookie is host-only. `admin.fow.sl` cookies do not leak to `fow.sl` and vice versa.
 - Local dev: same — host-only cookies. `admin.localhost` and `localhost` get separate cookie jars (browsers treat them as different origins).
 - `secure: true` in prod, `sameSite: "lax"`, `httpOnly: true`.
@@ -547,11 +558,11 @@ In `src/lib/server/auth.ts`:
 
 ```ts
 trustedOrigins: [
-  'https://fow.sl',
-  'https://admin.fow.sl',
-  'http://localhost:5173',
-  'http://admin.localhost:5173',
-]
+	'https://fow.sl',
+	'https://admin.fow.sl',
+	'http://localhost:5173',
+	'http://admin.localhost:5173'
+];
 ```
 
 ### Vercel configuration
@@ -766,36 +777,36 @@ ORDER BY ai_embedding <=> $1::vector LIMIT 50;
 
 All mutation routes validate via Zod. All protected routes verify session + role + ownership. Every `+server.ts` follows the thin template in §2.
 
-| Method | Route | Auth | Role | Service call |
-| ---- | ---- | ---- | ---- | ---- |
-| GET/POST | `/api/auth/[...all]` | – | – | Better Auth handler |
-| GET | `/api/bounties` | No | – | `bounty.service.listBounties` |
-| POST | `/api/bounties` | Yes | COMPANY | `bounty.service.createBounty` |
-| GET | `/api/bounties/[bountyId]` | No | – | `bounty.service.getBounty` |
-| PATCH | `/api/bounties/[bountyId]` | Yes | Owner | `bounty.service.updateBounty` |
-| DELETE | `/api/bounties/[bountyId]` | Yes | Owner | `bounty.service.deleteDraft` |
-| POST | `/api/bounties/[bountyId]/fund` | Yes | Owner | `escrow.service.createFundingCheckoutSession` |
-| POST | `/api/bounties/[bountyId]/publish` | Yes | Owner | `bounty.service.publish` |
-| POST | `/api/bounties/[bountyId]/cancel` | Yes | Owner | `escrow.service.cancelBountyWithRefund` |
-| POST | `/api/bounties/[bountyId]/announce-winners` | Yes | Owner | `winner.service.announceWinners` |
-| GET | `/api/bounties/[bountyId]/submissions` | Yes | Owner/Admin | `submission.service.listForBounty` |
-| POST | `/api/bounties/[bountyId]/submissions` | Yes | FREELANCER | `submission.service.create` |
-| GET/PATCH | `/api/bounties/[bountyId]/submissions/[submissionId]` | Yes | Relevant | `submission.service.getOrUpdate` |
-| POST | `/api/bounties/[bountyId]/submissions/[submissionId]/toggle-winner` | Yes | Owner | `submission.service.toggleWinner` |
-| PATCH | `/api/bounties/[bountyId]/submissions/[submissionId]/label` | Yes | Owner | `submission.service.setLabel` |
-| GET/PATCH | `/api/users/me` | Yes | – | `user.service.getOrUpdateMe` |
-| PATCH | `/api/users/me/notification-prefs` | Yes | – | `notification.service.updatePreferences` |
-| GET | `/api/skills` | No | – | `skill.service.list` |
-| GET | `/api/matching` | Yes | FREELANCER/ADMIN | `matching.service.recommendBounties` |
-| GET | `/api/payments` | Yes | – | `payment.service.listForCaller` |
-| POST | `/api/webhooks/monime` | HMAC | – | `escrow.service.handleWebhook` |
-| GET/PATCH | `/api/notifications` | Yes | – | `notification.service.listForCaller` |
-| POST | `/api/push/subscribe` | Yes | – | `notification.service.savePushSubscription` |
-| POST | `/api/push/unsubscribe` | Yes | – | `notification.service.deletePushSubscription` |
-| POST | `/api/admin/invites` | Yes | ADMIN | `invite.service.createCompanyInvite` |
-| GET | `/api/admin/invites` | Yes | ADMIN | `invite.service.listInvites` |
-| PATCH | `/api/admin/settings` | Yes | ADMIN | `settings.service.update` |
-| GET | `/api/admin/stats` | Yes | ADMIN | `admin.service.stats` |
+| Method    | Route                                                               | Auth | Role             | Service call                                  |
+| --------- | ------------------------------------------------------------------- | ---- | ---------------- | --------------------------------------------- |
+| GET/POST  | `/api/auth/[...all]`                                                | –    | –                | Better Auth handler                           |
+| GET       | `/api/bounties`                                                     | No   | –                | `bounty.service.listBounties`                 |
+| POST      | `/api/bounties`                                                     | Yes  | COMPANY          | `bounty.service.createBounty`                 |
+| GET       | `/api/bounties/[bountyId]`                                          | No   | –                | `bounty.service.getBounty`                    |
+| PATCH     | `/api/bounties/[bountyId]`                                          | Yes  | Owner            | `bounty.service.updateBounty`                 |
+| DELETE    | `/api/bounties/[bountyId]`                                          | Yes  | Owner            | `bounty.service.deleteDraft`                  |
+| POST      | `/api/bounties/[bountyId]/fund`                                     | Yes  | Owner            | `escrow.service.createFundingCheckoutSession` |
+| POST      | `/api/bounties/[bountyId]/publish`                                  | Yes  | Owner            | `bounty.service.publish`                      |
+| POST      | `/api/bounties/[bountyId]/cancel`                                   | Yes  | Owner            | `escrow.service.cancelBountyWithRefund`       |
+| POST      | `/api/bounties/[bountyId]/announce-winners`                         | Yes  | Owner            | `winner.service.announceWinners`              |
+| GET       | `/api/bounties/[bountyId]/submissions`                              | Yes  | Owner/Admin      | `submission.service.listForBounty`            |
+| POST      | `/api/bounties/[bountyId]/submissions`                              | Yes  | FREELANCER       | `submission.service.create`                   |
+| GET/PATCH | `/api/bounties/[bountyId]/submissions/[submissionId]`               | Yes  | Relevant         | `submission.service.getOrUpdate`              |
+| POST      | `/api/bounties/[bountyId]/submissions/[submissionId]/toggle-winner` | Yes  | Owner            | `submission.service.toggleWinner`             |
+| PATCH     | `/api/bounties/[bountyId]/submissions/[submissionId]/label`         | Yes  | Owner            | `submission.service.setLabel`                 |
+| GET/PATCH | `/api/users/me`                                                     | Yes  | –                | `user.service.getOrUpdateMe`                  |
+| PATCH     | `/api/users/me/notification-prefs`                                  | Yes  | –                | `notification.service.updatePreferences`      |
+| GET       | `/api/skills`                                                       | No   | –                | `skill.service.list`                          |
+| GET       | `/api/matching`                                                     | Yes  | FREELANCER/ADMIN | `matching.service.recommendBounties`          |
+| GET       | `/api/payments`                                                     | Yes  | –                | `payment.service.listForCaller`               |
+| POST      | `/api/webhooks/monime`                                              | HMAC | –                | `escrow.service.handleWebhook`                |
+| GET/PATCH | `/api/notifications`                                                | Yes  | –                | `notification.service.listForCaller`          |
+| POST      | `/api/push/subscribe`                                               | Yes  | –                | `notification.service.savePushSubscription`   |
+| POST      | `/api/push/unsubscribe`                                             | Yes  | –                | `notification.service.deletePushSubscription` |
+| POST      | `/api/admin/invites`                                                | Yes  | ADMIN            | `invite.service.createCompanyInvite`          |
+| GET       | `/api/admin/invites`                                                | Yes  | ADMIN            | `invite.service.listInvites`                  |
+| PATCH     | `/api/admin/settings`                                               | Yes  | ADMIN            | `settings.service.update`                     |
+| GET       | `/api/admin/stats`                                                  | Yes  | ADMIN            | `admin.service.stats`                         |
 
 ---
 
@@ -901,33 +912,35 @@ All public-facing pages render meta + OpenGraph + Twitter Card + JSON-LD via [`s
 
 - Use [`super-sitemap`](https://github.com/jasongitmail/super-sitemap) (`npm i -D super-sitemap`). It auto-discovers static routes and lets you plug in dynamic params for parameterised routes.
 - `src/routes/sitemap.xml/+server.ts`:
+
   ```ts
   import * as sitemap from 'super-sitemap';
   import { listActiveBountySlugs } from '$lib/server/repositories/bounty.repo';
 
   export const GET = async () => {
-    return await sitemap.response({
-      origin: process.env.PUBLIC_APP_URL!,
-      excludeRoutePatterns: [
-        '^/admin.*',
-        '^/dashboard.*',
-        '^/api.*',
-        '^/(auth)/.*',
-        '^/accept-invite',
-        '^/verify-email',
-        '^/forgot-password',
-        '^/settings.*',
-        '^/profile',
-        '^/notifications'
-      ],
-      paramValues: {
-        '/bounties/[slug]': await listActiveBountySlugs()
-      },
-      changefreq: 'daily',
-      priority: 0.7
-    });
+  	return await sitemap.response({
+  		origin: process.env.PUBLIC_APP_URL!,
+  		excludeRoutePatterns: [
+  			'^/admin.*',
+  			'^/dashboard.*',
+  			'^/api.*',
+  			'^/(auth)/.*',
+  			'^/accept-invite',
+  			'^/verify-email',
+  			'^/forgot-password',
+  			'^/settings.*',
+  			'^/profile',
+  			'^/notifications'
+  		],
+  		paramValues: {
+  			'/bounties/[slug]': await listActiveBountySlugs()
+  		},
+  		changefreq: 'daily',
+  		priority: 0.7
+  	});
   };
   ```
+
 - `src/routes/robots.txt/+server.ts` — disallows `/admin`, `/dashboard`, `/api`, `/(auth)/*`, points crawlers at `/sitemap.xml`.
 
 ---
@@ -1022,6 +1035,7 @@ Each phase has explicit deliverables. A junior engineer should be able to comple
 - Landing page.
 
 **Verify**:
+
 1. Self-register a FREELANCER; verify email; log in; log out.
 2. Toggle `COMPANY_SELF_REGISTER` OFF; reload `/register`; confirm COMPANY hidden. Toggle ON; confirm visible.
 3. Invite a company via `/admin/invites`; copy the dev email link; complete `/accept-invite`; confirm `CompanyProfile` exists and `CompanyInvite.status = ACCEPTED`.
@@ -1043,6 +1057,7 @@ Each phase has explicit deliverables. A junior engineer should be able to comple
 - Company dashboard listing.
 
 **Verify**:
+
 1. Create a BOUNTY and a PROJECT in DRAFT.
 2. Browse page filters by type/skills/prize range.
 3. Detail page renders all eligibility questions and prize tiers; rich-text fields render sanitised HTML.
@@ -1057,6 +1072,7 @@ Each phase has explicit deliverables. A junior engineer should be able to comple
 - `POST /api/bounties/[bountyId]/cancel` with refund.
 
 **Verify** (Monime test mode):
+
 1. Create draft → fund → simulate `checkout_session.completed` → confirm status FUNDED, Payment row COMPLETED.
 2. Cancel an ACTIVE bounty → confirm refund payout initiated.
 3. Replay `checkout_session.completed` → confirm idempotency (no duplicate Payment).
@@ -1075,6 +1091,7 @@ Each phase has explicit deliverables. A junior engineer should be able to comple
 - Freelancer dashboard (submissions list, earnings with tranche detail).
 
 **Verify**:
+
 1. Submit on a bounty; sponsor labels submissions + adds notes (confirm notes never appear in freelancer-facing responses).
 2. Toggle two winners (positions 1, 2); announce; confirm Monime payouts initiated, winners + non-winners receive emails, Notification rows created.
 3. Repeat for a PROJECT with two tranches; confirm `Submission.paymentDetails` has both entries.
@@ -1103,6 +1120,7 @@ Each phase has explicit deliverables. A junior engineer should be able to comple
 - `/api/users/me/notification-prefs` + `/settings/notifications` page.
 
 **Verify**:
+
 1. Install PWA on Android Chrome and iOS Safari (16.4+); confirm icon, splash, standalone display, offline app-shell load.
 2. Enable push; trigger a winner announcement; confirm system notification appears even when tab is backgrounded.
 3. Revoke permission; confirm subscription cleaned up on next 410.
@@ -1118,6 +1136,7 @@ Each phase has explicit deliverables. A junior engineer should be able to comple
 - `sanitize-html` running on all rich-text writes.
 
 **Verify**:
+
 1. Hit `/admin/*` as FREELANCER → expect 403.
 2. Replay Monime webhook with bad HMAC → expect 401.
 3. Attempt to read sponsor `notes` from freelancer-facing API → expect field absent.

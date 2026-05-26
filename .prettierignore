@@ -7,3 +7,12 @@ bun.lockb
 
 # Miscellaneous
 /static/
+.svelte-kit/
+.vercel/
+build/
+
+# Prisma migrations (generated SQL)
+prisma/migrations/
+
+# shadcn-svelte codegen
+src/lib/components/ui/
