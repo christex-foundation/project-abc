@@ -1,7 +1,8 @@
 <script lang="ts">
+	import { enhance } from '$app/forms';
 	import { Button, Card, CardHeader, CardTitle, CardContent, Badge } from '$lib/components/ui';
 
-	let { data } = $props();
+	let { data, form } = $props();
 
 	const statusOrder = ['DRAFT', 'FUNDED', 'ACTIVE', 'JUDGING', 'COMPLETED', 'CANCELLED'] as const;
 	type Status = (typeof statusOrder)[number];
@@ -40,6 +41,20 @@
 		<Button href="/bounties/create">+ Create</Button>
 	</header>
 
+	{#if form?.message}
+		<div
+			class="rounded-md border px-3 py-2 text-sm"
+			class:border-red-300={!form?.success}
+			class:bg-red-50={!form?.success}
+			class:text-red-700={!form?.success}
+			class:border-emerald-300={form?.success}
+			class:bg-emerald-50={form?.success}
+			class:text-emerald-700={form?.success}
+		>
+			{form.message}
+		</div>
+	{/if}
+
 	{#if data.bounties.length === 0}
 		<Card>
 			<CardContent class="py-12 text-center text-zinc-500">
@@ -61,15 +76,62 @@
 									</div>
 									<CardTitle class="line-clamp-2 text-base">{b.title}</CardTitle>
 								</CardHeader>
-								<CardContent class="flex items-center justify-between">
-									<span class="text-sm font-medium"
-										>{formatMoney(b.totalPrizePool, b.currency)}</span
-									>
-									{#if s === 'DRAFT'}
-										<Button size="sm" variant="outline" href={`/bounties/${b.slug}`}>Preview</Button
+								<CardContent class="space-y-3">
+									<div class="flex items-center justify-between">
+										<span class="text-sm font-medium"
+											>{formatMoney(b.totalPrizePool, b.currency)}</span
 										>
-									{:else}
-										<Button size="sm" variant="outline" href={`/bounties/${b.slug}`}>View</Button>
+										<Button size="sm" variant="outline" href={`/bounties/${b.slug}`}>
+											{s === 'DRAFT' ? 'Preview' : 'View'}
+										</Button>
+									</div>
+
+									{#if s === 'DRAFT'}
+										<div class="flex gap-2">
+											<Button
+												size="sm"
+												class="flex-1"
+												href={`/dashboard/company/bounties/${b.id}/fund`}
+											>
+												Fund
+											</Button>
+											<form method="POST" action="?/cancel" use:enhance class="flex-1">
+												<input type="hidden" name="bountyId" value={b.id} />
+												<Button
+													size="sm"
+													variant="outline"
+													type="submit"
+													class="w-full text-red-600"
+												>
+													Discard
+												</Button>
+											</form>
+										</div>
+									{:else if s === 'FUNDED'}
+										<div class="flex gap-2">
+											<form method="POST" action="?/publish" use:enhance class="flex-1">
+												<input type="hidden" name="bountyId" value={b.id} />
+												<Button size="sm" type="submit" class="w-full">Publish</Button>
+											</form>
+											<form method="POST" action="?/cancel" use:enhance class="flex-1">
+												<input type="hidden" name="bountyId" value={b.id} />
+												<Button
+													size="sm"
+													variant="outline"
+													type="submit"
+													class="w-full text-red-600"
+												>
+													Cancel &amp; refund
+												</Button>
+											</form>
+										</div>
+									{:else if s === 'ACTIVE'}
+										<form method="POST" action="?/cancel" use:enhance>
+											<input type="hidden" name="bountyId" value={b.id} />
+											<Button size="sm" variant="outline" type="submit" class="w-full text-red-600">
+												Cancel &amp; refund
+											</Button>
+										</form>
 									{/if}
 								</CardContent>
 							</Card>
