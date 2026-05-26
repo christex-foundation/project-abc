@@ -57,3 +57,17 @@ export async function getPreference(userId: string): Promise<NotificationChannel
 	if (p && typeof p === 'object') return p as NotificationChannelPrefs;
 	return null;
 }
+
+export async function upsertPreference(
+	userId: string,
+	prefs: NotificationChannelPrefs
+): Promise<NotificationChannelPrefs> {
+	const json = prefs as unknown as Prisma.InputJsonValue;
+	const row = await prisma.notificationPreference.upsert({
+		where: { userId },
+		create: { userId, prefs: json },
+		update: { prefs: json },
+		select: { prefs: true }
+	});
+	return row.prefs as unknown as NotificationChannelPrefs;
+}
