@@ -1,46 +1,215 @@
 <!--
-  Phase 1 shell. The real ProseKit-backed toolbar lands in Phase 2 when the
-  bounty-creation wizard ships (plan §13). The component API is fixed now so
-  callers don't churn: `value` (bindable HTML string), `placeholder`, `label`.
+  ProseKit-backed rich-text editor. Stores its content as **HTML** because the
+  trust boundary lives in `sanitizeRichText` on the server — keeping the wire
+  format as HTML means the same string round-trips between editor → DB → render
+  with one sanitise step.
 
-  Until Phase 2, the underlying control is a textarea. Sanitisation is the
-  server's responsibility (sanitizeRichText) — never trust this component's
-  output on writes.
+  Toolbar matches plan §13: bold, italic, H2, H3, bullet list, ordered list,
+  link, code, blockquote.
+
+  The component is **uncontrolled** for ProseKit state; the parent listens via
+  `onChange(html)` and persists. `initialHTML` is only read once on mount.
 -->
 <script lang="ts">
+	import { onDestroy, untrack } from 'svelte';
+	import {
+		createEditor,
+		defineBaseCommands,
+		defineBaseKeymap,
+		defineHistory,
+		union
+	} from '@prosekit/core';
+	import { defineDoc } from '@prosekit/extensions/doc';
+	import { defineText } from '@prosekit/extensions/text';
+	import { defineParagraph } from '@prosekit/extensions/paragraph';
+	import { defineHeading } from '@prosekit/extensions/heading';
+	import { defineBold } from '@prosekit/extensions/bold';
+	import { defineItalic } from '@prosekit/extensions/italic';
+	import { defineCode } from '@prosekit/extensions/code';
+	import { defineBlockquote } from '@prosekit/extensions/blockquote';
+	import { defineList } from '@prosekit/extensions/list';
+	import { defineLink } from '@prosekit/extensions/link';
+	import { defineHardBreak } from '@prosekit/extensions/hard-break';
+	import { definePlaceholder } from '@prosekit/extensions/placeholder';
+	import { ProseKit, useDocChange } from '@prosekit/svelte';
+	import { cn } from '$lib/utils';
+
 	type Props = {
-		value: string;
+		initialHTML?: string;
 		placeholder?: string;
-		label?: string;
-		name?: string;
-		id?: string;
-		rows?: number;
+		onChange?: (html: string) => void;
+		class?: string;
 		disabled?: boolean;
 	};
 
 	let {
-		value = $bindable(''),
-		placeholder = '',
-		label = '',
-		name,
-		id,
-		rows = 8,
+		initialHTML = '',
+		placeholder = 'Start writing…',
+		onChange,
+		class: className,
 		disabled = false
 	}: Props = $props();
+
+	// Placeholder is captured once on mount; changes to the prop after mount
+	// don't trigger a re-build (consistent with ProseKit's static extension graph).
+	const placeholderText = untrack(() => placeholder);
+	const extension = union(
+		defineDoc(),
+		defineText(),
+		defineParagraph(),
+		defineHardBreak(),
+		defineHistory(),
+		defineBold(),
+		defineItalic(),
+		defineCode(),
+		defineHeading(),
+		defineBlockquote(),
+		defineList(),
+		defineLink(),
+		definePlaceholder({ placeholder: placeholderText }),
+		defineBaseCommands(),
+		defineBaseKeymap()
+	);
+
+	const editor = createEditor({ extension });
+
+	let initialized = false;
+	function mountAction(node: HTMLElement) {
+		editor.mount(node);
+		if (initialHTML && !initialized) {
+			try {
+				editor.setContent(initialHTML);
+			} catch (e) {
+				console.warn('[RichTextEditor] failed to load initial HTML:', e);
+			}
+			initialized = true;
+		}
+		return {
+			destroy() {
+				editor.unmount();
+			}
+		};
+	}
+
+	onDestroy(() => {
+		if (editor.mounted) editor.unmount();
+	});
+
+	useDocChange(
+		() => {
+			onChange?.(editor.getDocHTML());
+		},
+		{ editor }
+	);
+
+	function exec(fn: () => void) {
+		return (e: Event) => {
+			e.preventDefault();
+			if (disabled) return;
+			fn();
+		};
+	}
+
+	function promptLink() {
+		if (disabled) return;
+		const href = window.prompt('Link URL (https:// or mailto:)?');
+		if (!href) return;
+		if (!/^(https?:|mailto:)/i.test(href)) {
+			alert('Only http(s) or mailto links are allowed.');
+			return;
+		}
+		editor.commands.addLink({ href });
+	}
+
+	const btn =
+		'inline-flex h-8 min-w-8 items-center justify-center rounded px-2 text-xs font-medium ' +
+		'text-zinc-700 hover:bg-zinc-100 disabled:opacity-50';
 </script>
 
-<div class="rich-text-editor">
-	{#if label}
-		<label class="mb-1 block text-sm font-medium" for={id}>{label}</label>
-	{/if}
-	<textarea
-		{id}
-		{name}
-		{placeholder}
-		{rows}
-		{disabled}
-		bind:value
-		class="w-full rounded border border-zinc-300 px-3 py-2 text-sm focus:border-zinc-500 focus:outline-none"
-	></textarea>
-	<p class="mt-1 text-xs text-zinc-500">Plain text for now. Rich formatting lands in Phase 2.</p>
-</div>
+<ProseKit {editor}>
+	<div class={cn('rounded-md border border-zinc-300 bg-white', className)}>
+		<div class="flex flex-wrap items-center gap-1 border-b border-zinc-200 px-2 py-1.5">
+			<button
+				type="button"
+				class={btn}
+				{disabled}
+				onmousedown={exec(() => editor.commands.toggleBold())}
+				title="Bold (⌘B)">B</button
+			>
+			<button
+				type="button"
+				class={`${btn} italic`}
+				{disabled}
+				onmousedown={exec(() => editor.commands.toggleItalic())}
+				title="Italic (⌘I)">I</button
+			>
+			<button
+				type="button"
+				class={btn}
+				{disabled}
+				onmousedown={exec(() => editor.commands.toggleCode())}
+				title="Inline code">{'</>'}</button
+			>
+			<span class="mx-1 h-5 w-px bg-zinc-200"></span>
+			<button
+				type="button"
+				class={btn}
+				{disabled}
+				onmousedown={exec(() => editor.commands.toggleHeading({ level: 2 }))}
+				title="Heading 2">H2</button
+			>
+			<button
+				type="button"
+				class={btn}
+				{disabled}
+				onmousedown={exec(() => editor.commands.toggleHeading({ level: 3 }))}
+				title="Heading 3">H3</button
+			>
+			<span class="mx-1 h-5 w-px bg-zinc-200"></span>
+			<button
+				type="button"
+				class={btn}
+				{disabled}
+				onmousedown={exec(() => editor.commands.toggleList({ kind: 'bullet' }))}
+				title="Bullet list">•</button
+			>
+			<button
+				type="button"
+				class={btn}
+				{disabled}
+				onmousedown={exec(() => editor.commands.toggleList({ kind: 'ordered' }))}
+				title="Numbered list">1.</button
+			>
+			<span class="mx-1 h-5 w-px bg-zinc-200"></span>
+			<button
+				type="button"
+				class={btn}
+				{disabled}
+				onmousedown={exec(() => editor.commands.toggleBlockquote())}
+				title="Quote">&gt;</button
+			>
+			<button type="button" class={btn} {disabled} onmousedown={exec(promptLink)} title="Link"
+				>🔗</button
+			>
+		</div>
+		<div
+			use:mountAction
+			class="prose prose-sm min-h-[180px] max-w-none px-3 py-2 focus:outline-none"
+			class:opacity-50={disabled}
+			class:pointer-events-none={disabled}
+		></div>
+	</div>
+</ProseKit>
+
+<style>
+	:global(.ProseMirror) {
+		min-height: 160px;
+	}
+	:global(.ProseMirror p.is-empty:first-child::before) {
+		content: attr(data-placeholder);
+		float: left;
+		color: rgb(161 161 170);
+		pointer-events: none;
+		height: 0;
+	}
+</style>
