@@ -167,6 +167,60 @@ export async function updateBountyStatus(id: string, status: BountyStatus) {
 	});
 }
 
+export async function setEscrowAccount(
+	id: string,
+	escrowFinancialAccountId: string,
+	tx: Prisma.TransactionClient = prisma
+) {
+	return tx.bounty.update({
+		where: { id },
+		data: { escrowFinancialAccountId },
+		select: { id: true, escrowFinancialAccountId: true }
+	});
+}
+
+export async function setCheckoutSession(
+	id: string,
+	input: { checkoutSessionId: string; checkoutSessionUrl: string }
+) {
+	return prisma.bounty.update({
+		where: { id },
+		data: {
+			checkoutSessionId: input.checkoutSessionId,
+			checkoutSessionUrl: input.checkoutSessionUrl
+		},
+		select: { id: true, checkoutSessionId: true, checkoutSessionUrl: true }
+	});
+}
+
+export async function markFunded(
+	id: string,
+	escrowFundedAmount: number,
+	tx: Prisma.TransactionClient = prisma
+) {
+	return tx.bounty.update({
+		where: { id },
+		data: { status: BountyStatus.FUNDED, escrowFundedAmount },
+		select: { id: true, status: true, escrowFundedAmount: true }
+	});
+}
+
+export async function markCancelled(id: string, tx: Prisma.TransactionClient = prisma) {
+	return tx.bounty.update({
+		where: { id },
+		data: { status: BountyStatus.CANCELLED, cancelledAt: new Date() },
+		select: { id: true, status: true, cancelledAt: true }
+	});
+}
+
+export async function markPublished(id: string, tx: Prisma.TransactionClient = prisma) {
+	return tx.bounty.update({
+		where: { id },
+		data: { status: BountyStatus.ACTIVE, publishedAt: new Date() },
+		select: { id: true, status: true, publishedAt: true }
+	});
+}
+
 export async function deleteBounty(id: string) {
 	await prisma.bounty.delete({ where: { id } });
 }

@@ -16,3 +16,11 @@ export async function setRole(id: string, role: UserRole): Promise<User> {
 export async function setActive(id: string, isActive: boolean): Promise<User> {
 	return prisma.user.update({ where: { id }, data: { isActive } });
 }
+
+export async function findByCompanyProfileId(companyProfileId: string): Promise<User | null> {
+	const profile = await prisma.companyProfile.findUnique({
+		where: { id: companyProfileId },
+		select: { user: true }
+	});
+	return profile?.user ?? null;
+}

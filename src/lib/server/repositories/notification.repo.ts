@@ -1,2 +1,43 @@
-// Phase-2+ repository. Implementations land in a later phase.
-export {};
+import { prisma } from '../db';
+import type { Notification, Prisma } from '@prisma/client';
+
+type CreateInput = {
+	userId: string;
+	eventType: string;
+	title: string;
+	message?: string | null;
+	link?: string | null;
+};
+
+export async function create(
+	input: CreateInput,
+	tx: Prisma.TransactionClient = prisma
+): Promise<Notification> {
+	return tx.notification.create({
+		data: {
+			userId: input.userId,
+			eventType: input.eventType,
+			title: input.title,
+			message: input.message ?? null,
+			link: input.link ?? null
+		}
+	});
+}
+
+export async function listForUser(
+	userId: string,
+	opts: { limit?: number; unreadOnly?: boolean } = {}
+): Promise<Notification[]> {
+	return prisma.notification.findMany({
+		where: { userId, ...(opts.unreadOnly && { isRead: false }) },
+		orderBy: { createdAt: 'desc' },
+		take: opts.limit ?? 50
+	});
+}
+
+export async function markRead(id: string, userId: string): Promise<void> {
+	await prisma.notification.updateMany({
+		where: { id, userId },
+		data: { isRead: true }
+	});
+}
