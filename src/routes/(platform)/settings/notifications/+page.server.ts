@@ -29,8 +29,6 @@ export const load: PageServerLoad = async ({ locals }) => {
 		hasPush: subs.length > 0,
 		deviceCount: subs.length,
 		emailEvents: [...EMAIL_EVENTS],
-		pushEvents: [...URGENT_PUSH_SET].filter((e) =>
-			(EVENT_KEYS as readonly string[]).includes(e)
-		)
+		pushEvents: [...URGENT_PUSH_SET].filter((e) => (EVENT_KEYS as readonly string[]).includes(e))
 	};
 };

@@ -28,7 +28,7 @@ export const actions: Actions = {
 		try {
 			const waitUntil = platform?.context?.waitUntil;
 			const enqueue = waitUntil
-				? <T,>(p: Promise<T>) => waitUntil(p as Promise<unknown>)
+				? <T>(p: Promise<T>) => waitUntil(p as Promise<unknown>)
 				: undefined;
 			await bountyService.publish(caller, bountyId, enqueue);
 			return { action: 'publish', bountyId, success: true };

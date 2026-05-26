@@ -112,9 +112,7 @@
 		</fieldset>
 
 		<fieldset class="rounded-lg border border-zinc-200 bg-white p-4">
-			<legend class="px-1 text-sm font-semibold text-zinc-700"
-				>Push (urgent events only)</legend
-			>
+			<legend class="px-1 text-sm font-semibold text-zinc-700">Push (urgent events only)</legend>
 			<ul class="divide-y divide-zinc-100">
 				{#each data.pushEvents as event (event)}
 					<li class="flex items-center justify-between py-2 text-sm">
