@@ -125,13 +125,30 @@
 												</Button>
 											</form>
 										</div>
-									{:else if s === 'ACTIVE'}
-										<form method="POST" action="?/cancel" use:enhance>
-											<input type="hidden" name="bountyId" value={b.id} />
-											<Button size="sm" variant="outline" type="submit" class="w-full text-red-600">
-												Cancel &amp; refund
+									{:else if s === 'ACTIVE' || s === 'JUDGING' || s === 'COMPLETED'}
+										<div class="flex gap-2">
+											<Button
+												size="sm"
+												variant="outline"
+												class="flex-1"
+												href={`/dashboard/company/bounties/${b.id}/submissions`}
+											>
+												Submissions
 											</Button>
-										</form>
+											{#if s !== 'COMPLETED'}
+												<form method="POST" action="?/cancel" use:enhance class="flex-1">
+													<input type="hidden" name="bountyId" value={b.id} />
+													<Button
+														size="sm"
+														variant="outline"
+														type="submit"
+														class="w-full text-red-600"
+													>
+														Cancel &amp; refund
+													</Button>
+												</form>
+											{/if}
+										</div>
 									{/if}
 								</CardContent>
 							</Card>
