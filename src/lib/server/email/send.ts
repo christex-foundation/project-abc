@@ -2,11 +2,24 @@ import { fromAddress, resend } from './client';
 import { verifyEmail, type VerifyEmailProps } from './templates/verify-email';
 import { resetPassword, type ResetPasswordProps } from './templates/reset-password';
 import { inviteCompany, type InviteCompanyProps } from './templates/invite-company';
+import { submissionReceived, type SubmissionReceivedProps } from './templates/submission-received';
+import {
+	submissionShortlisted,
+	type SubmissionShortlistedProps
+} from './templates/submission-shortlisted';
+import { winnersAnnounced, type WinnersAnnouncedProps } from './templates/winners-announced';
+import { payoutCompleted, type PayoutCompletedProps } from './templates/payout-completed';
+import { bountyCancelled, type BountyCancelledProps } from './templates/bounty-cancelled';
 
-type Templates = {
+export type Templates = {
 	'verify-email': VerifyEmailProps;
 	'reset-password': ResetPasswordProps;
 	'invite-company': InviteCompanyProps;
+	'submission-received': SubmissionReceivedProps;
+	'submission-shortlisted': SubmissionShortlistedProps;
+	'winners-announced': WinnersAnnouncedProps;
+	'payout-completed': PayoutCompletedProps;
+	'bounty-cancelled': BountyCancelledProps;
 };
 
 type SendInput<T extends keyof Templates> = {
@@ -18,7 +31,12 @@ type SendInput<T extends keyof Templates> = {
 const RENDERERS = {
 	'verify-email': verifyEmail,
 	'reset-password': resetPassword,
-	'invite-company': inviteCompany
+	'invite-company': inviteCompany,
+	'submission-received': submissionReceived,
+	'submission-shortlisted': submissionShortlisted,
+	'winners-announced': winnersAnnounced,
+	'payout-completed': payoutCompleted,
+	'bounty-cancelled': bountyCancelled
 } as const;
 
 /**
