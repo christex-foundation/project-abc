@@ -169,3 +169,37 @@ export async function incrementRetry(id: string): Promise<Payment> {
 		data: { retryCount: { increment: 1 } }
 	});
 }
+
+export type AdminPaymentRow = Payment & {
+	bounty: { id: string; slug: string; title: string };
+	submission: { id: string; freelancer: { displayName: string } } | null;
+};
+
+export async function listForAdmin(filter: {
+	status?: PaymentStatus;
+	type?: PaymentType;
+	take?: number;
+	skip?: number;
+}): Promise<{ items: AdminPaymentRow[]; total: number }> {
+	const where: Prisma.PaymentWhereInput = {};
+	if (filter.status) where.status = filter.status;
+	if (filter.type) where.type = filter.type;
+	const take = filter.take ?? 50;
+	const skip = filter.skip ?? 0;
+	const [items, total] = await Promise.all([
+		prisma.payment.findMany({
+			where,
+			include: {
+				bounty: { select: { id: true, slug: true, title: true } },
+				submission: {
+					select: { id: true, freelancer: { select: { displayName: true } } }
+				}
+			},
+			orderBy: { createdAt: 'desc' },
+			take,
+			skip
+		}) as Promise<AdminPaymentRow[]>,
+		prisma.payment.count({ where })
+	]);
+	return { items, total };
+}

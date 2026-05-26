@@ -1,5 +1,5 @@
 import { prisma } from '../db';
-import type { User, UserRole } from '@prisma/client';
+import type { Prisma, User, UserRole } from '@prisma/client';
 
 export async function findById(id: string): Promise<User | null> {
 	return prisma.user.findUnique({ where: { id } });
@@ -35,4 +35,57 @@ export async function findCompanyOwnerByBountyId(bountyId: string): Promise<User
 
 export async function listActiveAdmins(): Promise<User[]> {
 	return prisma.user.findMany({ where: { role: 'ADMIN', isActive: true } });
+}
+
+export type AdminUserListFilter = {
+	search?: string;
+	role?: UserRole;
+	isActive?: boolean;
+	take?: number;
+	skip?: number;
+};
+
+export type AdminUserRow = {
+	id: string;
+	email: string;
+	name: string | null;
+	role: UserRole;
+	isActive: boolean;
+	emailVerified: boolean;
+	createdAt: Date;
+};
+
+export async function listForAdmin(
+	filter: AdminUserListFilter = {}
+): Promise<{ items: AdminUserRow[]; total: number }> {
+	const where: Prisma.UserWhereInput = {};
+	if (filter.role) where.role = filter.role;
+	if (filter.isActive !== undefined) where.isActive = filter.isActive;
+	if (filter.search) {
+		where.OR = [
+			{ email: { contains: filter.search, mode: 'insensitive' } },
+			{ name: { contains: filter.search, mode: 'insensitive' } }
+		];
+	}
+	const take = filter.take ?? 50;
+	const skip = filter.skip ?? 0;
+	const [items, total] = await Promise.all([
+		prisma.user.findMany({
+			where,
+			select: {
+				id: true,
+				email: true,
+				name: true,
+				role: true,
+				isActive: true,
+				emailVerified: true,
+				createdAt: true
+			},
+			orderBy: { createdAt: 'desc' },
+			take,
+			skip
+		}),
+		prisma.user.count({ where })
+	]);
+	return { items, total };
 }

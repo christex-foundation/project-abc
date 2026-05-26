@@ -143,6 +143,56 @@ export async function listForCompany(companyProfileId: string): Promise<BountyFo
 	});
 }
 
+export type AdminBountyRow = {
+	id: string;
+	slug: string;
+	title: string;
+	status: BountyStatus;
+	type: BountyType;
+	currency: string;
+	totalPrizePool: number;
+	escrowFundedAmount: number;
+	submissionDeadline: Date;
+	createdAt: Date;
+	company: { id: string; companyName: string };
+	_count: { submissions: number };
+};
+
+export async function listForAdmin(filter: {
+	search?: string;
+	status?: BountyStatus;
+	type?: BountyType;
+}): Promise<AdminBountyRow[]> {
+	const where: Prisma.BountyWhereInput = {};
+	if (filter.status) where.status = filter.status;
+	if (filter.type) where.type = filter.type;
+	if (filter.search) {
+		where.OR = [
+			{ title: { contains: filter.search, mode: 'insensitive' } },
+			{ slug: { contains: filter.search, mode: 'insensitive' } }
+		];
+	}
+	return prisma.bounty.findMany({
+		where,
+		select: {
+			id: true,
+			slug: true,
+			title: true,
+			status: true,
+			type: true,
+			currency: true,
+			totalPrizePool: true,
+			escrowFundedAmount: true,
+			submissionDeadline: true,
+			createdAt: true,
+			company: { select: { id: true, companyName: true } },
+			_count: { select: { submissions: true } }
+		},
+		orderBy: { createdAt: 'desc' },
+		take: 100
+	});
+}
+
 export async function listActiveBountySlugs(): Promise<string[]> {
 	const rows = await prisma.bounty.findMany({
 		where: { status: BountyStatus.ACTIVE },
