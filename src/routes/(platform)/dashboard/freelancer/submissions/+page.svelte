@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { Badge, Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui';
+	import RaiseDisputeButton from '$lib/components/shared/RaiseDisputeButton.svelte';
 
 	let { data } = $props();
 
@@ -108,6 +109,15 @@
 										Sponsor feedback
 									</div>
 									<div>{@html s.feedback}</div>
+								</div>
+							{/if}
+							{#if s.bounty.isWinnersAnnounced}
+								<div class="flex justify-end pt-1">
+									<RaiseDisputeButton
+										bountyId={s.bounty.id}
+										bountyTitle={s.bounty.title}
+										submissionId={s.id}
+									/>
 								</div>
 							{/if}
 						</CardContent>

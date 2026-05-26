@@ -12,6 +12,8 @@ import { payoutCompleted, type PayoutCompletedProps } from './templates/payout-c
 import { bountyCancelled, type BountyCancelledProps } from './templates/bounty-cancelled';
 import { bountyPublished, type BountyPublishedProps } from './templates/bounty-published';
 import { bountyFunded, type BountyFundedProps } from './templates/bounty-funded';
+import { disputeRaised, type DisputeRaisedProps } from './templates/dispute-raised';
+import { disputeResolved, type DisputeResolvedProps } from './templates/dispute-resolved';
 
 export type Templates = {
 	'verify-email': VerifyEmailProps;
@@ -24,6 +26,8 @@ export type Templates = {
 	'bounty-cancelled': BountyCancelledProps;
 	'bounty-published': BountyPublishedProps;
 	'bounty-funded': BountyFundedProps;
+	'dispute-raised': DisputeRaisedProps;
+	'dispute-resolved': DisputeResolvedProps;
 };
 
 type SendInput<T extends keyof Templates> = {
@@ -42,7 +46,9 @@ const RENDERERS = {
 	'payout-completed': payoutCompleted,
 	'bounty-cancelled': bountyCancelled,
 	'bounty-published': bountyPublished,
-	'bounty-funded': bountyFunded
+	'bounty-funded': bountyFunded,
+	'dispute-raised': disputeRaised,
+	'dispute-resolved': disputeResolved
 } as const;
 
 /**

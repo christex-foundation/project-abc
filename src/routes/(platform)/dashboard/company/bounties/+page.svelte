@@ -1,8 +1,18 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { Button, Card, CardHeader, CardTitle, CardContent, Badge } from '$lib/components/ui';
+	import RaiseDisputeButton from '$lib/components/shared/RaiseDisputeButton.svelte';
 
 	let { data, form } = $props();
+
+	function confirmCancel(e: Event, title: string, isDraft: boolean) {
+		const msg = isDraft
+			? `Discard "${title}"? This cannot be undone.`
+			: `Cancel "${title}" and refund the escrow? Submitters will be notified.`;
+		if (!confirm(msg)) {
+			e.preventDefault();
+		}
+	}
 
 	const statusOrder = ['DRAFT', 'FUNDED', 'ACTIVE', 'JUDGING', 'COMPLETED', 'CANCELLED'] as const;
 	type Status = (typeof statusOrder)[number];
@@ -95,7 +105,13 @@
 											>
 												Fund
 											</Button>
-											<form method="POST" action="?/cancel" use:enhance class="flex-1">
+											<form
+												method="POST"
+												action="?/cancel"
+												use:enhance
+												onsubmit={(e) => confirmCancel(e, b.title, true)}
+												class="flex-1"
+											>
 												<input type="hidden" name="bountyId" value={b.id} />
 												<Button
 													size="sm"
@@ -113,7 +129,13 @@
 												<input type="hidden" name="bountyId" value={b.id} />
 												<Button size="sm" type="submit" class="w-full">Publish</Button>
 											</form>
-											<form method="POST" action="?/cancel" use:enhance class="flex-1">
+											<form
+												method="POST"
+												action="?/cancel"
+												use:enhance
+												onsubmit={(e) => confirmCancel(e, b.title, false)}
+												class="flex-1"
+											>
 												<input type="hidden" name="bountyId" value={b.id} />
 												<Button
 													size="sm"
@@ -136,7 +158,13 @@
 												Submissions
 											</Button>
 											{#if s !== 'COMPLETED'}
-												<form method="POST" action="?/cancel" use:enhance class="flex-1">
+												<form
+													method="POST"
+													action="?/cancel"
+													use:enhance
+													onsubmit={(e) => confirmCancel(e, b.title, false)}
+													class="flex-1"
+												>
 													<input type="hidden" name="bountyId" value={b.id} />
 													<Button
 														size="sm"
@@ -148,6 +176,12 @@
 													</Button>
 												</form>
 											{/if}
+										</div>
+									{/if}
+
+									{#if s === 'JUDGING' || s === 'COMPLETED'}
+										<div class="flex justify-end">
+											<RaiseDisputeButton bountyId={b.id} bountyTitle={b.title} />
 										</div>
 									{/if}
 								</CardContent>

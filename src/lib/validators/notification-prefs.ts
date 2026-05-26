@@ -14,7 +14,9 @@ export const EVENT_KEYS = [
 	'SUBMISSION_SHORTLISTED',
 	'WINNERS_ANNOUNCED',
 	'PAYOUT_COMPLETED',
-	'PAYOUT_FAILED'
+	'PAYOUT_FAILED',
+	'DISPUTE_RAISED',
+	'DISPUTE_RESOLVED'
 ] as const;
 
 export type EventKey = (typeof EVENT_KEYS)[number];

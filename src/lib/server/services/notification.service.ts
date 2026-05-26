@@ -42,7 +42,9 @@ const EMAIL_TEMPLATE_BY_EVENT: Partial<Record<EventType, keyof Templates>> = {
 	PAYOUT_COMPLETED: 'payout-completed',
 	BOUNTY_CANCELLED: 'bounty-cancelled',
 	BOUNTY_PUBLISHED: 'bounty-published',
-	BOUNTY_FUNDED: 'bounty-funded'
+	BOUNTY_FUNDED: 'bounty-funded',
+	DISPUTE_RAISED: 'dispute-raised',
+	DISPUTE_RESOLVED: 'dispute-resolved'
 };
 
 type DispatchPayload = {
