@@ -8,17 +8,18 @@
 	const dashboardHref = $derived(
 		user?.role === 'COMPANY' ? '/dashboard/company/bounties' : '/dashboard'
 	);
+	const profileHref = $derived(
+		user?.role === 'COMPANY' ? '/dashboard/company/profile' : '/dashboard/freelancer/profile'
+	);
 </script>
 
 {#if user}
 	<nav class="fixed inset-x-0 bottom-0 border-t border-zinc-200 bg-white md:hidden">
 		<div class="mx-auto flex max-w-md justify-around py-2 text-xs">
 			<a href="/bounties" class="px-3 py-1 text-zinc-700">Browse</a>
-			{#if user.role === 'COMPANY'}
-				<a href="/bounties/create" class="px-3 py-1 text-zinc-700">Create</a>
-			{/if}
 			<a href={dashboardHref} class="px-3 py-1 text-zinc-700">Dashboard</a>
-			<a href="/profile" class="px-3 py-1 text-zinc-700">Profile</a>
+			<a href="/notifications" class="px-3 py-1 text-zinc-700">Inbox</a>
+			<a href={profileHref} class="px-3 py-1 text-zinc-700">Profile</a>
 		</div>
 	</nav>
 {/if}
