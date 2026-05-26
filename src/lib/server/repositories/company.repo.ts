@@ -1,5 +1,5 @@
 import { prisma } from '../db';
-import type { CompanyProfile } from '@prisma/client';
+import type { CompanyProfile, Prisma } from '@prisma/client';
 
 export async function createEmpty(
 	userId: string,
@@ -21,4 +21,11 @@ export async function ensureForUser(
 	const existing = await findByUserId(userId);
 	if (existing) return existing;
 	return createEmpty(userId, companyName);
+}
+
+export async function updateById(
+	id: string,
+	data: Prisma.CompanyProfileUpdateInput
+): Promise<CompanyProfile> {
+	return prisma.companyProfile.update({ where: { id }, data });
 }

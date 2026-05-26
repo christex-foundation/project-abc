@@ -2,6 +2,7 @@ import { json } from '@sveltejs/kit';
 import { requireAuth } from '$lib/server/auth-helpers';
 import { AppError, respondError } from '$lib/server/http';
 import * as freelancerService from '$lib/server/services/freelancer.service';
+import * as companyService from '$lib/server/services/company.service';
 import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async ({ locals }) => {
@@ -11,7 +12,10 @@ export const GET: RequestHandler = async ({ locals }) => {
 			const profile = await freelancerService.getMyProfile(caller);
 			return json({ user: caller, freelancerProfile: profile });
 		}
-		// Company / admin profile reads land in Phase 7.
+		if (caller.role === 'COMPANY') {
+			const profile = await companyService.getMyProfile(caller);
+			return json({ user: caller, companyProfile: profile });
+		}
 		return json({ user: caller });
 	} catch (e) {
 		return respondError(e);
@@ -21,12 +25,16 @@ export const GET: RequestHandler = async ({ locals }) => {
 export const PATCH: RequestHandler = async ({ locals, request }) => {
 	try {
 		const caller = requireAuth(locals);
-		if (caller.role !== 'FREELANCER') {
-			throw new AppError('FORBIDDEN', 'Profile editing for this role lands in a later phase.');
-		}
 		const body = await request.json();
-		const profile = await freelancerService.updateProfile(caller, body);
-		return json({ freelancerProfile: profile });
+		if (caller.role === 'FREELANCER') {
+			const profile = await freelancerService.updateProfile(caller, body);
+			return json({ freelancerProfile: profile });
+		}
+		if (caller.role === 'COMPANY') {
+			const profile = await companyService.updateProfile(caller, body);
+			return json({ companyProfile: profile });
+		}
+		throw new AppError('FORBIDDEN', 'No editable profile for this role.');
 	} catch (e) {
 		return respondError(e);
 	}
