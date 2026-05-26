@@ -1,0 +1,538 @@
+// Future of Work (FOW) — Prisma schema
+// Source of truth: §3 of the Technical Implementation Plan.
+//
+// The full data model lands in the initial migration so subsequent phases
+// add features, not tables.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// =============================================================================
+// Enums
+// =============================================================================
+
+enum UserRole {
+  COMPANY
+  FREELANCER
+  ADMIN
+}
+
+enum BountyStatus {
+  DRAFT
+  FUNDED
+  ACTIVE
+  JUDGING
+  COMPLETED
+  CANCELLED
+}
+
+enum BountyType {
+  BOUNTY
+  PROJECT
+}
+
+enum CompensationType {
+  FIXED
+  RANGE
+  VARIABLE
+}
+
+enum SubmissionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum SubmissionLabel {
+  UNREVIEWED
+  REVIEWED
+  SHORTLISTED
+  SPAM
+  LOW_QUALITY
+  MID_QUALITY
+  HIGH_QUALITY
+}
+
+enum PaymentType {
+  ESCROW_DEPOSIT
+  PRIZE_PAYOUT
+  REFUND
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum InviteStatus {
+  PENDING
+  ACCEPTED
+  REVOKED
+}
+
+// =============================================================================
+// Better Auth tables
+//   - `user` is extended via Better Auth's `additionalFields` (role, phoneNumber, isActive).
+//   - Adapter-managed tables: account, session, verification.
+// =============================================================================
+
+model User {
+  id            String    @id
+  email         String    @unique
+  emailVerified Boolean   @default(false)
+  name          String?
+  image         String?
+  // Custom fields (additionalFields)
+  role          UserRole  @default(FREELANCER)
+  phoneNumber   String?
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts          Account[]
+  sessions          Session[]
+  companyProfile    CompanyProfile?
+  freelancerProfile FreelancerProfile?
+
+  invitesCreated     CompanyInvite[]       @relation("InviteCreatedBy")
+  invitesAcceptedBy  CompanyInvite[]       @relation("InviteAcceptedBy")
+  settingsTouched    Setting[]
+  notifications      Notification[]
+  notificationPrefs  NotificationPreference?
+  pushSubscriptions  PushSubscription[]
+  raisedDisputes     Dispute[]
+
+  @@map("user")
+}
+
+model Account {
+  id                    String    @id
+  userId                String
+  accountId             String
+  providerId            String
+  accessToken           String?
+  refreshToken          String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  idToken               String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Session {
+  id        String   @id
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("session")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+// =============================================================================
+// Profiles
+// =============================================================================
+
+model CompanyProfile {
+  id                       String   @id @default(cuid())
+  userId                   String   @unique
+  companyName              String
+  description              String?
+  website                  String?
+  logo                     String?
+  industry                 String?
+  country                  String   @default("SL")
+  verified                 Boolean  @default(false)
+  monimePayoutMomoNumber   String?
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bounties Bounty[]
+}
+
+model FreelancerProfile {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  displayName     String
+  headline        String?
+  bio             String?
+  portfolio       String?
+  experienceLevel String?
+  momoNumber      String?
+  whatsappNumber  String?
+  bankDetails     Json?
+  aiEmbedding     Float[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skills      FreelancerSkill[]
+  submissions Submission[]
+}
+
+// =============================================================================
+// Skills taxonomy
+// =============================================================================
+
+model SkillCategory {
+  id     String  @id @default(cuid())
+  name   String  @unique
+  slug   String  @unique
+  skills Skill[]
+}
+
+model Skill {
+  id         String @id @default(cuid())
+  name       String @unique
+  slug       String @unique
+  categoryId String
+
+  category         SkillCategory     @relation(fields: [categoryId], references: [id])
+  freelancerSkills FreelancerSkill[]
+  bountySkills     BountySkill[]
+
+  @@index([categoryId])
+  @@index([slug])
+}
+
+model FreelancerSkill {
+  id                  String @id @default(cuid())
+  freelancerProfileId String
+  skillId             String
+  proficiencyLevel    Int    // 1-5
+  yearsExperience     Int?
+
+  freelancer FreelancerProfile @relation(fields: [freelancerProfileId], references: [id], onDelete: Cascade)
+  skill      Skill             @relation(fields: [skillId], references: [id])
+
+  @@unique([freelancerProfileId, skillId])
+  @@index([freelancerProfileId])
+  @@index([skillId])
+}
+
+// =============================================================================
+// Bounties
+// =============================================================================
+
+model Bounty {
+  // Identity
+  id               String  @id @default(cuid())
+  companyProfileId String
+  title            String
+  slug             String  @unique
+  description      String  // sanitised HTML
+  requirements     String? // sanitised HTML
+  deliverables     String? // sanitised HTML
+
+  // Type & status
+  type   BountyType   @default(BOUNTY)
+  status BountyStatus @default(DRAFT)
+
+  // Compensation
+  compensationType CompensationType @default(FIXED)
+  currency         String           @default("SLE")
+  totalPrizePool   Int              // minor units
+  rewardAmount     Int?
+  minRewardAsk     Int?
+  maxRewardAsk     Int?
+  rewards          Json?
+
+  // Winners
+  numberOfWinners      Int       @default(1)
+  maxBonusSpots        Int       @default(0)
+  isWinnersAnnounced   Boolean   @default(false)
+  winnersAnnouncedAt   DateTime?
+
+  // Eligibility
+  eligibility Json?
+
+  // Timeline
+  timeToComplete     String?
+  submissionDeadline DateTime
+  judgingDeadline    DateTime?
+  publishedAt        DateTime?
+  completedAt        DateTime?
+  cancelledAt        DateTime?
+
+  // Monime escrow
+  escrowFinancialAccountId String?
+  escrowFundedAmount       Int     @default(0)
+  checkoutSessionId        String?
+  checkoutSessionUrl       String?
+
+  // AI
+  aiEmbedding Float[]
+
+  // Meta
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company     CompanyProfile @relation(fields: [companyProfileId], references: [id])
+  prizeTiers  PrizeTier[]
+  skills      BountySkill[]
+  submissions Submission[]
+  payments    Payment[]
+  disputes    Dispute[]
+
+  @@index([companyProfileId])
+  @@index([status])
+  @@index([slug])
+}
+
+model PrizeTier {
+  id       String  @id @default(cuid())
+  bountyId String
+  position Int     // 1=first place, 99=bonus
+  amount   Int     // minor units
+  label    String?
+
+  bounty Bounty @relation(fields: [bountyId], references: [id], onDelete: Cascade)
+
+  @@unique([bountyId, position])
+  @@index([bountyId])
+}
+
+model BountySkill {
+  id         String  @id @default(cuid())
+  bountyId   String
+  skillId    String
+  isRequired Boolean @default(false)
+
+  bounty Bounty @relation(fields: [bountyId], references: [id], onDelete: Cascade)
+  skill  Skill  @relation(fields: [skillId], references: [id])
+
+  @@unique([bountyId, skillId])
+  @@index([bountyId])
+  @@index([skillId])
+}
+
+// =============================================================================
+// Submissions
+// =============================================================================
+
+model Submission {
+  id                  String @id @default(cuid())
+  bountyId            String
+  freelancerProfileId String
+
+  // Content
+  link      String
+  tweet     String?
+  otherInfo String? // sanitised HTML
+
+  // Status
+  status   SubmissionStatus @default(PENDING)
+  label    SubmissionLabel  @default(UNREVIEWED)
+  isActive Boolean          @default(true)
+
+  // Eligibility
+  eligibilityAnswers Json?
+
+  // Compensation
+  ask Int? // minor units (RANGE/VARIABLE bounties)
+
+  // Winner
+  isWinner       Boolean @default(false)
+  winnerPosition Int?
+
+  // Judging
+  score    Int?
+  feedback String? // sanitised HTML, sponsor → freelancer
+  notes    String? // sponsor-private, never returned to freelancer
+
+  // Payment
+  prizeAmount    Int?
+  isPaid         Boolean @default(false)
+  paymentDetails Json?
+
+  // Meta
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  bounty     Bounty            @relation(fields: [bountyId], references: [id], onDelete: Cascade)
+  freelancer FreelancerProfile @relation(fields: [freelancerProfileId], references: [id])
+  payments   Payment[]
+
+  @@unique([bountyId, freelancerProfileId])
+  @@index([bountyId])
+  @@index([freelancerProfileId])
+  @@index([status])
+  @@index([label])
+}
+
+// =============================================================================
+// Payments
+// =============================================================================
+
+model Payment {
+  id           String        @id @default(cuid())
+  bountyId     String
+  submissionId String?
+  type         PaymentType
+  status       PaymentStatus @default(PENDING)
+  currency     String        @default("SLE")
+  amount       Int
+  feeAmount    Int           @default(0)
+  fromEntity   String?
+  toEntity     String?
+
+  checkoutSessionId String?
+  monimePaymentId   String?
+  monimePayoutId    String?
+
+  failureCode    String?
+  failureMessage String?
+  retryCount     Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  bounty     Bounty      @relation(fields: [bountyId], references: [id])
+  submission Submission? @relation(fields: [submissionId], references: [id])
+
+  @@index([bountyId])
+  @@index([submissionId])
+  @@index([status])
+  @@index([monimePaymentId])
+  @@index([monimePayoutId])
+}
+
+// =============================================================================
+// Disputes
+// =============================================================================
+
+model Dispute {
+  id         String   @id @default(cuid())
+  bountyId   String
+  raisedById String
+  reason     String
+  status     String   @default("OPEN")
+  resolution String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  bounty   Bounty @relation(fields: [bountyId], references: [id])
+  raisedBy User   @relation(fields: [raisedById], references: [id])
+
+  @@index([bountyId])
+  @@index([raisedById])
+}
+
+// =============================================================================
+// Platform settings (new in this revision)
+// =============================================================================
+
+model Setting {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       Json
+  updatedAt   DateTime @updatedAt
+  updatedById String?
+
+  updatedBy User? @relation(fields: [updatedById], references: [id])
+}
+
+// =============================================================================
+// Company invites (new in this revision)
+// =============================================================================
+
+model CompanyInvite {
+  id              String       @id @default(cuid())
+  email           String
+  companyName     String?
+  invitedById     String
+  status          InviteStatus @default(PENDING)
+  acceptedUserId  String?
+  createdAt       DateTime     @default(now())
+  acceptedAt      DateTime?
+
+  invitedBy    User  @relation("InviteCreatedBy", fields: [invitedById], references: [id])
+  acceptedUser User? @relation("InviteAcceptedBy", fields: [acceptedUserId], references: [id])
+
+  @@index([email])
+  @@index([invitedById])
+  @@index([status])
+  // NOTE: partial-unique index `(email) WHERE status = 'PENDING'` is appended
+  // as raw SQL in the initial migration — Prisma does not yet support partial
+  // unique indexes declaratively.
+}
+
+// =============================================================================
+// Push subscriptions (new in this revision)
+// =============================================================================
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// =============================================================================
+// Notification preferences + notifications (revised)
+//   - `Notification.channel` removed; the service fans out to email + push + in-app.
+// =============================================================================
+
+model NotificationPreference {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  prefs     Json
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  eventType String
+  title     String
+  message   String?
+  link      String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, eventType, createdAt])
+}
