@@ -238,3 +238,52 @@ export async function markPublished(id: string, tx: Prisma.TransactionClient = p
 export async function deleteBounty(id: string) {
 	await prisma.bounty.delete({ where: { id } });
 }
+
+export async function setAiEmbedding(id: string, vector: number[]) {
+	await prisma.bounty.update({
+		where: { id },
+		data: { aiEmbedding: vector }
+	});
+}
+
+/**
+ * Used by matching.service. Reuses `selectForFreelancer` (sponsor-private
+ * fields stay excluded) and adds `aiEmbedding` so the service can compute
+ * cosine similarity in memory.
+ */
+export const selectForMatching = {
+	...selectForFreelancer,
+	aiEmbedding: true
+} satisfies Prisma.BountySelect;
+
+export type BountyForMatching = Prisma.BountyGetPayload<{ select: typeof selectForMatching }>;
+
+/**
+ * Returns ACTIVE bounties with their embeddings for cosine-similarity ranking.
+ * Bounties without an embedding are filtered out in the service layer (Prisma
+ * cannot express "non-empty array" cleanly across providers).
+ */
+export async function listActiveForMatching(): Promise<BountyForMatching[]> {
+	return prisma.bounty.findMany({
+		where: { status: BountyStatus.ACTIVE },
+		select: selectForMatching,
+		orderBy: [{ publishedAt: 'desc' }, { createdAt: 'desc' }]
+	});
+}
+
+/**
+ * Lightweight load used to compose the bounty's embedding prompt.
+ */
+export async function findForEmbedding(id: string) {
+	return prisma.bounty.findUnique({
+		where: { id },
+		select: {
+			id: true,
+			title: true,
+			description: true,
+			requirements: true,
+			deliverables: true,
+			skills: { select: { skill: { select: { name: true } } } }
+		}
+	});
+}

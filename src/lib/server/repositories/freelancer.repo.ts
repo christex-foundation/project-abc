@@ -1,5 +1,29 @@
 import { prisma } from '../db';
-import type { FreelancerProfile } from '@prisma/client';
+import type { FreelancerProfile, Prisma, PrismaClient } from '@prisma/client';
+
+export type FreelancerProfileWithSkills = Prisma.FreelancerProfileGetPayload<{
+	include: {
+		skills: {
+			include: { skill: { select: { id: true; name: true; slug: true; categoryId: true } } };
+		};
+	};
+}>;
+
+export type UpdateProfileInput = {
+	displayName?: string;
+	headline?: string | null;
+	bio?: string | null;
+	portfolio?: string | null;
+	experienceLevel?: string | null;
+	momoNumber?: string | null;
+	whatsappNumber?: string | null;
+};
+
+export type FreelancerSkillInput = {
+	skillId: string;
+	proficiencyLevel: number;
+	yearsExperience?: number | null;
+};
 
 export async function createEmpty(userId: string, displayName: string): Promise<FreelancerProfile> {
 	return prisma.freelancerProfile.create({
@@ -9,4 +33,60 @@ export async function createEmpty(userId: string, displayName: string): Promise<
 
 export async function findByUserId(userId: string): Promise<FreelancerProfile | null> {
 	return prisma.freelancerProfile.findUnique({ where: { userId } });
+}
+
+export async function findByUserIdWithSkills(
+	userId: string
+): Promise<FreelancerProfileWithSkills | null> {
+	return prisma.freelancerProfile.findUnique({
+		where: { userId },
+		include: {
+			skills: {
+				include: { skill: { select: { id: true, name: true, slug: true, categoryId: true } } }
+			}
+		}
+	});
+}
+
+export async function findByIdWithSkills(id: string): Promise<FreelancerProfileWithSkills | null> {
+	return prisma.freelancerProfile.findUnique({
+		where: { id },
+		include: {
+			skills: {
+				include: { skill: { select: { id: true, name: true, slug: true, categoryId: true } } }
+			}
+		}
+	});
+}
+
+export async function updateProfile(
+	tx: Prisma.TransactionClient | PrismaClient,
+	id: string,
+	data: UpdateProfileInput
+): Promise<FreelancerProfile> {
+	return tx.freelancerProfile.update({ where: { id }, data });
+}
+
+export async function replaceSkills(
+	tx: Prisma.TransactionClient | PrismaClient,
+	freelancerProfileId: string,
+	skills: FreelancerSkillInput[]
+) {
+	await tx.freelancerSkill.deleteMany({ where: { freelancerProfileId } });
+	if (skills.length === 0) return;
+	await tx.freelancerSkill.createMany({
+		data: skills.map((s) => ({
+			freelancerProfileId,
+			skillId: s.skillId,
+			proficiencyLevel: s.proficiencyLevel,
+			yearsExperience: s.yearsExperience ?? null
+		}))
+	});
+}
+
+export async function setAiEmbedding(id: string, vector: number[]) {
+	await prisma.freelancerProfile.update({
+		where: { id },
+		data: { aiEmbedding: vector }
+	});
 }
