@@ -1,0 +1,44 @@
+import * as bountyService from '$lib/server/services/bounty.service';
+import * as skillService from '$lib/server/services/skill.service';
+import type { PageServerLoad } from './$types';
+
+export const load: PageServerLoad = async ({ url }) => {
+	const params = Object.fromEntries(url.searchParams.entries());
+	const skillIdsAll = url.searchParams.getAll('skillIds');
+	const result = await bountyService.listBounties({
+		...params,
+		...(skillIdsAll.length ? { skillIds: skillIdsAll } : {})
+	});
+	const skills = await skillService.listSkills();
+
+	// Page-level robots: if any filter is applied, prevent indexing of thin
+	// derived URLs. Pagination key alone (`page`) doesn't count.
+	const filterKeys = [
+		'type',
+		'compensationType',
+		'skillIds',
+		'minPrize',
+		'maxPrize',
+		'beforeDeadline',
+		'search'
+	];
+	const hasFilter = filterKeys.some((k) => url.searchParams.has(k));
+
+	return {
+		items: result.items,
+		total: result.total,
+		page: Number(params.page ?? 1),
+		pageSize: Number(params.pageSize ?? 20),
+		filters: {
+			type: params.type ?? '',
+			compensationType: params.compensationType ?? '',
+			minPrize: params.minPrize ?? '',
+			maxPrize: params.maxPrize ?? '',
+			beforeDeadline: params.beforeDeadline ?? '',
+			search: params.search ?? '',
+			skillIds: skillIdsAll
+		},
+		categories: skills,
+		pageMetaTags: hasFilter ? { robots: 'noindex, nofollow' } : undefined
+	};
+};
