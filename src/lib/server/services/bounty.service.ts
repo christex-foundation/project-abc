@@ -8,6 +8,7 @@ import * as prizeTierRepo from '../repositories/prizeTier.repo';
 import * as bountySkillRepo from '../repositories/bountySkill.repo';
 import * as companyRepo from '../repositories/company.repo';
 import * as skillRepo from '../repositories/skill.repo';
+import * as matchingService from './matching.service';
 import {
 	createBountyInput,
 	mergedBountyInput,
@@ -258,7 +259,10 @@ export async function publish(caller: AuthedUser, id: string) {
 		throw new AppError('CONFLICT', 'Only FUNDED bounties may be published.');
 	}
 	await bountyRepo.markPublished(id);
-	// TODO Phase 5: matching.service.recomputeBountyEmbedding(id).
+	// Fire-and-forget — OpenAI latency or downtime must not block publish.
+	void matchingService
+		.recomputeBountyEmbedding(id)
+		.catch((e) => console.error('[bounty.service] embedding recompute failed:', e));
 	const full = await bountyRepo.findBountyById(id);
 	if (!full) throw new AppError('INTERNAL', 'Failed to reload bounty.');
 	return full;
