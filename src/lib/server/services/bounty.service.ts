@@ -8,6 +8,7 @@ import * as prizeTierRepo from '../repositories/prizeTier.repo';
 import * as bountySkillRepo from '../repositories/bountySkill.repo';
 import * as companyRepo from '../repositories/company.repo';
 import * as skillRepo from '../repositories/skill.repo';
+import * as submissionRepo from '../repositories/submission.repo';
 import * as matchingService from './matching.service';
 import * as notification from './notification.service';
 import {
@@ -253,6 +254,48 @@ export async function listForCompany(caller: AuthedUser) {
 	const profile = await companyRepo.findByUserId(caller.id);
 	if (!profile) return [];
 	return bountyRepo.listForCompany(profile.id);
+}
+
+export type CompanyOverviewStats = {
+	activeBountiesCount: number;
+	activeProjectsCount: number;
+	draftCount: number;
+	fundedCount: number;
+	completedCount: number;
+	totalSubmissions: number;
+	totalEscrowFunded: number;
+	currency: string;
+};
+
+export async function companyOverviewStats(caller: AuthedUser): Promise<CompanyOverviewStats> {
+	requireRole(caller, 'COMPANY');
+	const zeros: CompanyOverviewStats = {
+		activeBountiesCount: 0,
+		activeProjectsCount: 0,
+		draftCount: 0,
+		fundedCount: 0,
+		completedCount: 0,
+		totalSubmissions: 0,
+		totalEscrowFunded: 0,
+		currency: 'SLE'
+	};
+	const profile = await companyRepo.findByUserId(caller.id);
+	if (!profile) return zeros;
+	const [bounties, totalSubmissions] = await Promise.all([
+		bountyRepo.listForCompany(profile.id),
+		submissionRepo.countSubmissionsForCompany(profile.id)
+	]);
+	const isOpen = (s: BountyStatus) => s === BountyStatus.ACTIVE || s === BountyStatus.JUDGING;
+	return {
+		activeBountiesCount: bounties.filter((b) => isOpen(b.status) && b.type === 'BOUNTY').length,
+		activeProjectsCount: bounties.filter((b) => isOpen(b.status) && b.type === 'PROJECT').length,
+		draftCount: bounties.filter((b) => b.status === BountyStatus.DRAFT).length,
+		fundedCount: bounties.filter((b) => b.status === BountyStatus.FUNDED).length,
+		completedCount: bounties.filter((b) => b.status === BountyStatus.COMPLETED).length,
+		totalSubmissions,
+		totalEscrowFunded: bounties.reduce((s, b) => s + b.escrowFundedAmount, 0),
+		currency: bounties[0]?.currency ?? 'SLE'
+	};
 }
 
 export async function publish(caller: AuthedUser, id: string, enqueue: Enqueue = inlineEnqueue) {

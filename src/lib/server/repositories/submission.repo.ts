@@ -140,6 +140,12 @@ export async function listForFreelancer(
 	});
 }
 
+export async function countSubmissionsForCompany(companyProfileId: string): Promise<number> {
+	return prisma.submission.count({
+		where: { isActive: true, bounty: { companyProfileId } }
+	});
+}
+
 export async function listWinners(bountyId: string): Promise<SubmissionForSponsor[]> {
 	return prisma.submission.findMany({
 		where: { bountyId, isWinner: true, isActive: true },
