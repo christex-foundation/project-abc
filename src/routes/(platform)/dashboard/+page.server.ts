@@ -12,9 +12,7 @@ export const load: PageServerLoad = ({ locals }) => {
 		case 'COMPANY':
 			throw redirect(303, '/dashboard/company/bounties');
 		case 'FREELANCER':
-			// Freelancer dashboard subroutes land in Phase 4 (submissions / earnings).
-			// Until then, send them to the public browse so the link doesn't 404.
-			throw redirect(303, '/bounties');
+			throw redirect(303, '/dashboard/freelancer/submissions');
 		case 'ADMIN':
 			throw redirect(303, '/admin');
 	}

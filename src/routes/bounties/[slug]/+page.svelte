@@ -206,9 +206,20 @@
 				</Card>
 			{/if}
 
-			<Button class="w-full" disabled title="Submissions open once Phase 4 ships.">
-				Submit work (coming soon)
-			</Button>
+			{#if page.data.user?.role === 'FREELANCER' && b.status === 'ACTIVE' && !countdown.ago}
+				<Button class="w-full" href={`/bounties/${b.slug}/submit`}>Submit work</Button>
+			{:else if !page.data.user}
+				<Button
+					class="w-full"
+					href={`/login?next=${encodeURIComponent(`/bounties/${b.slug}/submit`)}`}
+				>
+					Sign in to submit
+				</Button>
+			{:else if b.status !== 'ACTIVE'}
+				<Button class="w-full" disabled>Submissions closed</Button>
+			{:else}
+				<Button class="w-full" disabled>Submissions closed</Button>
+			{/if}
 		</aside>
 	</div>
 </article>
