@@ -1,6 +1,7 @@
 import { AppError } from '../http';
 import { requireRole, type AuthedUser } from '../auth-helpers';
 import * as userRepo from '../repositories/user.repo';
+import * as bountyRepo from '../repositories/bounty.repo';
 import { adminUpdateUserInput } from '$lib/validators/admin-user';
 
 export async function listUsers(
@@ -31,4 +32,15 @@ export async function updateUser(caller: AuthedUser, userId: string, raw: unknow
 	}
 
 	return userRepo.findById(userId);
+}
+
+export async function setBountyCreditsExempt(
+	caller: AuthedUser,
+	bountyId: string,
+	creditsExempt: boolean
+) {
+	requireRole(caller, 'ADMIN');
+	const bounty = await bountyRepo.findBountyById(bountyId);
+	if (!bounty) throw new AppError('NOT_FOUND', 'Bounty not found.');
+	return bountyRepo.setCreditsExempt(bountyId, creditsExempt);
 }

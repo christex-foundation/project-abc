@@ -26,6 +26,7 @@ export const selectForFreelancer = {
 	numberOfWinners: true,
 	maxBonusSpots: true,
 	eligibility: true,
+	creditsExempt: true,
 	timeToComplete: true,
 	submissionDeadline: true,
 	judgingDeadline: true,
@@ -152,11 +153,23 @@ export type AdminBountyRow = {
 	currency: string;
 	totalPrizePool: number;
 	escrowFundedAmount: number;
+	creditsExempt: boolean;
 	submissionDeadline: Date;
 	createdAt: Date;
 	company: { id: string; companyName: string };
 	_count: { submissions: number };
 };
+
+export async function setCreditsExempt(
+	bountyId: string,
+	creditsExempt: boolean
+): Promise<{ id: string; creditsExempt: boolean }> {
+	return prisma.bounty.update({
+		where: { id: bountyId },
+		data: { creditsExempt },
+		select: { id: true, creditsExempt: true }
+	});
+}
 
 export async function listForAdmin(filter: {
 	search?: string;
@@ -183,6 +196,7 @@ export async function listForAdmin(filter: {
 			currency: true,
 			totalPrizePool: true,
 			escrowFundedAmount: true,
+			creditsExempt: true,
 			submissionDeadline: true,
 			createdAt: true,
 			company: { select: { id: true, companyName: true } },

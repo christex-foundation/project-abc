@@ -53,6 +53,7 @@ export type AdminUserRow = {
 	isActive: boolean;
 	emailVerified: boolean;
 	createdAt: Date;
+	freelancerProfileId: string | null;
 };
 
 export async function listForAdmin(
@@ -79,7 +80,8 @@ export async function listForAdmin(
 				role: true,
 				isActive: true,
 				emailVerified: true,
-				createdAt: true
+				createdAt: true,
+				freelancerProfile: { select: { id: true } }
 			},
 			orderBy: { createdAt: 'desc' },
 			take,
@@ -87,5 +89,17 @@ export async function listForAdmin(
 		}),
 		prisma.user.count({ where })
 	]);
-	return { items, total };
+	return {
+		items: items.map((u) => ({
+			id: u.id,
+			email: u.email,
+			name: u.name,
+			role: u.role,
+			isActive: u.isActive,
+			emailVerified: u.emailVerified,
+			createdAt: u.createdAt,
+			freelancerProfileId: u.freelancerProfile?.id ?? null
+		})),
+		total
+	};
 }
