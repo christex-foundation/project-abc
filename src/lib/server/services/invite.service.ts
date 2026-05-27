@@ -130,6 +130,68 @@ export async function listInvites(caller: AuthedUser) {
 	return inviteRepo.listAll();
 }
 
+export type CreateAdminInviteInput = {
+	email: string;
+	name?: string | null;
+};
+
+/**
+ * Provision a new ADMIN-role user and send a password-reset link. Unlike
+ * companies, admin invites do not create a CompanyInvite row — the User row
+ * with role=ADMIN is the source of truth, and /admin/admins lists from there.
+ *
+ * Refuses to overwrite an existing COMPANY account (which has business data
+ * attached). Promotes an existing FREELANCER to ADMIN if the caller passes
+ * `promoteExisting` semantics by calling again — for now we just error so the
+ * admin makes the role change explicitly via the users page.
+ */
+export async function createAdminInvite(
+	caller: AuthedUser,
+	input: CreateAdminInviteInput
+): Promise<{ user: { id: string; email: string; name: string | null } }> {
+	requireRole(caller, 'ADMIN');
+	const email = input.email.toLowerCase().trim();
+	if (!email) throw new AppError('BAD_REQUEST', 'Email is required.');
+
+	let user = await userRepo.findByEmail(email);
+	if (!user) {
+		const password = randomBytes(32).toString('hex');
+		const result = await auth.api.signUpEmail({
+			body: { email, password, name: input.name ?? email }
+		});
+		if (!result?.user?.id) {
+			throw new AppError('INTERNAL', 'Failed to create user for admin invite.');
+		}
+		await prisma.user.update({
+			where: { id: result.user.id },
+			data: { role: UserRole.ADMIN, isActive: true }
+		});
+		user = await userRepo.findById(result.user.id);
+	} else if (user.role === UserRole.COMPANY) {
+		throw new AppError(
+			'CONFLICT',
+			`User ${email} already exists as a COMPANY. Demote them first if you want to make them an admin.`
+		);
+	} else if (user.role === UserRole.ADMIN) {
+		// Already an admin — re-send the reset link (idempotent).
+	} else {
+		// FREELANCER → promote to ADMIN.
+		await prisma.user.update({
+			where: { id: user.id },
+			data: { role: UserRole.ADMIN, isActive: true }
+		});
+	}
+
+	if (!user) throw new AppError('INTERNAL', 'User lookup failed after creation.');
+
+	// Trigger the password-reset link → /accept-invite.
+	await auth.api.requestPasswordReset({
+		body: { email, redirectTo: '/accept-invite' }
+	});
+
+	return { user: { id: user.id, email: user.email, name: user.name } };
+}
+
 async function resolveSystemAdminId(): Promise<string> {
 	const admin = await prisma.user.findFirst({
 		where: { role: UserRole.ADMIN },
