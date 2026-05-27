@@ -1,4 +1,10 @@
-import { BountyStatus, BountyType, PaymentMethod, PaymentStatus, PaymentType } from '@prisma/client';
+import {
+	BountyStatus,
+	BountyType,
+	PaymentMethod,
+	PaymentStatus,
+	PaymentType
+} from '@prisma/client';
 import { prisma } from '../db';
 import { AppError } from '../http';
 import { requireRole, type AuthedUser } from '../auth-helpers';
@@ -8,6 +14,7 @@ import * as companyRepo from '../repositories/company.repo';
 import * as submissionRepo from '../repositories/submission.repo';
 import * as paymentRepo from '../repositories/payment.repo';
 import * as notification from './notification.service';
+import * as creditService from './credit.service';
 
 function appUrl(): string {
 	return process.env.PUBLIC_APP_URL?.trim() || 'http://localhost:5173';
@@ -127,6 +134,7 @@ export async function announceWinners(caller: AuthedUser, bountyId: string) {
 		amount: number;
 		toAccountId: string;
 		freelancerUserId: string;
+		freelancerProfileId: string;
 	}> = [];
 
 	for (const w of winners) {
@@ -145,12 +153,14 @@ export async function announceWinners(caller: AuthedUser, bountyId: string) {
 			monimeTransferId: transfer.id,
 			amount: w.prizeAmount!,
 			toAccountId: w.freelancer.monimeFinancialAccountId!,
-			freelancerUserId: w.freelancer.user.id
+			freelancerUserId: w.freelancer.user.id,
+			freelancerProfileId: w.freelancer.id
 		});
 	}
 
 	// Persist Payment rows + flip bounty + mark submissions paid in one tx.
 	// Internal transfers are synchronous so we set status = COMPLETED immediately.
+	const creditConfig = await creditService.getConfig();
 	await prisma.$transaction(async (tx) => {
 		for (const p of transferResults) {
 			await paymentRepo.createPayout(
@@ -175,6 +185,9 @@ export async function announceWinners(caller: AuthedUser, bountyId: string) {
 					{ monimeTransferId: p.monimeTransferId, amount: p.amount, tranche: 1 },
 					tx
 				);
+			}
+			if (creditConfig.enabled) {
+				await creditService.grantWinBonus(p.freelancerProfileId, p.submissionId, bounty.id, tx);
 			}
 		}
 		await bountyRepo.markCompletedAndAnnounced(bounty.id, tx);

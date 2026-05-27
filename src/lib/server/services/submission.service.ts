@@ -8,6 +8,7 @@ import {
 import { AppError } from '../http';
 import { requireRole, type AuthedUser } from '../auth-helpers';
 import { sanitizeRichText } from '../sanitize';
+import { prisma } from '../db';
 import * as submissionRepo from '../repositories/submission.repo';
 import * as bountyRepo from '../repositories/bounty.repo';
 import * as freelancerRepo from '../repositories/freelancer.repo';
@@ -15,6 +16,7 @@ import * as companyRepo from '../repositories/company.repo';
 import * as paymentRepo from '../repositories/payment.repo';
 import * as userRepo from '../repositories/user.repo';
 import * as notification from './notification.service';
+import * as creditService from './credit.service';
 import {
 	createSubmissionInput,
 	setLabelInput,
@@ -122,17 +124,29 @@ export async function create(caller: AuthedUser, bountyId: string, raw: unknown)
 		throw new AppError('CONFLICT', 'You have already submitted to this bounty.');
 	}
 
+	const creditConfig = await creditService.getConfig();
+	const shouldCharge = creditConfig.enabled && !bounty.creditsExempt;
+
 	const sanitizedOther = parsed.otherInfo ? sanitizeRichText(parsed.otherInfo) : null;
-	const submission = await submissionRepo.create({
-		bountyId,
-		freelancerProfileId: freelancer.id,
-		link: parsed.link,
-		tweet: parsed.tweet ?? null,
-		otherInfo: sanitizedOther,
-		ask: parsed.ask ?? null,
-		eligibilityAnswers: parsed.eligibilityAnswers as unknown as Parameters<
-			typeof submissionRepo.create
-		>[0]['eligibilityAnswers']
+	const submission = await prisma.$transaction(async (tx) => {
+		const created = await submissionRepo.create(
+			{
+				bountyId,
+				freelancerProfileId: freelancer.id,
+				link: parsed.link,
+				tweet: parsed.tweet ?? null,
+				otherInfo: sanitizedOther,
+				ask: parsed.ask ?? null,
+				eligibilityAnswers: parsed.eligibilityAnswers as unknown as Parameters<
+					typeof submissionRepo.create
+				>[0]['eligibilityAnswers']
+			},
+			tx
+		);
+		if (shouldCharge) {
+			await creditService.spendForSubmission(freelancer.id, created.id, tx);
+		}
+		return created;
 	});
 
 	const owner = await userRepo.findCompanyOwnerByBountyId(bountyId);
@@ -213,6 +227,10 @@ export async function setLabel(caller: AuthedUser, submissionId: string, raw: un
 	if (submission.label === parsed.label) return submission;
 
 	const updated = await submissionRepo.setLabel(submission.id, parsed.label);
+
+	if (parsed.label === SubmissionLabel.SPAM && submission.label !== SubmissionLabel.SPAM) {
+		await creditService.penalizeSpam(submission.freelancerProfileId, submission.id, prisma);
+	}
 
 	if (parsed.label === SubmissionLabel.SHORTLISTED) {
 		const bountyUrl = `${appUrl()}/bounties/${bounty.slug}`;
