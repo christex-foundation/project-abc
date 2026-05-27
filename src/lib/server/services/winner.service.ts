@@ -83,8 +83,15 @@ export async function announceWinners(caller: AuthedUser, bountyId: string) {
 		throw new AppError('BAD_REQUEST', 'Mark at least one winner before announcing.');
 	}
 
-	// Validation — per winner.
+	// Validation — per winner. Freelancer FK is non-null at this point because
+	// unpaid winners block the freelancer's GDPR delete (see account.service).
 	for (const w of winners) {
+		if (!w.freelancer) {
+			throw new AppError(
+				'CONFLICT',
+				'A winning submission no longer has an attached freelancer — cannot pay out.'
+			);
+		}
 		if (!w.freelancer.monimeFinancialAccountId) {
 			throw new AppError(
 				'CONFLICT',
@@ -139,10 +146,12 @@ export async function announceWinners(caller: AuthedUser, bountyId: string) {
 	}> = [];
 
 	for (const w of winners) {
+		// Already validated as non-null above; assert for TS.
+		const freelancer = w.freelancer!;
 		const transfer = await withRetry(() =>
 			monime.internalTransfers.create({
 				from: bounty.escrowFinancialAccountId!,
-				to: w.freelancer.monimeFinancialAccountId!,
+				to: freelancer.monimeFinancialAccountId!,
 				amount: w.prizeAmount!,
 				currency: bounty.currency,
 				reference: `prize:${w.id}`,
@@ -153,9 +162,9 @@ export async function announceWinners(caller: AuthedUser, bountyId: string) {
 			submissionId: w.id,
 			monimeTransferId: transfer.id,
 			amount: w.prizeAmount!,
-			toAccountId: w.freelancer.monimeFinancialAccountId!,
-			freelancerUserId: w.freelancer.user.id,
-			freelancerProfileId: w.freelancer.id
+			toAccountId: freelancer.monimeFinancialAccountId!,
+			freelancerUserId: freelancer.user.id,
+			freelancerProfileId: freelancer.id
 		});
 	}
 
@@ -206,27 +215,31 @@ export async function announceWinners(caller: AuthedUser, bountyId: string) {
 	const bountyUrl = `${appUrl()}/bounties/${bounty.slug}`;
 
 	await Promise.all(
-		allSubmitters.map((s) => {
-			const w = winnerById.get(s.id);
-			const isWinner = !!w;
-			const freelancerName = s.freelancer.displayName;
-			return notification.dispatch(s.freelancer.user.id, 'WINNERS_ANNOUNCED', {
-				title: isWinner ? 'You won!' : 'Winners announced',
-				message: isWinner
-					? `You won "${bounty.title}" — prize transferred to your payment account.`
-					: `Winners were announced for "${bounty.title}".`,
-				link: bountyUrl,
-				email: {
-					bountyTitle: bounty.title,
-					bountyUrl,
-					freelancerName,
-					isWinner,
-					position: w?.winnerPosition ?? null,
-					amount: w?.prizeAmount ?? null,
-					currency: bounty.currency
-				}
-			});
-		})
+		allSubmitters
+			.filter(
+				(s): s is typeof s & { freelancer: NonNullable<typeof s.freelancer> } => !!s.freelancer
+			)
+			.map((s) => {
+				const w = winnerById.get(s.id);
+				const isWinner = !!w;
+				const freelancerName = s.freelancer.displayName;
+				return notification.dispatch(s.freelancer.user.id, 'WINNERS_ANNOUNCED', {
+					title: isWinner ? 'You won!' : 'Winners announced',
+					message: isWinner
+						? `You won "${bounty.title}" — prize transferred to your payment account.`
+						: `Winners were announced for "${bounty.title}".`,
+					link: bountyUrl,
+					email: {
+						bountyTitle: bounty.title,
+						bountyUrl,
+						freelancerName,
+						isWinner,
+						position: w?.winnerPosition ?? null,
+						amount: w?.prizeAmount ?? null,
+						currency: bounty.currency
+					}
+				});
+			})
 	);
 
 	const fresh = await bountyRepo.findBountyById(bountyId);
@@ -260,6 +273,9 @@ export async function payProjectTranche(
 	}
 	if (!bounty.escrowFinancialAccountId) {
 		throw new AppError('INTERNAL', 'Bounty is missing its escrow account.');
+	}
+	if (!submission.freelancer) {
+		throw new AppError('CONFLICT', 'Winning freelancer is no longer attached to this submission.');
 	}
 	if (!submission.freelancer.monimeFinancialAccountId) {
 		throw new AppError('CONFLICT', 'Winner has not set up their payment account.');
@@ -298,10 +314,11 @@ export async function payProjectTranche(
 		(lastPrize ? prior.filter((p) => p.type === PaymentType.PRIZE_PAYOUT).length : 0) + 1;
 
 	// Internal transfer (synchronous) — no webhook needed
+	const freelancer = submission.freelancer;
 	const transfer = await withRetry(() =>
 		monime.internalTransfers.create({
 			from: bounty.escrowFinancialAccountId!,
-			to: submission.freelancer.monimeFinancialAccountId!,
+			to: freelancer.monimeFinancialAccountId!,
 			amount,
 			currency: bounty.currency,
 			reference: `tranche:${submission.id}:${nextTrancheNumber}`,
@@ -322,7 +339,7 @@ export async function payProjectTranche(
 				currency: bounty.currency,
 				monimeTransferId: transfer.id,
 				fromEntity: bounty.escrowFinancialAccountId!,
-				toEntity: submission.freelancer.monimeFinancialAccountId!,
+				toEntity: freelancer.monimeFinancialAccountId!,
 				status: PaymentStatus.COMPLETED
 			},
 			tx

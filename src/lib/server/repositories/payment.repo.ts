@@ -58,7 +58,9 @@ export async function sumCompletedPrizePayoutsForSubmission(
 export type FreelancerEarningRow = Payment & {
 	submission: {
 		id: string;
-		bounty: { id: string; slug: string; title: string; type: string; currency: string };
+		// Bounty is nullable when the owning company has deleted their account
+		// (Bounty stays alive but loses its company FK).
+		bounty: { id: string; slug: string; title: string; type: string; currency: string } | null;
 	} | null;
 };
 
@@ -255,7 +257,8 @@ export async function incrementRetry(id: string): Promise<Payment> {
 
 export type AdminPaymentRow = Payment & {
 	bounty: { id: string; slug: string; title: string };
-	submission: { id: string; freelancer: { displayName: string } } | null;
+	// Freelancer is nullable when the submitter has deleted their account.
+	submission: { id: string; freelancer: { displayName: string } | null } | null;
 };
 
 export async function listForAdmin(filter: {

@@ -121,8 +121,9 @@ export async function update(caller: AuthedUser, id: string, raw: unknown) {
 	if (parsed.resolution !== undefined && parsed.resolution.trim().length > 0) {
 		const nextStatus = parsed.status ?? 'RESOLVED';
 		updated = await disputeRepo.setResolution(id, parsed.resolution.trim(), nextStatus);
-		// Notify the raiser when transitioning to RESOLVED.
-		if (nextStatus === 'RESOLVED') {
+		// Notify the raiser when transitioning to RESOLVED. Skip silently if the
+		// raiser has since deleted their account (raisedById is now nullable).
+		if (nextStatus === 'RESOLVED' && dispute.raisedById) {
 			await notification.dispatch(dispute.raisedById, 'DISPUTE_RESOLVED', {
 				title: 'Dispute resolved',
 				message: `Your dispute on "${dispute.bounty.title}" has been resolved.`,

@@ -43,7 +43,7 @@ async function loadOwnedSubmission(caller: AuthedUser, submissionId: string) {
 	const submission = await submissionRepo.findByIdForSponsor(submissionId);
 	if (!submission) throw new AppError('NOT_FOUND', 'Submission not found.');
 	const bounty = await bountyRepo.findBountyById(submission.bountyId);
-	if (!bounty) throw new AppError('NOT_FOUND', 'Submission not found.');
+	if (!bounty || !bounty.companyProfileId) throw new AppError('NOT_FOUND', 'Submission not found.');
 	if (!(await ownsBounty(caller, bounty.companyProfileId))) {
 		throw new AppError('FORBIDDEN', 'You do not own this submission.');
 	}
@@ -179,7 +179,8 @@ export async function getForCaller(caller: AuthedUser, submissionId: string) {
 		const submission = await submissionRepo.findByIdForSponsor(submissionId);
 		if (!submission) throw new AppError('NOT_FOUND', 'Submission not found.');
 		const bounty = await bountyRepo.findBountyById(submission.bountyId);
-		if (!bounty) throw new AppError('NOT_FOUND', 'Submission not found.');
+		if (!bounty || !bounty.companyProfileId)
+			throw new AppError('NOT_FOUND', 'Submission not found.');
 		if (await ownsBounty(caller, bounty.companyProfileId)) {
 			return { view: 'sponsor' as const, data: submission };
 		}
@@ -202,7 +203,7 @@ export async function listForBountyAsSponsor(
 ) {
 	requireRole(caller, 'COMPANY', 'ADMIN');
 	const bounty = await bountyRepo.findBountyById(bountyId);
-	if (!bounty) throw new AppError('NOT_FOUND', 'Bounty not found.');
+	if (!bounty || !bounty.companyProfileId) throw new AppError('NOT_FOUND', 'Bounty not found.');
 	if (!(await ownsBounty(caller, bounty.companyProfileId))) {
 		throw new AppError('FORBIDDEN', 'You do not own this bounty.');
 	}
@@ -232,18 +233,19 @@ export async function setLabel(caller: AuthedUser, submissionId: string, raw: un
 
 	const updated = await submissionRepo.setLabel(submission.id, parsed.label);
 
-	if (parsed.label === SubmissionLabel.SPAM && submission.label !== SubmissionLabel.SPAM) {
+	if (
+		parsed.label === SubmissionLabel.SPAM &&
+		submission.label !== SubmissionLabel.SPAM &&
+		submission.freelancerProfileId
+	) {
+		const freelancerProfileId = submission.freelancerProfileId;
 		await prisma.$transaction(async (tx) => {
-			await creditService.penalizeSpam(submission.freelancerProfileId, submission.id, tx);
-			await referralService.onSubmissionLabelledSpam(
-				submission.freelancerProfileId,
-				submission.id,
-				tx
-			);
+			await creditService.penalizeSpam(freelancerProfileId, submission.id, tx);
+			await referralService.onSubmissionLabelledSpam(freelancerProfileId, submission.id, tx);
 		});
 	}
 
-	if (parsed.label === SubmissionLabel.SHORTLISTED) {
+	if (parsed.label === SubmissionLabel.SHORTLISTED && submission.freelancer) {
 		const bountyUrl = `${appUrl()}/bounties/${bounty.slug}`;
 		await notification.dispatch(submission.freelancer.user.id, 'SUBMISSION_SHORTLISTED', {
 			title: "You've been shortlisted",

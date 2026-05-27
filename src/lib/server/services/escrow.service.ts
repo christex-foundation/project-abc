@@ -104,7 +104,9 @@ export async function fundFromFinancialAccount(
 		await bountyRepo.markFunded(bounty.id, bounty.totalPrizePool, tx);
 	});
 
-	const owner = await userRepo.findByCompanyProfileId(bounty.companyProfileId);
+	const owner = bounty.companyProfileId
+		? await userRepo.findByCompanyProfileId(bounty.companyProfileId)
+		: null;
 	if (owner) {
 		await notification.dispatch(owner.id, 'BOUNTY_FUNDED', {
 			title: 'Bounty funded',
@@ -253,7 +255,9 @@ async function handleFundingCompleted(event: MonimeEvent) {
 		await bountyRepo.markFunded(bounty.id, bounty.totalPrizePool, tx);
 	});
 
-	const owner = await userRepo.findByCompanyProfileId(bounty.companyProfileId);
+	const owner = bounty.companyProfileId
+		? await userRepo.findByCompanyProfileId(bounty.companyProfileId)
+		: null;
 	if (owner) {
 		await notification.dispatch(owner.id, 'BOUNTY_FUNDED', {
 			title: 'Bounty funded',
@@ -355,16 +359,20 @@ export async function cancelBountyWithRefund(caller: AuthedUser, bountyId: strin
 async function fanOutBountyCancelledToSubmitters(bountyId: string, bountyTitle: string) {
 	const submitters = await submissionRepo.listSubmittersForBounty(bountyId);
 	await Promise.all(
-		submitters.map((s) =>
-			notification.dispatch(s.freelancer.user.id, 'BOUNTY_CANCELLED', {
-				title: 'Bounty cancelled',
-				message: `"${bountyTitle}" was cancelled by the sponsor.`,
-				email: {
-					bountyTitle,
-					isSubmitter: true
-				}
-			})
-		)
+		submitters
+			.filter(
+				(s): s is typeof s & { freelancer: NonNullable<typeof s.freelancer> } => !!s.freelancer
+			)
+			.map((s) =>
+				notification.dispatch(s.freelancer.user.id, 'BOUNTY_CANCELLED', {
+					title: 'Bounty cancelled',
+					message: `"${bountyTitle}" was cancelled by the sponsor.`,
+					email: {
+						bountyTitle,
+						isSubmitter: true
+					}
+				})
+			)
 	);
 }
 
@@ -451,18 +459,20 @@ async function onPrizePayoutCompleted(submissionId: string, amount: number) {
 		: [];
 	const trancheNum = tranches.length > 0 ? (tranches[tranches.length - 1]?.tranche ?? null) : null;
 
-	await notification.dispatch(submission.freelancer.user.id, 'PAYOUT_COMPLETED', {
-		title: 'Payout settled',
-		message: `Your prize for "${bounty.title}" has been paid.`,
-		link: `/bounties/${bounty.slug}`,
-		email: {
-			bountyTitle: bounty.title,
-			amount,
-			currency: bounty.currency,
-			tranche: bounty.type === 'PROJECT' ? trancheNum : null,
-			totalTranches: null
-		}
-	});
+	if (submission.freelancer) {
+		await notification.dispatch(submission.freelancer.user.id, 'PAYOUT_COMPLETED', {
+			title: 'Payout settled',
+			message: `Your prize for "${bounty.title}" has been paid.`,
+			link: `/bounties/${bounty.slug}`,
+			email: {
+				bountyTitle: bounty.title,
+				amount,
+				currency: bounty.currency,
+				tranche: bounty.type === 'PROJECT' ? trancheNum : null,
+				totalTranches: null
+			}
+		});
+	}
 }
 
 async function onPrizePayoutFailed(

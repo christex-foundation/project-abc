@@ -32,6 +32,7 @@ export const selectForFreelancer = {
 	judgingDeadline: true,
 	publishedAt: true,
 	createdAt: true,
+	companyNameSnapshot: true,
 	company: {
 		select: {
 			id: true,
@@ -156,7 +157,8 @@ export type AdminBountyRow = {
 	creditsExempt: boolean;
 	submissionDeadline: Date;
 	createdAt: Date;
-	company: { id: string; companyName: string };
+	// Nullable after the owning company's GDPR account deletion (FK is SET NULL).
+	company: { id: string; companyName: string } | null;
 	_count: { submissions: number };
 };
 

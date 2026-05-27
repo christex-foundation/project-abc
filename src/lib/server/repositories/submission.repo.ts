@@ -43,6 +43,7 @@ export const selectForSponsor = {
 	notes: true,
 	score: true,
 	isActive: true,
+	freelancerNameSnapshot: true,
 	freelancer: {
 		select: {
 			id: true,

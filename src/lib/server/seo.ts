@@ -34,13 +34,13 @@ export function buildBountyJsonLd(bounty: BountyForFreelancer, originUrl: string
 		employmentType: 'CONTRACTOR',
 		hiringOrganization: {
 			'@type': 'Organization',
-			name: bounty.company.companyName,
-			...(bounty.company.website ? { sameAs: bounty.company.website } : {}),
-			...(bounty.company.logo ? { logo: bounty.company.logo } : {})
+			name: bounty.company?.companyName ?? bounty.companyNameSnapshot ?? 'Anonymous',
+			...(bounty.company?.website ? { sameAs: bounty.company.website } : {}),
+			...(bounty.company?.logo ? { logo: bounty.company.logo } : {})
 		},
 		jobLocation: {
 			'@type': 'Place',
-			address: { '@type': 'PostalAddress', addressCountry: bounty.company.country ?? 'SL' }
+			address: { '@type': 'PostalAddress', addressCountry: bounty.company?.country ?? 'SL' }
 		},
 		baseSalary: {
 			'@type': 'MonetaryAmount',
