@@ -1,5 +1,13 @@
 import { prisma } from '../db';
-import { PaymentStatus, PaymentType, type Payment, type Prisma } from '@prisma/client';
+import {
+	PaymentMethod,
+	PaymentStatus,
+	PaymentType,
+	WithdrawalStatus,
+	type AccountWithdrawal,
+	type Payment,
+	type Prisma
+} from '@prisma/client';
 
 export async function findById(id: string): Promise<Payment | null> {
 	return prisma.payment.findUnique({ where: { id } });
@@ -84,8 +92,13 @@ type CreateDepositInput = {
 	bountyId: string;
 	amount: number;
 	currency?: string;
-	checkoutSessionId: string;
-	monimePaymentId: string;
+	/** Required for CHECKOUT method deposits. */
+	checkoutSessionId?: string;
+	/** Required for CHECKOUT method deposits. */
+	monimePaymentId?: string;
+	/** Required for INTERNAL_TRANSFER method deposits. */
+	monimeTransferId?: string;
+	method?: PaymentMethod;
 	fromEntity?: string;
 	toEntity?: string;
 	status?: PaymentStatus;
@@ -99,11 +112,13 @@ export async function createDeposit(
 		data: {
 			bountyId: input.bountyId,
 			type: PaymentType.ESCROW_DEPOSIT,
+			method: input.method ?? PaymentMethod.CHECKOUT,
 			status: input.status ?? PaymentStatus.COMPLETED,
 			currency: input.currency ?? 'SLE',
 			amount: input.amount,
-			checkoutSessionId: input.checkoutSessionId,
-			monimePaymentId: input.monimePaymentId,
+			checkoutSessionId: input.checkoutSessionId ?? null,
+			monimePaymentId: input.monimePaymentId ?? null,
+			monimeTransferId: input.monimeTransferId ?? null,
 			fromEntity: input.fromEntity ?? null,
 			toEntity: input.toEntity ?? null
 		}
@@ -116,7 +131,11 @@ type CreatePayoutInput = {
 	type: typeof PaymentType.PRIZE_PAYOUT | typeof PaymentType.REFUND;
 	amount: number;
 	currency?: string;
-	monimePayoutId: string;
+	/** Required for MOMO_PAYOUT method. */
+	monimePayoutId?: string;
+	/** Required for INTERNAL_TRANSFER method. */
+	monimeTransferId?: string;
+	method?: PaymentMethod;
 	toEntity?: string;
 	fromEntity?: string;
 	status?: PaymentStatus;
@@ -131,13 +150,77 @@ export async function createPayout(
 			bountyId: input.bountyId,
 			submissionId: input.submissionId ?? null,
 			type: input.type,
+			method: input.method ?? PaymentMethod.MOMO_PAYOUT,
 			status: input.status ?? PaymentStatus.PROCESSING,
 			currency: input.currency ?? 'SLE',
 			amount: input.amount,
-			monimePayoutId: input.monimePayoutId,
+			monimePayoutId: input.monimePayoutId ?? null,
+			monimeTransferId: input.monimeTransferId ?? null,
 			toEntity: input.toEntity ?? null,
 			fromEntity: input.fromEntity ?? null
 		}
+	});
+}
+
+// ─── Account Withdrawal (separate from bounty-scoped Payment) ────────────────
+
+type CreateWithdrawalInput = {
+	userId: string;
+	role: 'COMPANY' | 'FREELANCER';
+	fromAccountId: string;
+	toPhoneNumber: string;
+	holderName: string;
+	providerName: string;
+	amount: number;
+	currency?: string;
+	monimePayoutId: string;
+};
+
+export async function createWithdrawal(
+	input: CreateWithdrawalInput,
+	tx: Prisma.TransactionClient = prisma
+): Promise<AccountWithdrawal> {
+	return tx.accountWithdrawal.create({
+		data: {
+			userId: input.userId,
+			role: input.role,
+			fromAccountId: input.fromAccountId,
+			toPhoneNumber: input.toPhoneNumber,
+			holderName: input.holderName,
+			providerName: input.providerName,
+			amount: input.amount,
+			currency: input.currency ?? 'SLE',
+			monimePayoutId: input.monimePayoutId,
+			status: WithdrawalStatus.PROCESSING
+		}
+	});
+}
+
+export async function findWithdrawalByPayoutId(
+	monimePayoutId: string
+): Promise<AccountWithdrawal | null> {
+	return prisma.accountWithdrawal.findFirst({ where: { monimePayoutId } });
+}
+
+export async function markWithdrawalStatus(
+	id: string,
+	status: WithdrawalStatus,
+	opts: { failureCode?: string; failureMessage?: string } = {}
+): Promise<AccountWithdrawal> {
+	return prisma.accountWithdrawal.update({
+		where: { id },
+		data: {
+			status,
+			...(opts.failureCode !== undefined && { failureCode: opts.failureCode }),
+			...(opts.failureMessage !== undefined && { failureMessage: opts.failureMessage })
+		}
+	});
+}
+
+export async function listWithdrawalsForUser(userId: string): Promise<AccountWithdrawal[]> {
+	return prisma.accountWithdrawal.findMany({
+		where: { userId },
+		orderBy: { createdAt: 'desc' }
 	});
 }
 

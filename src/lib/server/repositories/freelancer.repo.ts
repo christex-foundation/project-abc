@@ -91,6 +91,17 @@ export async function setAiEmbedding(id: string, vector: number[]) {
 	});
 }
 
+export async function setFinancialAccount(
+	profileId: string,
+	accountId: string,
+	uvan: string | null
+): Promise<void> {
+	await prisma.freelancerProfile.update({
+		where: { id: profileId },
+		data: { monimeFinancialAccountId: accountId, monimeUvan: uvan }
+	});
+}
+
 export type FreelancerForMatching = {
 	id: string;
 	userId: string;

@@ -52,6 +52,8 @@ export const selectForSponsor = {
 			momoNumber: true,
 			whatsappNumber: true,
 			bankDetails: true,
+			monimeFinancialAccountId: true,
+			monimeUvan: true,
 			user: { select: { id: true, email: true, name: true } }
 		}
 	}
@@ -270,7 +272,10 @@ export async function markPaid(
 }
 
 export type TrancheEntry = {
-	monimePayoutId: string;
+	/** Populated for MOMO_PAYOUT method tranches (legacy). */
+	monimePayoutId?: string;
+	/** Populated for INTERNAL_TRANSFER method tranches. */
+	monimeTransferId?: string;
 	amount: number;
 	tranche: number;
 	final?: boolean;

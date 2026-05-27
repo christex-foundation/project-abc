@@ -29,3 +29,14 @@ export async function updateById(
 ): Promise<CompanyProfile> {
 	return prisma.companyProfile.update({ where: { id }, data });
 }
+
+export async function setFinancialAccount(
+	profileId: string,
+	accountId: string,
+	uvan: string | null
+): Promise<void> {
+	await prisma.companyProfile.update({
+		where: { id: profileId },
+		data: { monimeFinancialAccountId: accountId, monimeUvan: uvan }
+	});
+}
