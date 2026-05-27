@@ -1,4 +1,10 @@
-import { BountyStatus, BountyType, CompensationType, SubmissionLabel } from '@prisma/client';
+import {
+	BountyStatus,
+	BountyType,
+	CompensationType,
+	SubmissionLabel,
+	SubmissionStatus
+} from '@prisma/client';
 import { AppError } from '../http';
 import { requireRole, type AuthedUser } from '../auth-helpers';
 import { sanitizeRichText } from '../sanitize';
@@ -321,4 +327,23 @@ export async function toggleWinner(caller: AuthedUser, submissionId: string, raw
 		winnerPosition: position,
 		prizeAmount
 	});
+}
+
+/**
+ * Set the freelancer-visible `status` on a submission (PENDING / APPROVED / REJECTED).
+ * `APPROVED` surfaces as "Shortlisted" to the freelancer; the private `label` is untouched.
+ * Cannot be called after winners have been announced.
+ */
+export async function setSubmissionStatus(
+	caller: AuthedUser,
+	submissionId: string,
+	status: SubmissionStatus
+) {
+	requireRole(caller, 'COMPANY', 'ADMIN');
+	const { submission, bounty } = await loadOwnedSubmission(caller, submissionId);
+	if (bounty.isWinnersAnnounced) {
+		throw new AppError('CONFLICT', 'Cannot change status after winners have been announced.');
+	}
+	if (submission.status === status) return submission;
+	return submissionRepo.setStatus(submission.id, status);
 }

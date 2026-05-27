@@ -213,6 +213,23 @@ export async function setFeedback(
 	});
 }
 
+/**
+ * Update the freelancer-visible `status` field (PENDING → APPROVED / REJECTED).
+ * `SubmissionStatus.APPROVED` surfaces as "Shortlisted" to the freelancer;
+ * the sponsor-private `label` field is untouched.
+ */
+export async function setStatus(
+	id: string,
+	status: SubmissionStatus,
+	tx: Prisma.TransactionClient = prisma
+): Promise<SubmissionForSponsor> {
+	return tx.submission.update({
+		where: { id },
+		data: { status },
+		select: selectForSponsor
+	});
+}
+
 type ToggleWinnerInput = {
 	isWinner: boolean;
 	winnerPosition?: number | null;
