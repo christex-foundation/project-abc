@@ -4,7 +4,7 @@ import { AppError } from '$lib/server/http';
 import * as bountyService from '$lib/server/services/bounty.service';
 import * as submissionService from '$lib/server/services/submission.service';
 import * as winnerService from '$lib/server/services/winner.service';
-import { SubmissionLabel } from '@prisma/client';
+import { SubmissionLabel, SubmissionStatus } from '@prisma/client';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ params, locals }) => {
@@ -104,6 +104,28 @@ export const actions: Actions = {
 			return { action: 'announce', submissionId: null, success: true };
 		} catch (e) {
 			return failureFor('announce', null, e);
+		}
+	},
+	shortlist: async ({ request, locals }) => {
+		const caller = requireAuth(locals);
+		const form = await request.formData();
+		const submissionId = String(form.get('submissionId') ?? '');
+		try {
+			await submissionService.setSubmissionStatus(caller, submissionId, SubmissionStatus.APPROVED);
+			return { action: 'shortlist', submissionId, success: true };
+		} catch (e) {
+			return failureFor('shortlist', submissionId, e);
+		}
+	},
+	reject: async ({ request, locals }) => {
+		const caller = requireAuth(locals);
+		const form = await request.formData();
+		const submissionId = String(form.get('submissionId') ?? '');
+		try {
+			await submissionService.setSubmissionStatus(caller, submissionId, SubmissionStatus.REJECTED);
+			return { action: 'reject', submissionId, success: true };
+		} catch (e) {
+			return failureFor('reject', submissionId, e);
 		}
 	}
 };

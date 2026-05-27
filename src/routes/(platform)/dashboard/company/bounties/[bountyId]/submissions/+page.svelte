@@ -33,6 +33,19 @@
 		return 'secondary' as const;
 	}
 
+	/** Badge variant for the freelancer-visible status field. */
+	function statusVariant(status: string) {
+		if (status === 'APPROVED') return 'outline' as const;
+		if (status === 'REJECTED') return 'destructive' as const;
+		return 'secondary' as const;
+	}
+
+	function statusLabel(status: string) {
+		if (status === 'APPROVED') return 'Shortlisted';
+		if (status === 'REJECTED') return 'Rejected';
+		return 'Pending';
+	}
+
 	function formatMoney(minor: number | null | undefined, currency: string) {
 		if (minor == null) return '—';
 		return `${currency} ${(minor / 100).toLocaleString()}`;
@@ -75,6 +88,11 @@
 			</div>
 			<div class="flex gap-2">
 				<Button variant="outline" href={`/bounties/${bounty.slug}`}>View public page</Button>
+				{#if bounty.isWinnersAnnounced}
+					<Button variant="outline" href={`/dashboard/company/bounties/${bounty.id}/payments`}>
+						Payouts
+					</Button>
+				{/if}
 				{#if showJudgingButton}
 					<form method="POST" action="?/judging" use:enhance>
 						<Button type="submit">Move to judging</Button>
@@ -132,6 +150,9 @@
 							</CardTitle>
 							<div class="flex flex-wrap items-center gap-2">
 								<Badge variant={labelVariant(s.label)}>{s.label}</Badge>
+								<Badge variant={statusVariant(s.status)} class="text-xs">
+									Visible: {statusLabel(s.status)}
+								</Badge>
 								{#if s.isWinner}
 									<Badge variant="success">
 										Winner — pos {s.winnerPosition}
@@ -235,6 +256,32 @@
 										</div>
 									{/if}
 								</form>
+
+								<div class="space-y-1">
+									<Label>Freelancer-visible status</Label>
+									<div class="flex gap-2">
+										<form method="POST" action="?/shortlist" use:enhance>
+											<input type="hidden" name="submissionId" value={s.id} />
+											<Button
+												type="submit"
+												size="sm"
+												variant={s.status === 'APPROVED' ? 'default' : 'outline'}
+											>
+												Shortlist
+											</Button>
+										</form>
+										<form method="POST" action="?/reject" use:enhance>
+											<input type="hidden" name="submissionId" value={s.id} />
+											<Button
+												type="submit"
+												size="sm"
+												variant={s.status === 'REJECTED' ? 'destructive' : 'outline'}
+											>
+												Reject
+											</Button>
+										</form>
+									</div>
+								</div>
 							{/if}
 						</div>
 
