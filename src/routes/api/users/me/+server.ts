@@ -3,6 +3,7 @@ import { requireAuth } from '$lib/server/auth-helpers';
 import { AppError, respondError } from '$lib/server/http';
 import * as freelancerService from '$lib/server/services/freelancer.service';
 import * as companyService from '$lib/server/services/company.service';
+import { tryProvisionAccountAfterProfileUpdate } from '$lib/server/services/financial-account.service';
 import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async ({ locals }) => {
@@ -28,10 +29,14 @@ export const PATCH: RequestHandler = async ({ locals, request }) => {
 		const body = await request.json();
 		if (caller.role === 'FREELANCER') {
 			const profile = await freelancerService.updateProfile(caller, body);
+			// Lazily provision Monime financial account after profile save (non-blocking).
+			tryProvisionAccountAfterProfileUpdate(caller).catch(() => {});
 			return json({ freelancerProfile: profile });
 		}
 		if (caller.role === 'COMPANY') {
 			const profile = await companyService.updateProfile(caller, body);
+			// Lazily provision Monime financial account after profile save (non-blocking).
+			tryProvisionAccountAfterProfileUpdate(caller).catch(() => {});
 			return json({ companyProfile: profile });
 		}
 		throw new AppError('FORBIDDEN', 'No editable profile for this role.');
