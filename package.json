@@ -58,6 +58,7 @@
 		"@vite-pwa/sveltekit": "^1.1.0",
 		"better-auth": "^1.6.11",
 		"clsx": "^2.1.1",
+		"jszip": "^3.10.1",
 		"mobile-operator-lookup": "^2.0.0",
 		"openai": "^6.39.0",
 		"pg": "^8.21.0",
