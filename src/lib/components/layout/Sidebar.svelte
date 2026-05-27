@@ -25,7 +25,9 @@
 		{:else}
 			{#if user}
 				<a href={profileHref} class="mb-3 flex items-center gap-2 rounded-md bg-zinc-50 px-3 py-2 hover:bg-zinc-100">
-					<UserAvatar seed={user.name ?? user.email} size={32} />
+					{#if user.role !== 'COMPANY'}
+						<UserAvatar seed={user.name ?? user.email} size={32} />
+					{/if}
 					<span class="truncate text-xs text-zinc-700">{user.name ?? user.email}</span>
 				</a>
 			{/if}

@@ -14,6 +14,7 @@
 		Textarea
 	} from '$lib/components/ui';
 	import WithdrawalForm from '$lib/components/shared/WithdrawalForm.svelte';
+	import UserAvatar from '$lib/components/shared/UserAvatar.svelte';
 	import ProofOfWorkCard from '$lib/components/freelancer/ProofOfWorkCard.svelte';
 
 	let { data } = $props();
@@ -148,12 +149,15 @@
 </script>
 
 <div class="space-y-6">
-	<header class="space-y-1">
-		<h1 class="text-2xl font-semibold">Your profile</h1>
-		<p class="text-sm text-zinc-500">
-			Skills and headline power your bounty recommendations.
-			<a href="/dashboard/freelancer/recommendations" class="underline">See your matches</a>.
-		</p>
+	<header class="flex items-center gap-4">
+		<UserAvatar seed={displayName} size={96} class="border border-zinc-200" />
+		<div class="space-y-1">
+			<h1 class="text-2xl font-semibold">Your profile</h1>
+			<p class="text-sm text-zinc-500">
+				Skills and headline power your bounty recommendations.
+				<a href="/dashboard/freelancer/recommendations" class="underline">See your matches</a>.
+			</p>
+		</div>
 	</header>
 
 	<Card>
