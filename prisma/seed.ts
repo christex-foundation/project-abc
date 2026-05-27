@@ -119,6 +119,23 @@ async function seedSettings() {
 	console.log(
 		'✓ Default Setting row: FREELANCER_CREDIT_SYSTEM = { enabled: false, monthlyAllocation: 3 }.'
 	);
+
+	await prisma.setting.upsert({
+		where: { key: 'FREELANCER_REFERRAL_SYSTEM' },
+		update: {},
+		create: {
+			key: 'FREELANCER_REFERRAL_SYSTEM',
+			value: {
+				enabled: false,
+				maxReferrals: 10,
+				creditsPerFirstSubmission: 1,
+				creditsPerWin: 2
+			}
+		}
+	});
+	console.log(
+		'✓ Default Setting row: FREELANCER_REFERRAL_SYSTEM = { enabled: false, maxReferrals: 10, creditsPerFirstSubmission: 1, creditsPerWin: 2 }.'
+	);
 }
 
 async function seedAdmin() {

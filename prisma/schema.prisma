@@ -96,6 +96,9 @@ enum CreditTxnReason {
   SPAM_PENALTY
   ADMIN_GRANT
   ADMIN_REVOKE
+  REFERRAL_FIRST_SUBMISSION
+  REFERRAL_WIN_BONUS
+  REFERRAL_REVERSAL
 }
 
 // =============================================================================
@@ -114,6 +117,8 @@ model User {
   role          UserRole @default(FREELANCER)
   phoneNumber   String?
   isActive      Boolean  @default(true)
+  // Referral system — short shareable code (nullable until lazily generated)
+  referralCode  String?  @unique
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -222,6 +227,8 @@ model FreelancerProfile {
   monimeUvan               String? // UVAN identifier
   creditsBalance           Int      @default(0)
   creditsPeriodKey         String? // "YYYY-MM" of the cached balance; null = never initialized
+  // Referral — set once at signup when the new freelancer redeemed a code; immutable thereafter.
+  referrerProfileId        String?
   createdAt                DateTime @default(now())
   updatedAt                DateTime @updatedAt
 
@@ -230,6 +237,12 @@ model FreelancerProfile {
   submissions        Submission[]
   proofOfWorks       ProofOfWork[]
   creditTransactions CreditTransaction[]
+
+  referrer           FreelancerProfile?  @relation("FreelancerReferrals", fields: [referrerProfileId], references: [id], onDelete: SetNull)
+  referredFreelancers FreelancerProfile[] @relation("FreelancerReferrals")
+  referralCreditTxns CreditTransaction[] @relation("CreditTxnReferred")
+
+  @@index([referrerProfileId])
 }
 
 // =============================================================================
@@ -659,15 +672,20 @@ model CreditTransaction {
   submissionId        String?
   bountyId            String?
   adminUserId         String?
+  // Referral ledger rows: the referred freelancer whose activity triggered this row.
+  // Used as the idempotency key for REFERRAL_FIRST_SUBMISSION / REFERRAL_REVERSAL.
+  referredProfileId   String?
   notes               String?
   createdAt           DateTime        @default(now())
 
-  freelancer FreelancerProfile @relation(fields: [freelancerProfileId], references: [id], onDelete: Cascade)
-  submission Submission?       @relation(fields: [submissionId], references: [id], onDelete: SetNull)
-  bounty     Bounty?           @relation(fields: [bountyId], references: [id], onDelete: SetNull)
-  adminUser  User?             @relation("CreditTxnAdmin", fields: [adminUserId], references: [id])
+  freelancer FreelancerProfile  @relation(fields: [freelancerProfileId], references: [id], onDelete: Cascade)
+  submission Submission?        @relation(fields: [submissionId], references: [id], onDelete: SetNull)
+  bounty     Bounty?            @relation(fields: [bountyId], references: [id], onDelete: SetNull)
+  adminUser  User?              @relation("CreditTxnAdmin", fields: [adminUserId], references: [id])
+  referred   FreelancerProfile? @relation("CreditTxnReferred", fields: [referredProfileId], references: [id], onDelete: SetNull)
 
   @@index([freelancerProfileId, createdAt])
   @@index([submissionId])
   @@index([reason, periodKey])
+  @@index([referredProfileId])
 }
