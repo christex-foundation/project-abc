@@ -29,13 +29,26 @@
 		return 'outline' as const;
 	}
 
+	function methodLabel(method: string | null | undefined) {
+		if (method === 'INTERNAL_TRANSFER') return 'Account transfer';
+		if (method === 'CHECKOUT') return 'Checkout';
+		if (method === 'MOMO_PAYOUT') return 'Mobile money';
+		return null;
+	}
+
 	const bounty = $derived(data.bounty);
 	const winner = $derived(data.winner);
 	const winners = $derived(data.winners ?? []);
 	const prizePayments = $derived(data.prizePayments ?? []);
 
 	// PROJECT-type tranche helpers (unchanged).
-	type Tranche = { monimePayoutId: string; amount: number; tranche: number; final?: boolean };
+	type Tranche = {
+		monimePayoutId?: string;
+		monimeTransferId?: string;
+		amount: number;
+		tranche: number;
+		final?: boolean;
+	};
 	const tranches = $derived.by<Tranche[]>(() => {
 		if (!winner) return [];
 		const pd = winner.paymentDetails;
@@ -111,6 +124,7 @@
 								<th class="py-2 pr-4">Freelancer</th>
 								<th class="py-2 pr-4">Position</th>
 								<th class="py-2 pr-4">Prize</th>
+								<th class="py-2 pr-4">Method</th>
 								<th class="py-2 pr-4">Payment status</th>
 								<th class="py-2">Paid on</th>
 							</tr>
@@ -118,6 +132,7 @@
 						<tbody>
 							{#each winners as w (w.id)}
 								{@const payment = prizePayments.find((p) => p.submissionId === w.id)}
+								{@const label = methodLabel(payment?.method)}
 								<tr class="border-t">
 									<td class="py-2 pr-4">
 										<div class="font-medium">{w.freelancer.displayName}</div>
@@ -127,6 +142,13 @@
 										{w.winnerPosition === 99 ? 'Bonus' : `#${w.winnerPosition}`}
 									</td>
 									<td class="py-2 pr-4">{formatMoney(w.prizeAmount, bounty.currency)}</td>
+									<td class="py-2 pr-4">
+										{#if label}
+											<Badge variant="outline" class="text-xs">{label}</Badge>
+										{:else}
+											<span class="text-zinc-400">—</span>
+										{/if}
+									</td>
 									<td class="py-2 pr-4">
 										{#if payment}
 											<Badge variant={paymentStatusVariant(payment.status)}>
@@ -173,19 +195,32 @@
 						<table class="w-full text-sm">
 							<thead class="text-left text-xs text-zinc-500 uppercase">
 								<tr>
-									<th class="pb-1">#</th>
-									<th class="pb-1">Amount</th>
-									<th class="pb-1">Final</th>
-									<th class="pb-1">Monime payout</th>
+									<th class="pb-1 pr-4">#</th>
+									<th class="pb-1 pr-4">Amount</th>
+									<th class="pb-1 pr-4">Method</th>
+									<th class="pb-1 pr-4">Final</th>
+									<th class="pb-1">Monime reference</th>
 								</tr>
 							</thead>
 							<tbody>
-								{#each tranches as t (t.monimePayoutId)}
+								{#each tranches as t, i (t.monimeTransferId ?? t.monimePayoutId ?? i)}
+									{@const monimeRef = t.monimeTransferId ?? t.monimePayoutId ?? null}
+									{@const trancheMethod = t.monimeTransferId ? 'INTERNAL_TRANSFER' : t.monimePayoutId ? 'MOMO_PAYOUT' : null}
+									{@const trancheLabel = methodLabel(trancheMethod)}
 									<tr class="border-t">
-										<td class="py-1">{t.tranche}</td>
-										<td class="py-1">{formatMoney(t.amount, bounty.currency)}</td>
-										<td class="py-1">{t.final ? 'Yes' : '—'}</td>
-										<td class="py-1 font-mono text-xs">{t.monimePayoutId}</td>
+										<td class="py-1 pr-4">{t.tranche}</td>
+										<td class="py-1 pr-4">{formatMoney(t.amount, bounty.currency)}</td>
+										<td class="py-1 pr-4">
+											{#if trancheLabel}
+												<Badge variant="outline" class="text-xs">{trancheLabel}</Badge>
+											{:else}
+												<span class="text-zinc-400">—</span>
+											{/if}
+										</td>
+										<td class="py-1 pr-4">{t.final ? 'Yes' : '—'}</td>
+										<td class="py-1 font-mono text-xs text-zinc-500">
+											{monimeRef ?? '—'}
+										</td>
 									</tr>
 								{/each}
 							</tbody>
