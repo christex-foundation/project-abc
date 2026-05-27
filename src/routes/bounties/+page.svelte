@@ -186,7 +186,9 @@
 										>
 									{/if}
 								</p>
-								<p class="mt-1 text-xs text-zinc-500">{b.company.companyName}</p>
+								<p class="mt-1 text-xs text-zinc-500">
+									{b.company?.companyName ?? b.companyNameSnapshot ?? 'Anonymous sponsor'}
+								</p>
 								{#if b.skills.length > 0}
 									<div class="mt-3 flex flex-wrap gap-1">
 										{#each b.skills.slice(0, 3) as s (s.id)}

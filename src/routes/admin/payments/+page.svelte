@@ -115,7 +115,7 @@
 						>{formatMoney(p.amount, p.currency)}</TableCell
 					>
 					<TableCell class="text-zinc-600">
-						{p.submission?.freelancer.displayName ?? p.toEntity ?? '—'}
+						{p.submission?.freelancer?.displayName ?? p.toEntity ?? '—'}
 					</TableCell>
 					<TableCell align="right">{p.retryCount}</TableCell>
 					<TableCell align="right" class="text-xs text-zinc-500"

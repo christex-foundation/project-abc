@@ -135,8 +135,12 @@
 								{@const label = methodLabel(payment?.method)}
 								<tr class="border-t">
 									<td class="py-2 pr-4">
-										<div class="font-medium">{w.freelancer.displayName}</div>
-										<div class="text-xs text-zinc-500">{w.freelancer.user.email}</div>
+										<div class="font-medium">
+											{w.freelancer?.displayName ?? w.freelancerNameSnapshot ?? '(deleted user)'}
+										</div>
+										{#if w.freelancer}
+											<div class="text-xs text-zinc-500">{w.freelancer.user.email}</div>
+										{/if}
 									</td>
 									<td class="py-2 pr-4">
 										{w.winnerPosition === 99 ? 'Bonus' : `#${w.winnerPosition}`}
@@ -182,10 +186,12 @@
 			<Card>
 				<CardHeader>
 					<CardTitle class="text-base">
-						{winner.freelancer.displayName}
-						<span class="ml-2 text-xs font-normal text-zinc-500">
-							{winner.freelancer.user.email}
-						</span>
+						{winner.freelancer?.displayName ?? winner.freelancerNameSnapshot ?? '(deleted user)'}
+						{#if winner.freelancer}
+							<span class="ml-2 text-xs font-normal text-zinc-500">
+								{winner.freelancer.user.email}
+							</span>
+						{/if}
 					</CardTitle>
 				</CardHeader>
 				<CardContent class="space-y-4">

@@ -47,7 +47,8 @@
 			status: string;
 			reason: string;
 			createdAt: Date;
-			raisedBy: { id: string; name: string | null; email: string; role: string };
+			// Nullable after the raiser has deleted their account (GDPR).
+			raisedBy: { id: string; name: string | null; email: string; role: string } | null;
 			bounty: { id: string; slug: string; title: string };
 		}[];
 	};
@@ -166,7 +167,10 @@
 									</div>
 									<p class="mt-1 line-clamp-2 text-xs text-zinc-600">{d.reason}</p>
 									<p class="text-[11px] text-zinc-400">
-										Raised by {d.raisedBy.name ?? d.raisedBy.email} ({d.raisedBy.role.toLowerCase()})
+										Raised by {d.raisedBy?.name ??
+											d.raisedBy?.email ??
+											'(deleted user)'}{#if d.raisedBy}
+											({d.raisedBy.role.toLowerCase()}){/if}
 									</p>
 								</div>
 								<span class="shrink-0 text-xs text-zinc-500">{formatDate(d.createdAt)}</span>

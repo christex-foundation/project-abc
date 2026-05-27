@@ -130,10 +130,14 @@
 						</a>
 					</TableCell>
 					<TableCell class="text-xs">
-						<a href={`/admin/users/${d.raisedBy.id}`} class="hover:text-indigo-600">
-							{d.raisedBy.name ?? d.raisedBy.email}
-						</a>
-						<span class="ml-1 text-zinc-400">({d.raisedBy.role.toLowerCase()})</span>
+						{#if d.raisedBy}
+							<a href={`/admin/users/${d.raisedBy.id}`} class="hover:text-indigo-600">
+								{d.raisedBy.name ?? d.raisedBy.email}
+							</a>
+							<span class="ml-1 text-zinc-400">({d.raisedBy.role.toLowerCase()})</span>
+						{:else}
+							<span class="text-zinc-500">(deleted user)</span>
+						{/if}
 					</TableCell>
 					<TableCell class="max-w-xs truncate text-xs text-zinc-600">{d.reason}</TableCell>
 					<TableCell><StatusBadge value={d.status} /></TableCell>
@@ -161,7 +165,11 @@
 			<div>
 				<dt class="text-xs text-zinc-500">Raised by</dt>
 				<dd>
-					{openRow.raisedBy.name ?? openRow.raisedBy.email} ({openRow.raisedBy.role.toLowerCase()})
+					{#if openRow.raisedBy}
+						{openRow.raisedBy.name ?? openRow.raisedBy.email} ({openRow.raisedBy.role.toLowerCase()})
+					{:else}
+						(deleted user)
+					{/if}
 				</dd>
 			</div>
 			<div>

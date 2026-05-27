@@ -50,7 +50,7 @@
 		type: 'website',
 		title: b.title,
 		description: data.pageMetaTags.description,
-		images: b.company.logo ? [{ url: b.company.logo, alt: b.company.companyName }] : undefined
+		images: b.company?.logo ? [{ url: b.company.logo, alt: b.company.companyName }] : undefined
 	}}
 />
 
@@ -67,11 +67,11 @@
 		</div>
 		<h1 class="text-3xl font-semibold tracking-tight">{b.title}</h1>
 		<div class="flex items-center gap-3 text-sm text-zinc-600">
-			{#if b.company.logo}
+			{#if b.company?.logo}
 				<img src={b.company.logo} alt="" class="h-8 w-8 rounded-full" />
 			{/if}
-			<span>{b.company.companyName}</span>
-			{#if b.company.website}
+			<span>{b.company?.companyName ?? b.companyNameSnapshot ?? 'Anonymous sponsor'}</span>
+			{#if b.company?.website}
 				<a href={b.company.website} target="_blank" rel="noopener noreferrer" class="underline"
 					>website</a
 				>

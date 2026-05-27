@@ -102,7 +102,10 @@
 	});
 </script>
 
-<PageHeader title={b.title} description={`${b.company.companyName} · ${b.slug}`}>
+<PageHeader
+	title={b.title}
+	description={`${b.company?.companyName ?? '(deleted company)'} · ${b.slug}`}
+>
 	{#snippet meta()}
 		<StatusBadge value={b.status} />
 		<StatusBadge value={b.type} />
@@ -262,13 +265,17 @@
 				{#each data.submissions as s (s.id)}
 					<TableRow>
 						<TableCell>
-							<a
-								class="font-medium text-zinc-900 hover:text-indigo-600"
-								href="/admin/users/{s.freelancer.user.id}"
-							>
-								{s.freelancer.displayName}
-							</a>
-							<div class="text-xs text-zinc-500">{s.freelancer.user.email}</div>
+							{#if s.freelancer}
+								<a
+									class="font-medium text-zinc-900 hover:text-indigo-600"
+									href="/admin/users/{s.freelancer.user.id}"
+								>
+									{s.freelancer.displayName}
+								</a>
+								<div class="text-xs text-zinc-500">{s.freelancer.user.email}</div>
+							{:else}
+								<span class="font-medium text-zinc-500">(deleted user)</span>
+							{/if}
 						</TableCell>
 						<TableCell><StatusBadge value={s.label} /></TableCell>
 						<TableCell><StatusBadge value={s.status} /></TableCell>
@@ -324,12 +331,16 @@
 							</span>
 						</TableCell>
 						<TableCell>
-							<a
-								class="font-medium text-zinc-900 hover:text-indigo-600"
-								href="/admin/users/{w.freelancer.user.id}"
-							>
-								{w.freelancer.displayName}
-							</a>
+							{#if w.freelancer}
+								<a
+									class="font-medium text-zinc-900 hover:text-indigo-600"
+									href="/admin/users/{w.freelancer.user.id}"
+								>
+									{w.freelancer.displayName}
+								</a>
+							{:else}
+								<span class="font-medium text-zinc-500">(deleted user)</span>
+							{/if}
 						</TableCell>
 						<TableCell class="tabular-nums">
 							{w.prizeAmount ? formatMoney(w.prizeAmount, b.currency) : '—'}
@@ -402,7 +413,8 @@
 							<div class="flex items-center gap-2">
 								<StatusBadge value={d.status} />
 								<span class="text-xs text-zinc-500">
-									{d.raisedBy.name ?? d.raisedBy.email} · {d.raisedBy.role.toLowerCase()}
+									{d.raisedBy?.name ?? d.raisedBy?.email ?? '(deleted user)'}{#if d.raisedBy}
+										· {d.raisedBy.role.toLowerCase()}{/if}
 								</span>
 							</div>
 							<p class="mt-2 text-sm whitespace-pre-wrap text-zinc-700">{d.reason}</p>

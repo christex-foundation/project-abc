@@ -67,7 +67,7 @@
 							<Badge variant={score.tone}>{score.label}</Badge>
 						</div>
 						<div class="text-xs text-zinc-500">
-							{r.bounty.company.companyName ?? 'A company'}
+							{r.bounty.company?.companyName ?? r.bounty.companyNameSnapshot ?? 'A company'}
 						</div>
 					</CardHeader>
 					<CardContent class="space-y-3 text-sm">

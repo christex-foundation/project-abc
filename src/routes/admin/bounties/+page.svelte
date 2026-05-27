@@ -143,7 +143,7 @@
 							{b.title}
 						</a>
 					</TableCell>
-					<TableCell class="text-zinc-600">{b.company.companyName}</TableCell>
+					<TableCell class="text-zinc-600">{b.company?.companyName ?? '(deleted)'}</TableCell>
 					<TableCell><StatusBadge value={b.status} /></TableCell>
 					<TableCell><StatusBadge value={b.type} /></TableCell>
 					<TableCell align="right" class="tabular-nums">

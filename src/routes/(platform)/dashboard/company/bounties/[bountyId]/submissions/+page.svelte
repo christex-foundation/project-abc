@@ -138,15 +138,17 @@
 	{:else}
 		<div class="space-y-4">
 			{#each submissions as s (s.id)}
-				{@const hasPayoutMethod = !!s.freelancer.monimeFinancialAccountId}
+				{@const hasPayoutMethod = !!s.freelancer?.monimeFinancialAccountId}
 				<Card>
 					<CardHeader>
 						<div class="flex flex-wrap items-center justify-between gap-2">
 							<CardTitle class="text-base">
-								{s.freelancer.displayName}
-								<span class="ml-2 text-xs font-normal text-zinc-500">
-									{s.freelancer.user.email}
-								</span>
+								{s.freelancer?.displayName ?? s.freelancerNameSnapshot ?? '(deleted user)'}
+								{#if s.freelancer}
+									<span class="ml-2 text-xs font-normal text-zinc-500">
+										{s.freelancer.user.email}
+									</span>
+								{/if}
 							</CardTitle>
 							<div class="flex flex-wrap items-center gap-2">
 								<Badge variant={labelVariant(s.label)}>{s.label}</Badge>
