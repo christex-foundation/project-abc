@@ -198,7 +198,6 @@ model CompanyProfile {
   industry                 String?
   country                  String   @default("SL")
   verified                 Boolean  @default(false)
-  monimePayoutMomoNumber   String?
   monimeFinancialAccountId String? // Monime financial account UUID
   monimeUvan               String? // UVAN identifier
   createdAt                DateTime @default(now())
@@ -216,7 +215,6 @@ model FreelancerProfile {
   bio                      String?
   portfolio                String?
   experienceLevel          String?
-  momoNumber               String?
   whatsappNumber           String?
   bankDetails              Json?
   aiEmbedding              Float[]
