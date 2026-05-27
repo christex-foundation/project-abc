@@ -191,8 +191,8 @@
 		When ON, each freelancer gets a shareable code on their dashboard. Referrers earn
 		<code>creditsPerFirstSubmission</code>
 		when a referred friend (with verified email) makes their first non-spam submission, and
-		<code>creditsPerWin</code> each time that friend wins a bounty. Spam-labelled submissions
-		reverse the first-submission grant. Requires the freelancer credit system to be ON.
+		<code>creditsPerWin</code> each time that friend wins a bounty. Spam-labelled submissions reverse
+		the first-submission grant. Requires the freelancer credit system to be ON.
 	</p>
 	<label class="mt-3 flex items-center gap-2 text-sm">
 		<input type="checkbox" bind:checked={referralEnabled} />

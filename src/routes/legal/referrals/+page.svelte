@@ -20,7 +20,7 @@
 	</p>
 	<h2>Changes</h2>
 	<p>
-		Future of Work may adjust the cap, credit amounts, or terms of the programme at any time.
-		Earned credits already in your balance are not affected by future changes.
+		Future of Work may adjust the cap, credit amounts, or terms of the programme at any time. Earned
+		credits already in your balance are not affected by future changes.
 	</p>
 </div>
