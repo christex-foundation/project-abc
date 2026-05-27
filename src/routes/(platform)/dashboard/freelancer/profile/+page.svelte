@@ -14,6 +14,7 @@
 		Textarea
 	} from '$lib/components/ui';
 	import WithdrawalForm from '$lib/components/shared/WithdrawalForm.svelte';
+	import ProofOfWorkCard from '$lib/components/freelancer/ProofOfWorkCard.svelte';
 
 	let { data } = $props();
 
@@ -247,7 +248,7 @@
 				<div class="space-y-3">
 					<div class="flex items-center justify-between rounded-md bg-zinc-50 px-3 py-2">
 						<div class="space-y-0.5">
-							<p class="text-xs font-medium text-zinc-500 uppercase tracking-wide">UVAN</p>
+							<p class="text-xs font-medium tracking-wide text-zinc-500 uppercase">UVAN</p>
 							<p class="font-mono text-sm">{uvan ?? accountId}</p>
 						</div>
 						<Button variant="ghost" size="sm" onclick={copyUvan}>
@@ -256,7 +257,7 @@
 					</div>
 					<div class="flex items-center justify-between rounded-md bg-zinc-50 px-3 py-2">
 						<div class="space-y-0.5">
-							<p class="text-xs font-medium text-zinc-500 uppercase tracking-wide">Balance</p>
+							<p class="text-xs font-medium tracking-wide text-zinc-500 uppercase">Balance</p>
 							<p class="text-sm font-semibold">
 								{accountLoading ? 'Loading…' : formatMoney(balance)}
 							</p>
@@ -276,6 +277,8 @@
 		</CardContent>
 	</Card>
 
+	<ProofOfWorkCard items={data.proofOfWork} skillCategories={data.skillCategories} />
+
 	<Card>
 		<CardHeader>
 			<CardTitle>Skills</CardTitle>
@@ -288,7 +291,7 @@
 				<div class="space-y-2">
 					<div class="text-sm font-medium text-zinc-700">{cat.name}</div>
 					<div class="flex flex-wrap gap-2">
-						{#each cat.skills as skill (skill.id)}
+						{#each cat.skills.filter((s) => s.parentSkillId !== null) as skill (skill.id)}
 							{@const sel = isSelected(skill.id)}
 							{@const current = selected.find((s) => s.skillId === skill.id)}
 							<div
