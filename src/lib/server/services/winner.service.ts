@@ -192,12 +192,7 @@ export async function announceWinners(caller: AuthedUser, bountyId: string) {
 			}
 			// Referral: per-win bonus to the winner's referrer (if any). No-op when
 			// the referral system is disabled or there is no referrer.
-			await referralService.onReferredWin(
-				p.freelancerProfileId,
-				p.submissionId,
-				bounty.id,
-				tx
-			);
+			await referralService.onReferredWin(p.freelancerProfileId, p.submissionId, bounty.id, tx);
 		}
 		await bountyRepo.markCompletedAndAnnounced(bounty.id, tx);
 	});
