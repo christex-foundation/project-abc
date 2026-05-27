@@ -19,9 +19,22 @@
 		return `${currency} ${(minor / 100).toLocaleString()}`;
 	}
 
+	function fmtDate(d: Date | string) {
+		return new Date(d).toLocaleDateString();
+	}
+
+	function paymentStatusVariant(status: string) {
+		if (status === 'COMPLETED') return 'success' as const;
+		if (status === 'FAILED') return 'destructive' as const;
+		return 'outline' as const;
+	}
+
 	const bounty = $derived(data.bounty);
 	const winner = $derived(data.winner);
+	const winners = $derived(data.winners ?? []);
+	const prizePayments = $derived(data.prizePayments ?? []);
 
+	// PROJECT-type tranche helpers (unchanged).
 	type Tranche = { monimePayoutId: string; amount: number; tranche: number; final?: boolean };
 	const tranches = $derived.by<Tranche[]>(() => {
 		if (!winner) return [];
@@ -72,74 +85,140 @@
 		</div>
 	{/if}
 
-	{#if !winner}
-		<Card>
-			<CardContent class="py-12 text-center text-zinc-500">
-				No winner has been selected yet.
-			</CardContent>
-		</Card>
-	{:else}
-		<Card>
-			<CardHeader>
-				<CardTitle class="text-base">
-					{winner.freelancer.displayName}
-					<span class="ml-2 text-xs font-normal text-zinc-500">
-						{winner.freelancer.user.email}
-					</span>
-				</CardTitle>
-			</CardHeader>
-			<CardContent class="space-y-4">
-				{#if tranches.length === 0}
-					<p class="text-sm text-zinc-500">No tranches paid yet.</p>
-				{:else}
+	{#if bounty.type === 'BOUNTY'}
+		<!-- ── BOUNTY: multi-winner payout breakdown ── -->
+		{#if !bounty.isWinnersAnnounced}
+			<Card>
+				<CardContent class="py-12 text-center text-zinc-500">
+					Winners haven't been announced yet. Payouts will appear here after announcement.
+				</CardContent>
+			</Card>
+		{:else if winners.length === 0}
+			<Card>
+				<CardContent class="py-12 text-center text-zinc-500">
+					No winners were selected for this bounty.
+				</CardContent>
+			</Card>
+		{:else}
+			<Card>
+				<CardHeader>
+					<CardTitle class="text-base">Winner payouts</CardTitle>
+				</CardHeader>
+				<CardContent class="py-2">
 					<table class="w-full text-sm">
 						<thead class="text-left text-xs text-zinc-500 uppercase">
 							<tr>
-								<th class="pb-1">#</th>
-								<th class="pb-1">Amount</th>
-								<th class="pb-1">Final</th>
-								<th class="pb-1">Monime payout</th>
+								<th class="py-2 pr-4">Freelancer</th>
+								<th class="py-2 pr-4">Position</th>
+								<th class="py-2 pr-4">Prize</th>
+								<th class="py-2 pr-4">Payment status</th>
+								<th class="py-2">Paid on</th>
 							</tr>
 						</thead>
 						<tbody>
-							{#each tranches as t (t.monimePayoutId)}
+							{#each winners as w (w.id)}
+								{@const payment = prizePayments.find((p) => p.submissionId === w.id)}
 								<tr class="border-t">
-									<td class="py-1">{t.tranche}</td>
-									<td class="py-1">{formatMoney(t.amount, bounty.currency)}</td>
-									<td class="py-1">{t.final ? 'Yes' : '—'}</td>
-									<td class="py-1 font-mono text-xs">{t.monimePayoutId}</td>
+									<td class="py-2 pr-4">
+										<div class="font-medium">{w.freelancer.displayName}</div>
+										<div class="text-xs text-zinc-500">{w.freelancer.user.email}</div>
+									</td>
+									<td class="py-2 pr-4">
+										{w.winnerPosition === 99 ? 'Bonus' : `#${w.winnerPosition}`}
+									</td>
+									<td class="py-2 pr-4">{formatMoney(w.prizeAmount, bounty.currency)}</td>
+									<td class="py-2 pr-4">
+										{#if payment}
+											<Badge variant={paymentStatusVariant(payment.status)}>
+												{payment.status}
+											</Badge>
+										{:else if w.isPaid}
+											<Badge variant="success">COMPLETED</Badge>
+										{:else}
+											<Badge variant="outline">PENDING</Badge>
+										{/if}
+									</td>
+									<td class="py-2 text-zinc-600">
+										{payment ? fmtDate(payment.createdAt) : '—'}
+									</td>
 								</tr>
 							{/each}
 						</tbody>
 					</table>
-				{/if}
+				</CardContent>
+			</Card>
+		{/if}
+	{:else}
+		<!-- ── PROJECT: single-winner tranche payments ── -->
+		{#if !winner}
+			<Card>
+				<CardContent class="py-12 text-center text-zinc-500">
+					No winner has been selected yet.
+				</CardContent>
+			</Card>
+		{:else}
+			<Card>
+				<CardHeader>
+					<CardTitle class="text-base">
+						{winner.freelancer.displayName}
+						<span class="ml-2 text-xs font-normal text-zinc-500">
+							{winner.freelancer.user.email}
+						</span>
+					</CardTitle>
+				</CardHeader>
+				<CardContent class="space-y-4">
+					{#if tranches.length === 0}
+						<p class="text-sm text-zinc-500">No tranches paid yet.</p>
+					{:else}
+						<table class="w-full text-sm">
+							<thead class="text-left text-xs text-zinc-500 uppercase">
+								<tr>
+									<th class="pb-1">#</th>
+									<th class="pb-1">Amount</th>
+									<th class="pb-1">Final</th>
+									<th class="pb-1">Monime payout</th>
+								</tr>
+							</thead>
+							<tbody>
+								{#each tranches as t (t.monimePayoutId)}
+									<tr class="border-t">
+										<td class="py-1">{t.tranche}</td>
+										<td class="py-1">{formatMoney(t.amount, bounty.currency)}</td>
+										<td class="py-1">{t.final ? 'Yes' : '—'}</td>
+										<td class="py-1 font-mono text-xs">{t.monimePayoutId}</td>
+									</tr>
+								{/each}
+							</tbody>
+						</table>
+					{/if}
 
-				{#if canPayMore}
-					<form
-						method="POST"
-						action="?/payTranche"
-						use:enhance
-						class="grid gap-2 sm:grid-cols-[1fr_auto_auto] sm:items-end"
-					>
-						<input type="hidden" name="submissionId" value={winner.id} />
-						<div>
-							<Label for="amount">Next tranche amount (minor units)</Label>
-							<Input id="amount" name="amount" type="number" min="1" max={remaining} required />
-						</div>
-						<label class="flex items-center gap-2 text-sm">
-							<Checkbox name="final" value="1" />
-							Final tranche
-						</label>
-						<Button type="submit">Pay tranche</Button>
-					</form>
-				{:else if winner.isPaid}
-					<p class="text-sm text-emerald-700">All tranches paid.</p>
-				{:else}
-					<p class="text-sm text-zinc-500">
-						Cannot initiate next tranche — wait for the previous one to settle.
-					</p>
-				{/if}
-			</CardContent>
-		</Card>
+					{#if canPayMore}
+						<form
+							method="POST"
+							action="?/payTranche"
+							use:enhance
+							class="grid gap-2 sm:grid-cols-[1fr_auto_auto] sm:items-end"
+						>
+							<input type="hidden" name="submissionId" value={winner.id} />
+							<div>
+								<Label for="amount">Next tranche amount (minor units)</Label>
+								<Input id="amount" name="amount" type="number" min="1" max={remaining} required />
+							</div>
+							<label class="flex items-center gap-2 text-sm">
+								<Checkbox name="final" value="1" />
+								Final tranche
+							</label>
+							<Button type="submit">Pay tranche</Button>
+						</form>
+					{:else if winner.isPaid}
+						<p class="text-sm text-emerald-700">All tranches paid.</p>
+					{:else}
+						<p class="text-sm text-zinc-500">
+							Cannot initiate next tranche — wait for the previous one to settle.
+						</p>
+					{/if}
+				</CardContent>
+			</Card>
+		{/if}
 	{/if}
 </div>

@@ -4,6 +4,9 @@ import { AppError } from '$lib/server/http';
 import * as bountyService from '$lib/server/services/bounty.service';
 import * as submissionService from '$lib/server/services/submission.service';
 import * as winnerService from '$lib/server/services/winner.service';
+import * as submissionRepo from '$lib/server/repositories/submission.repo';
+import * as paymentRepo from '$lib/server/repositories/payment.repo';
+import { PaymentType } from '@prisma/client';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ params, locals }) => {
@@ -17,12 +20,21 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		if (e instanceof AppError && e.code === 'NOT_FOUND') throw error(404, e.message);
 		throw e;
 	}
-	if (bounty.type !== 'PROJECT') {
-		throw error(404, 'Tranches are only used for PROJECT bounties.');
+
+	// BOUNTY type: show winner payout breakdown (multiple winners, no tranches).
+	if (bounty.type === 'BOUNTY') {
+		const [winners, allPayments] = await Promise.all([
+			submissionRepo.listWinners(params.bountyId),
+			paymentRepo.listForBounty(params.bountyId)
+		]);
+		const prizePayments = allPayments.filter((p) => p.type === PaymentType.PRIZE_PAYOUT);
+		return { bounty, winners, prizePayments, winner: null };
 	}
+
+	// PROJECT type: single winner, tranche payments (original behaviour).
 	const submissions = await submissionService.listForBountyAsSponsor(caller, params.bountyId, {});
 	const winner = submissions.find((s) => s.isWinner) ?? null;
-	return { bounty, winner };
+	return { bounty, winner, winners: [], prizePayments: [] };
 };
 
 export const actions: Actions = {

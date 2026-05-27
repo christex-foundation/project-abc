@@ -68,14 +68,16 @@
 								</CardTitle>
 								<div class="flex flex-wrap items-center gap-2">
 									<Badge variant="outline">{s.bounty.type}</Badge>
-									{#if s.isWinner}
-										<Badge variant="success">
-											Winner — pos {s.winnerPosition}
-										</Badge>
-									{:else if s.bounty.isWinnersAnnounced}
-										<Badge variant="secondary">Not selected</Badge>
+									{#if s.isWinner && s.bounty.isWinnersAnnounced}
+										<Badge variant="success">Winner — pos {s.winnerPosition}</Badge>
+									{:else if !s.isWinner && s.bounty.isWinnersAnnounced}
+										<Badge variant="destructive">Rejected</Badge>
+									{:else if s.status === 'REJECTED'}
+										<Badge variant="destructive">Rejected</Badge>
+									{:else if s.status === 'APPROVED'}
+										<Badge variant="outline">Shortlisted</Badge>
 									{:else}
-										<Badge variant="outline">Submitted</Badge>
+										<Badge variant="secondary">Pending</Badge>
 									{/if}
 									{#if s.isPaid}
 										<Badge variant="success">Paid</Badge>
