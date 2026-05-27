@@ -64,6 +64,18 @@ enum PaymentType {
   REFUND
 }
 
+enum PaymentMethod {
+  CHECKOUT
+  INTERNAL_TRANSFER
+  MOMO_PAYOUT
+}
+
+enum WithdrawalStatus {
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
 enum PaymentStatus {
   PENDING
   PROCESSING
@@ -108,6 +120,7 @@ model User {
   notificationPrefs  NotificationPreference?
   pushSubscriptions  PushSubscription[]
   raisedDisputes     Dispute[]
+  withdrawals        AccountWithdrawal[]
 
   @@map("user")
 }
@@ -176,6 +189,8 @@ model CompanyProfile {
   country                  String   @default("SL")
   verified                 Boolean  @default(false)
   monimePayoutMomoNumber   String?
+  monimeFinancialAccountId String?  // Monime financial account UUID
+  monimeUvan               String?  // UVAN identifier
   createdAt                DateTime @default(now())
   updatedAt                DateTime @updatedAt
 
@@ -184,19 +199,21 @@ model CompanyProfile {
 }
 
 model FreelancerProfile {
-  id              String   @id @default(cuid())
-  userId          String   @unique
-  displayName     String
-  headline        String?
-  bio             String?
-  portfolio       String?
-  experienceLevel String?
-  momoNumber      String?
-  whatsappNumber  String?
-  bankDetails     Json?
-  aiEmbedding     Float[]
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id                       String   @id @default(cuid())
+  userId                   String   @unique
+  displayName              String
+  headline                 String?
+  bio                      String?
+  portfolio                String?
+  experienceLevel          String?
+  momoNumber               String?
+  whatsappNumber           String?
+  bankDetails              Json?
+  aiEmbedding              Float[]
+  monimeFinancialAccountId String?  // Monime financial account UUID
+  monimeUvan               String?  // UVAN identifier
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
 
   user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   skills      FreelancerSkill[]
@@ -409,9 +426,11 @@ model Payment {
   fromEntity   String?
   toEntity     String?
 
+  method           PaymentMethod @default(CHECKOUT)
   checkoutSessionId String?
   monimePaymentId   String?
   monimePayoutId    String?
+  monimeTransferId  String?       // populated for INTERNAL_TRANSFER payments
 
   failureCode    String?
   failureMessage String?
@@ -428,6 +447,35 @@ model Payment {
   @@index([status])
   @@index([monimePaymentId])
   @@index([monimePayoutId])
+}
+
+// =============================================================================
+// Account withdrawals (user pulls from their financial account to mobile money)
+// Stored separately from Payment because they are not tied to a specific bounty.
+// =============================================================================
+
+model AccountWithdrawal {
+  id               String           @id @default(cuid())
+  userId           String
+  role             UserRole         // COMPANY | FREELANCER — whose account was withdrawn from
+  fromAccountId    String           // Monime financial account ID
+  toPhoneNumber    String           // Destination MoMo number (KYC-verified)
+  holderName       String           // Confirmed via Monime provider KYC
+  providerName     String           // e.g. "Orange Money"
+  amount           Int              // minor units
+  currency         String           @default("SLE")
+  monimePayoutId   String           @unique
+  status           WithdrawalStatus @default(PROCESSING)
+  failureCode      String?
+  failureMessage   String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([monimePayoutId])
+  @@index([status])
 }
 
 // =============================================================================
