@@ -12,6 +12,34 @@
 	let busyId = $state<string | null>(null);
 	let errorMsg = $state<string | null>(null);
 
+	type CreditTxn = {
+		id: string;
+		delta: number;
+		balanceAfter: number;
+		reason: string;
+		periodKey: string;
+		notes: string | null;
+		createdAt: string;
+		adminUser?: { email: string; name: string | null } | null;
+	};
+
+	type CreditPanel = {
+		freelancerProfileId: string;
+		freelancerName: string;
+		loading: boolean;
+		balance: number | null;
+		monthlyAllocation: number | null;
+		periodKey: string | null;
+		enabled: boolean;
+		transactions: CreditTxn[];
+		delta: number;
+		notes: string;
+		saving: boolean;
+		error: string | null;
+	};
+
+	let panel = $state<CreditPanel | null>(null);
+
 	function applyFilters() {
 		const params = new URLSearchParams();
 		if (search) params.set('q', search);
@@ -40,8 +68,77 @@
 		}
 	}
 
+	async function openCredits(freelancerProfileId: string, freelancerName: string) {
+		panel = {
+			freelancerProfileId,
+			freelancerName,
+			loading: true,
+			balance: null,
+			monthlyAllocation: null,
+			periodKey: null,
+			enabled: false,
+			transactions: [],
+			delta: 1,
+			notes: '',
+			saving: false,
+			error: null
+		};
+		const res = await fetch(`/api/admin/freelancers/${freelancerProfileId}/credits?limit=10`);
+		if (!panel) return;
+		if (!res.ok) {
+			const body = await res.json().catch(() => ({}));
+			panel.error = body?.error?.message ?? `Load failed (${res.status})`;
+			panel.loading = false;
+			return;
+		}
+		const body = await res.json();
+		panel.balance = body.balance;
+		panel.monthlyAllocation = body.monthlyAllocation;
+		panel.periodKey = body.periodKey;
+		panel.enabled = body.enabled;
+		panel.transactions = body.transactions;
+		panel.loading = false;
+	}
+
+	function closePanel() {
+		panel = null;
+	}
+
+	async function submitAdjust() {
+		if (!panel) return;
+		panel.saving = true;
+		panel.error = null;
+		const res = await fetch(`/api/admin/freelancers/${panel.freelancerProfileId}/credits/adjust`, {
+			method: 'POST',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({ delta: panel.delta, notes: panel.notes })
+		});
+		if (!res.ok) {
+			const body = await res.json().catch(() => ({}));
+			panel.error = body?.error?.message ?? `Adjust failed (${res.status})`;
+			panel.saving = false;
+			return;
+		}
+		// Re-fetch panel data
+		const reload = await fetch(
+			`/api/admin/freelancers/${panel.freelancerProfileId}/credits?limit=10`
+		);
+		if (reload.ok) {
+			const body = await reload.json();
+			panel.balance = body.balance;
+			panel.transactions = body.transactions;
+		}
+		panel.delta = 1;
+		panel.notes = '';
+		panel.saving = false;
+	}
+
 	function fmt(d: Date | string) {
 		return new Date(d).toLocaleDateString();
+	}
+
+	function fmtDateTime(d: Date | string) {
+		return new Date(d).toLocaleString();
 	}
 </script>
 
@@ -99,6 +196,7 @@
 					<th class="px-4 py-2">Role</th>
 					<th class="px-4 py-2">Status</th>
 					<th class="px-4 py-2">Joined</th>
+					<th class="px-4 py-2">Credits</th>
 					<th class="px-4 py-2"></th>
 				</tr>
 			</thead>
@@ -126,6 +224,19 @@
 							</span>
 						</td>
 						<td class="px-4 py-2 text-xs text-zinc-500">{fmt(u.createdAt)}</td>
+						<td class="px-4 py-2">
+							{#if u.freelancerProfileId}
+								<button
+									type="button"
+									onclick={() => openCredits(u.freelancerProfileId!, u.name ?? u.email)}
+									class="rounded border border-zinc-300 px-2 py-1 text-xs hover:bg-zinc-50"
+								>
+									Manage
+								</button>
+							{:else}
+								<span class="text-xs text-zinc-400">—</span>
+							{/if}
+						</td>
 						<td class="px-4 py-2 text-right">
 							<button
 								type="button"
@@ -141,4 +252,113 @@
 			</tbody>
 		</table>
 	</section>
+{/if}
+
+{#if panel}
+	<div
+		class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+		role="dialog"
+		aria-modal="true"
+	>
+		<div class="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg bg-white p-6 shadow-xl">
+			<div class="flex items-start justify-between gap-4">
+				<div>
+					<h2 class="text-lg font-semibold">Credits — {panel.freelancerName}</h2>
+					{#if panel.enabled}
+						<p class="mt-1 text-sm text-zinc-600">
+							Balance: <span class="font-medium">{panel.balance ?? '—'}</span>
+							/ {panel.monthlyAllocation} this month
+							{#if panel.periodKey}<span class="text-xs text-zinc-400">({panel.periodKey})</span
+								>{/if}
+						</p>
+					{:else}
+						<p class="mt-1 text-sm text-amber-600">
+							Credit system is currently disabled. Manual adjustments still write audit rows.
+						</p>
+					{/if}
+				</div>
+				<button
+					type="button"
+					onclick={closePanel}
+					class="rounded border border-zinc-300 px-2 py-1 text-xs hover:bg-zinc-50"
+				>
+					Close
+				</button>
+			</div>
+
+			{#if panel.loading}
+				<p class="mt-6 text-sm text-zinc-500">Loading…</p>
+			{:else}
+				<div class="mt-6 rounded border border-zinc-200 bg-zinc-50 p-4">
+					<h3 class="text-sm font-semibold">Adjust balance</h3>
+					<div class="mt-3 flex flex-wrap items-end gap-3">
+						<label class="flex flex-col gap-1 text-xs">
+							Delta (signed)
+							<input
+								type="number"
+								step="1"
+								bind:value={panel.delta}
+								class="w-28 rounded border border-zinc-300 px-2 py-1 text-sm"
+							/>
+						</label>
+						<label class="flex flex-1 flex-col gap-1 text-xs">
+							Reason
+							<input
+								type="text"
+								bind:value={panel.notes}
+								placeholder="e.g. MVP bootstrap grant"
+								maxlength="500"
+								class="rounded border border-zinc-300 px-2 py-1 text-sm"
+							/>
+						</label>
+						<button
+							type="button"
+							onclick={submitAdjust}
+							disabled={panel.saving || !panel.notes.trim() || panel.delta === 0}
+							class="rounded bg-zinc-900 px-3 py-1.5 text-sm text-white disabled:opacity-50"
+						>
+							{panel.saving ? 'Saving…' : 'Apply'}
+						</button>
+					</div>
+					{#if panel.error}
+						<p class="mt-2 text-xs text-red-600">{panel.error}</p>
+					{/if}
+				</div>
+
+				<h3 class="mt-6 text-sm font-semibold">Recent activity</h3>
+				{#if panel.transactions.length === 0}
+					<p class="mt-2 text-sm text-zinc-500">No transactions yet.</p>
+				{:else}
+					<ul class="mt-2 divide-y divide-zinc-100 rounded border border-zinc-200">
+						{#each panel.transactions as t (t.id)}
+							<li class="flex items-start justify-between gap-3 px-3 py-2 text-sm">
+								<div>
+									<span class="font-mono text-xs text-zinc-500">{t.reason}</span>
+									<span
+										class={t.delta > 0
+											? 'ml-2 font-medium text-green-700'
+											: t.delta < 0
+												? 'ml-2 font-medium text-red-600'
+												: 'ml-2 text-zinc-500'}
+									>
+										{t.delta > 0 ? '+' : ''}{t.delta}
+									</span>
+									<span class="ml-2 text-xs text-zinc-500">→ {t.balanceAfter}</span>
+									{#if t.notes}
+										<div class="text-xs text-zinc-600">{t.notes}</div>
+									{/if}
+									{#if t.adminUser}
+										<div class="text-xs text-zinc-400">
+											by {t.adminUser.name ?? t.adminUser.email}
+										</div>
+									{/if}
+								</div>
+								<span class="text-xs text-zinc-500">{fmtDateTime(t.createdAt)}</span>
+							</li>
+						{/each}
+					</ul>
+				{/if}
+			{/if}
+		</div>
+	</div>
 {/if}

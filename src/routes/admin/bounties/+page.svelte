@@ -44,6 +44,26 @@
 			busyId = null;
 		}
 	}
+
+	async function toggleExempt(id: string, next: boolean) {
+		busyId = id;
+		errorMsg = null;
+		try {
+			const res = await fetch(`/api/admin/bounties/${id}/credits-exempt`, {
+				method: 'PATCH',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ creditsExempt: next })
+			});
+			if (!res.ok) {
+				const body = await res.json().catch(() => ({}));
+				errorMsg = body?.error?.message ?? `Update failed (${res.status})`;
+				return;
+			}
+			await invalidateAll();
+		} finally {
+			busyId = null;
+		}
+	}
 </script>
 
 <h1 class="text-2xl font-semibold">Bounties</h1>
@@ -104,6 +124,7 @@
 					<th class="px-4 py-2">Type</th>
 					<th class="px-4 py-2">Prize pool</th>
 					<th class="px-4 py-2">Subs</th>
+					<th class="px-4 py-2">Credits</th>
 					<th class="px-4 py-2">Deadline</th>
 					<th class="px-4 py-2"></th>
 				</tr>
@@ -119,6 +140,18 @@
 						<td class="px-4 py-2 text-xs">{b.type}</td>
 						<td class="px-4 py-2 text-xs">{fmtMoney(b.totalPrizePool, b.currency)}</td>
 						<td class="px-4 py-2 text-xs">{b._count.submissions}</td>
+						<td class="px-4 py-2 text-xs">
+							<label class="inline-flex items-center gap-1">
+								<input
+									type="checkbox"
+									checked={b.creditsExempt}
+									disabled={busyId === b.id}
+									onchange={(e) =>
+										toggleExempt(b.id, (e.currentTarget as HTMLInputElement).checked)}
+								/>
+								<span class="text-zinc-600">Exempt</span>
+							</label>
+						</td>
 						<td class="px-4 py-2 text-xs text-zinc-500">{fmt(b.submissionDeadline)}</td>
 						<td class="px-4 py-2 text-right">
 							{#if ['DRAFT', 'FUNDED', 'ACTIVE'].includes(b.status)}
