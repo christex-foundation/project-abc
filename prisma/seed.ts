@@ -65,17 +65,39 @@ async function seedSkills() {
 			update: {},
 			create: { name: categoryName, slug: slugify(categoryName) }
 		});
+
+		// Mirror each category as a top-level Skill (parentSkillId = null) so the
+		// proof-of-work picker can group children under it.
+		const parentSlug = slugify(categoryName);
+		const parentSkill = await prisma.skill.upsert({
+			where: { slug: parentSlug },
+			update: { parentSkillId: null, categoryId: category.id },
+			create: { name: categoryName, slug: parentSlug, categoryId: category.id }
+		});
+
 		for (const skillName of skillNames) {
+			const childSlug = slugify(skillName);
+			// Skip when the child slug collides with the parent (e.g. a future
+			// taxonomy where a skill shares its category's name).
+			if (childSlug === parentSlug) continue;
 			await prisma.skill.upsert({
-				where: { slug: slugify(skillName) },
-				update: {},
-				create: { name: skillName, slug: slugify(skillName), categoryId: category.id }
+				where: { slug: childSlug },
+				update: { parentSkillId: parentSkill.id, categoryId: category.id },
+				create: {
+					name: skillName,
+					slug: childSlug,
+					categoryId: category.id,
+					parentSkillId: parentSkill.id
+				}
 			});
 		}
 	}
 	const cats = await prisma.skillCategory.count();
 	const skills = await prisma.skill.count();
-	console.log(`✓ Skills taxonomy: ${cats} categories, ${skills} skills.`);
+	const parents = await prisma.skill.count({ where: { parentSkillId: null } });
+	console.log(
+		`✓ Skills taxonomy: ${cats} categories, ${skills} skills (${parents} top-level, ${skills - parents} sub-skills).`
+	);
 }
 
 async function seedSettings() {
@@ -85,6 +107,18 @@ async function seedSettings() {
 		create: { key: 'COMPANY_SELF_REGISTER', value: { enabled: true } }
 	});
 	console.log('✓ Default Setting row: COMPANY_SELF_REGISTER = { enabled: true }.');
+
+	await prisma.setting.upsert({
+		where: { key: 'FREELANCER_CREDIT_SYSTEM' },
+		update: {},
+		create: {
+			key: 'FREELANCER_CREDIT_SYSTEM',
+			value: { enabled: false, monthlyAllocation: 3 }
+		}
+	});
+	console.log(
+		'✓ Default Setting row: FREELANCER_CREDIT_SYSTEM = { enabled: false, monthlyAllocation: 3 }.'
+	);
 }
 
 async function seedAdmin() {

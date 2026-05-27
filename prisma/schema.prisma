@@ -89,6 +89,15 @@ enum InviteStatus {
   REVOKED
 }
 
+enum CreditTxnReason {
+  MONTHLY_RESET
+  SUBMISSION_SPEND
+  WIN_BONUS
+  SPAM_PENALTY
+  ADMIN_GRANT
+  ADMIN_REVOKE
+}
+
 // =============================================================================
 // Better Auth tables
 //   - `user` is extended via Better Auth's `additionalFields` (role, phoneNumber, isActive).
@@ -96,31 +105,32 @@ enum InviteStatus {
 // =============================================================================
 
 model User {
-  id            String    @id
-  email         String    @unique
-  emailVerified Boolean   @default(false)
+  id            String   @id
+  email         String   @unique
+  emailVerified Boolean  @default(false)
   name          String?
   image         String?
   // Custom fields (additionalFields)
-  role          UserRole  @default(FREELANCER)
+  role          UserRole @default(FREELANCER)
   phoneNumber   String?
-  isActive      Boolean   @default(true)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   accounts          Account[]
   sessions          Session[]
   companyProfile    CompanyProfile?
   freelancerProfile FreelancerProfile?
 
-  invitesCreated     CompanyInvite[]       @relation("InviteCreatedBy")
-  invitesAcceptedBy  CompanyInvite[]       @relation("InviteAcceptedBy")
-  settingsTouched    Setting[]
-  notifications      Notification[]
-  notificationPrefs  NotificationPreference?
-  pushSubscriptions  PushSubscription[]
-  raisedDisputes     Dispute[]
-  withdrawals        AccountWithdrawal[]
+  invitesCreated    CompanyInvite[]         @relation("InviteCreatedBy")
+  invitesAcceptedBy CompanyInvite[]         @relation("InviteAcceptedBy")
+  settingsTouched   Setting[]
+  notifications     Notification[]
+  notificationPrefs NotificationPreference?
+  pushSubscriptions PushSubscription[]
+  raisedDisputes    Dispute[]
+  withdrawals       AccountWithdrawal[]
+  creditTxnsAsAdmin CreditTransaction[]     @relation("CreditTxnAdmin")
 
   @@map("user")
 }
@@ -189,8 +199,8 @@ model CompanyProfile {
   country                  String   @default("SL")
   verified                 Boolean  @default(false)
   monimePayoutMomoNumber   String?
-  monimeFinancialAccountId String?  // Monime financial account UUID
-  monimeUvan               String?  // UVAN identifier
+  monimeFinancialAccountId String? // Monime financial account UUID
+  monimeUvan               String? // UVAN identifier
   createdAt                DateTime @default(now())
   updatedAt                DateTime @updatedAt
 
@@ -210,14 +220,18 @@ model FreelancerProfile {
   whatsappNumber           String?
   bankDetails              Json?
   aiEmbedding              Float[]
-  monimeFinancialAccountId String?  // Monime financial account UUID
-  monimeUvan               String?  // UVAN identifier
+  monimeFinancialAccountId String? // Monime financial account UUID
+  monimeUvan               String? // UVAN identifier
+  creditsBalance           Int      @default(0)
+  creditsPeriodKey         String? // "YYYY-MM" of the cached balance; null = never initialized
   createdAt                DateTime @default(now())
   updatedAt                DateTime @updatedAt
 
-  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  skills      FreelancerSkill[]
-  submissions Submission[]
+  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skills             FreelancerSkill[]
+  submissions        Submission[]
+  proofOfWorks       ProofOfWork[]
+  creditTransactions CreditTransaction[]
 }
 
 // =============================================================================
@@ -232,24 +246,29 @@ model SkillCategory {
 }
 
 model Skill {
-  id         String @id @default(cuid())
-  name       String @unique
-  slug       String @unique
-  categoryId String
+  id            String  @id @default(cuid())
+  name          String  @unique
+  slug          String  @unique
+  categoryId    String
+  parentSkillId String? // null = top-level skill; non-null = sub-skill of another Skill
 
-  category         SkillCategory     @relation(fields: [categoryId], references: [id])
-  freelancerSkills FreelancerSkill[]
-  bountySkills     BountySkill[]
+  category          SkillCategory      @relation(fields: [categoryId], references: [id])
+  parent            Skill?             @relation("SkillHierarchy", fields: [parentSkillId], references: [id])
+  children          Skill[]            @relation("SkillHierarchy")
+  freelancerSkills  FreelancerSkill[]
+  bountySkills      BountySkill[]
+  proofOfWorkSkills ProofOfWorkSkill[]
 
   @@index([categoryId])
   @@index([slug])
+  @@index([parentSkillId])
 }
 
 model FreelancerSkill {
   id                  String @id @default(cuid())
   freelancerProfileId String
   skillId             String
-  proficiencyLevel    Int    // 1-5
+  proficiencyLevel    Int // 1-5
   yearsExperience     Int?
 
   freelancer FreelancerProfile @relation(fields: [freelancerProfileId], references: [id], onDelete: Cascade)
@@ -257,6 +276,38 @@ model FreelancerSkill {
 
   @@unique([freelancerProfileId, skillId])
   @@index([freelancerProfileId])
+  @@index([skillId])
+}
+
+// =============================================================================
+// Proof of Work (freelancer portfolio items)
+// =============================================================================
+
+model ProofOfWork {
+  id                  String   @id @default(cuid())
+  freelancerProfileId String
+  title               String
+  description         String // length capped in validator
+  link                String
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  freelancer FreelancerProfile  @relation(fields: [freelancerProfileId], references: [id], onDelete: Cascade)
+  skills     ProofOfWorkSkill[]
+
+  @@index([freelancerProfileId])
+}
+
+model ProofOfWorkSkill {
+  id            String @id @default(cuid())
+  proofOfWorkId String
+  skillId       String
+
+  proofOfWork ProofOfWork @relation(fields: [proofOfWorkId], references: [id], onDelete: Cascade)
+  skill       Skill       @relation(fields: [skillId], references: [id])
+
+  @@unique([proofOfWorkId, skillId])
+  @@index([proofOfWorkId])
   @@index([skillId])
 }
 
@@ -270,7 +321,7 @@ model Bounty {
   companyProfileId String
   title            String
   slug             String  @unique
-  description      String  // sanitised HTML
+  description      String // sanitised HTML
   requirements     String? // sanitised HTML
   deliverables     String? // sanitised HTML
 
@@ -281,17 +332,17 @@ model Bounty {
   // Compensation
   compensationType CompensationType @default(FIXED)
   currency         String           @default("SLE")
-  totalPrizePool   Int              // minor units
+  totalPrizePool   Int // minor units
   rewardAmount     Int?
   minRewardAsk     Int?
   maxRewardAsk     Int?
   rewards          Json?
 
   // Winners
-  numberOfWinners      Int       @default(1)
-  maxBonusSpots        Int       @default(0)
-  isWinnersAnnounced   Boolean   @default(false)
-  winnersAnnouncedAt   DateTime?
+  numberOfWinners    Int       @default(1)
+  maxBonusSpots      Int       @default(0)
+  isWinnersAnnounced Boolean   @default(false)
+  winnersAnnouncedAt DateTime?
 
   // Eligibility
   eligibility Json?
@@ -313,16 +364,20 @@ model Bounty {
   // AI
   aiEmbedding Float[]
 
+  // Credit system
+  creditsExempt Boolean @default(false)
+
   // Meta
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  company     CompanyProfile @relation(fields: [companyProfileId], references: [id])
-  prizeTiers  PrizeTier[]
-  skills      BountySkill[]
-  submissions Submission[]
-  payments    Payment[]
-  disputes    Dispute[]
+  company            CompanyProfile      @relation(fields: [companyProfileId], references: [id])
+  prizeTiers         PrizeTier[]
+  skills             BountySkill[]
+  submissions        Submission[]
+  payments           Payment[]
+  disputes           Dispute[]
+  creditTransactions CreditTransaction[]
 
   @@index([companyProfileId])
   @@index([status])
@@ -332,8 +387,8 @@ model Bounty {
 model PrizeTier {
   id       String  @id @default(cuid())
   bountyId String
-  position Int     // 1=first place, 99=bonus
-  amount   Int     // minor units
+  position Int // 1=first place, 99=bonus
+  amount   Int // minor units
   label    String?
 
   bounty Bounty @relation(fields: [bountyId], references: [id], onDelete: Cascade)
@@ -399,9 +454,10 @@ model Submission {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  bounty     Bounty            @relation(fields: [bountyId], references: [id], onDelete: Cascade)
-  freelancer FreelancerProfile @relation(fields: [freelancerProfileId], references: [id])
-  payments   Payment[]
+  bounty             Bounty              @relation(fields: [bountyId], references: [id], onDelete: Cascade)
+  freelancer         FreelancerProfile   @relation(fields: [freelancerProfileId], references: [id])
+  payments           Payment[]
+  creditTransactions CreditTransaction[]
 
   @@unique([bountyId, freelancerProfileId])
   @@index([bountyId])
@@ -426,11 +482,11 @@ model Payment {
   fromEntity   String?
   toEntity     String?
 
-  method           PaymentMethod @default(CHECKOUT)
+  method            PaymentMethod @default(CHECKOUT)
   checkoutSessionId String?
   monimePaymentId   String?
   monimePayoutId    String?
-  monimeTransferId  String?       // populated for INTERNAL_TRANSFER payments
+  monimeTransferId  String? // populated for INTERNAL_TRANSFER payments
 
   failureCode    String?
   failureMessage String?
@@ -455,21 +511,21 @@ model Payment {
 // =============================================================================
 
 model AccountWithdrawal {
-  id               String           @id @default(cuid())
-  userId           String
-  role             UserRole         // COMPANY | FREELANCER — whose account was withdrawn from
-  fromAccountId    String           // Monime financial account ID
-  toPhoneNumber    String           // Destination MoMo number (KYC-verified)
-  holderName       String           // Confirmed via Monime provider KYC
-  providerName     String           // e.g. "Orange Money"
-  amount           Int              // minor units
-  currency         String           @default("SLE")
-  monimePayoutId   String           @unique
-  status           WithdrawalStatus @default(PROCESSING)
-  failureCode      String?
-  failureMessage   String?
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
+  id             String           @id @default(cuid())
+  userId         String
+  role           UserRole // COMPANY | FREELANCER — whose account was withdrawn from
+  fromAccountId  String // Monime financial account ID
+  toPhoneNumber  String // Destination MoMo number (KYC-verified)
+  holderName     String // Confirmed via Monime provider KYC
+  providerName   String // e.g. "Orange Money"
+  amount         Int // minor units
+  currency       String           @default("SLE")
+  monimePayoutId String           @unique
+  status         WithdrawalStatus @default(PROCESSING)
+  failureCode    String?
+  failureMessage String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -518,24 +574,24 @@ model Setting {
 // =============================================================================
 
 model CompanyInvite {
-  id              String       @id @default(cuid())
-  email           String
-  companyName     String?
-  invitedById     String
-  status          InviteStatus @default(PENDING)
-  acceptedUserId  String?
-  createdAt       DateTime     @default(now())
-  acceptedAt      DateTime?
+  id             String       @id @default(cuid())
+  email          String
+  companyName    String?
+  invitedById    String
+  status         InviteStatus @default(PENDING)
+  acceptedUserId String?
+  createdAt      DateTime     @default(now())
+  acceptedAt     DateTime?
 
   invitedBy    User  @relation("InviteCreatedBy", fields: [invitedById], references: [id])
   acceptedUser User? @relation("InviteAcceptedBy", fields: [acceptedUserId], references: [id])
+  // NOTE: partial-unique index `(email) WHERE status = 'PENDING'` is appended
+  // as raw SQL in the initial migration — Prisma does not yet support partial
+  // unique indexes declaratively.
 
   @@index([email])
   @@index([invitedById])
   @@index([status])
-  // NOTE: partial-unique index `(email) WHERE status = 'PENDING'` is appended
-  // as raw SQL in the initial migration — Prisma does not yet support partial
-  // unique indexes declaratively.
 }
 
 // =============================================================================
@@ -583,4 +639,37 @@ model Notification {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, eventType, createdAt])
+}
+
+// =============================================================================
+// Credit system — freelancer submission credits ledger.
+//   Idempotency is enforced via partial-unique indexes appended as raw SQL in
+//   the migration (Prisma cannot model partial uniques declaratively):
+//     - one SUBMISSION_SPEND per submission
+//     - one WIN_BONUS per submission
+//     - one SPAM_PENALTY per submission
+//     - one MONTHLY_RESET per (freelancer, periodKey)
+// =============================================================================
+
+model CreditTransaction {
+  id                  String          @id @default(cuid())
+  freelancerProfileId String
+  delta               Int // signed; +N grant, -N spend, 0 for floor-clamped no-ops
+  balanceAfter        Int // post-transaction snapshot (audit aid)
+  reason              CreditTxnReason
+  periodKey           String // "YYYY-MM" of the period this transaction belongs to
+  submissionId        String?
+  bountyId            String?
+  adminUserId         String?
+  notes               String?
+  createdAt           DateTime        @default(now())
+
+  freelancer FreelancerProfile @relation(fields: [freelancerProfileId], references: [id], onDelete: Cascade)
+  submission Submission?       @relation(fields: [submissionId], references: [id], onDelete: SetNull)
+  bounty     Bounty?           @relation(fields: [bountyId], references: [id], onDelete: SetNull)
+  adminUser  User?             @relation("CreditTxnAdmin", fields: [adminUserId], references: [id])
+
+  @@index([freelancerProfileId, createdAt])
+  @@index([submissionId])
+  @@index([reason, periodKey])
 }
