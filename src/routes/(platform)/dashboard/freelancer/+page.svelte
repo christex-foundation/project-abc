@@ -133,9 +133,8 @@
 			</CardHeader>
 			<CardContent class="space-y-4">
 				<p class="text-sm text-zinc-600">
-					You get {referrals.creditsPerFirstSubmission} credit when a friend you invited makes a
-					non-spam submission. You also get {referrals.creditsPerWin} bonus credits every time they
-					win.
+					You get {referrals.creditsPerFirstSubmission} credit when a friend you invited makes a non-spam
+					submission. You also get {referrals.creditsPerWin} bonus credits every time they win.
 				</p>
 
 				<div class="flex items-baseline gap-2">
@@ -147,7 +146,9 @@
 				<div>
 					<div class="text-xs text-zinc-500 uppercase">Your Code</div>
 					<div class="mt-1 flex items-center gap-2">
-						<code class="rounded bg-zinc-100 px-3 py-1.5 font-mono text-sm font-semibold tracking-wider">
+						<code
+							class="rounded bg-zinc-100 px-3 py-1.5 font-mono text-sm font-semibold tracking-wider"
+						>
 							{referrals.code}
 						</code>
 						<button
