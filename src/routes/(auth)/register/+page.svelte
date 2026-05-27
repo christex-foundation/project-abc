@@ -3,6 +3,7 @@
 
 	let { data, form } = $props();
 	let role = $state<'FREELANCER' | 'COMPANY'>('FREELANCER');
+	const referralCode = $derived(data.referralCode);
 </script>
 
 <h1 class="text-xl font-semibold">Create your account</h1>
@@ -78,6 +79,12 @@
 		/>
 		<span class="mt-1 block text-xs text-zinc-500">At least 8 characters with one digit.</span>
 	</label>
+	{#if role === 'FREELANCER' && referralCode}
+		<input type="hidden" name="referralCode" value={referralCode} />
+		<p class="rounded bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
+			You were invited with code <span class="font-mono font-semibold">{referralCode}</span>.
+		</p>
+	{/if}
 	{#if form?.error}
 		<p class="text-sm text-red-600">{form.error}</p>
 	{/if}

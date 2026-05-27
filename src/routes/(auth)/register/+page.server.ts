@@ -4,10 +4,11 @@ import * as authService from '$lib/server/services/auth.service';
 import { AppError } from '$lib/server/http';
 import type { Actions, PageServerLoad } from './$types';
 
-export const load: PageServerLoad = ({ locals }) => {
+export const load: PageServerLoad = ({ locals, url }) => {
 	const flag =
 		(locals.settings?.COMPANY_SELF_REGISTER as { enabled?: boolean } | undefined) ?? null;
-	return { companySelfRegisterEnabled: flag?.enabled === true };
+	const ref = url.searchParams.get('ref')?.trim() || null;
+	return { companySelfRegisterEnabled: flag?.enabled === true, referralCode: ref };
 };
 
 export const actions: Actions = {

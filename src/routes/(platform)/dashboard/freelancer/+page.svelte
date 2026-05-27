@@ -46,6 +46,7 @@
 	const recentSubmissions = $derived(submissions.slice(0, 5));
 	const credits = $derived(data.credits);
 	const creditTransactions = $derived(data.creditTransactions);
+	const referrals = $derived(data.referrals);
 
 	const REASON_LABEL: Record<string, string> = {
 		MONTHLY_RESET: 'Monthly reset',
@@ -53,8 +54,29 @@
 		WIN_BONUS: 'Win bonus',
 		SPAM_PENALTY: 'Spam penalty',
 		ADMIN_GRANT: 'Admin grant',
-		ADMIN_REVOKE: 'Admin revoke'
+		ADMIN_REVOKE: 'Admin revoke',
+		REFERRAL_FIRST_SUBMISSION: 'Referral — first submission',
+		REFERRAL_WIN_BONUS: 'Referral — win bonus',
+		REFERRAL_REVERSAL: 'Referral — reversed (spam)'
 	};
+
+	let copiedCode = $state(false);
+	let copiedLink = $state(false);
+
+	async function copy(value: string, which: 'code' | 'link') {
+		try {
+			await navigator.clipboard.writeText(value);
+			if (which === 'code') {
+				copiedCode = true;
+				setTimeout(() => (copiedCode = false), 1500);
+			} else {
+				copiedLink = true;
+				setTimeout(() => (copiedLink = false), 1500);
+			}
+		} catch {
+			// Clipboard unavailable — silently no-op; user can long-press the field.
+		}
+	}
 </script>
 
 <div class="space-y-6">
@@ -103,6 +125,88 @@
 			</Card>
 		{/if}
 	</div>
+
+	{#if referrals?.enabled}
+		<Card>
+			<CardHeader>
+				<CardTitle class="text-base">Get one credit for every friend you invite</CardTitle>
+			</CardHeader>
+			<CardContent class="space-y-4">
+				<p class="text-sm text-zinc-600">
+					You get {referrals.creditsPerFirstSubmission} credit when a friend you invited makes a
+					non-spam submission. You also get {referrals.creditsPerWin} bonus credits every time they
+					win.
+				</p>
+
+				<div class="flex items-baseline gap-2">
+					<span class="text-3xl font-semibold">{referrals.remaining}</span>
+					<span class="text-sm text-zinc-500">/ {referrals.cap} invites left</span>
+					<a href="/legal/referrals" class="ml-auto text-xs text-zinc-500 underline">READ TERMS</a>
+				</div>
+
+				<div>
+					<div class="text-xs text-zinc-500 uppercase">Your Code</div>
+					<div class="mt-1 flex items-center gap-2">
+						<code class="rounded bg-zinc-100 px-3 py-1.5 font-mono text-sm font-semibold tracking-wider">
+							{referrals.code}
+						</code>
+						<button
+							type="button"
+							onclick={() => copy(referrals!.code, 'code')}
+							class="text-xs text-zinc-600 underline"
+						>
+							{copiedCode ? 'Copied!' : 'Copy'}
+						</button>
+					</div>
+				</div>
+
+				<div>
+					<div class="text-xs text-zinc-500 uppercase">Share link</div>
+					<div class="mt-1 flex items-center gap-2">
+						<input
+							readonly
+							value={referrals.link}
+							class="min-w-0 flex-1 rounded border border-zinc-200 bg-zinc-50 px-2 py-1 font-mono text-xs"
+						/>
+						<button
+							type="button"
+							onclick={() => copy(referrals!.link, 'link')}
+							class="text-xs text-zinc-600 underline"
+						>
+							{copiedLink ? 'Copied!' : 'Copy'}
+						</button>
+					</div>
+				</div>
+
+				{#if referrals.referrals.length > 0}
+					<details class="text-sm">
+						<summary class="cursor-pointer text-zinc-600">
+							Friends you've invited ({referrals.referrals.length})
+						</summary>
+						<ul class="mt-2 space-y-1">
+							{#each referrals.referrals as r (r.id)}
+								<li class="flex items-center justify-between border-b py-1.5 text-xs last:border-0">
+									<span class="truncate">{r.displayName}</span>
+									<span class="flex shrink-0 items-center gap-1.5">
+										{#if !r.emailVerified}
+											<Badge variant="outline">Pending verification</Badge>
+										{:else if r.hasSubmitted}
+											<Badge variant="success">Submitted</Badge>
+										{:else}
+											<Badge variant="secondary">Signed up</Badge>
+										{/if}
+										{#if r.winCount > 0}
+											<Badge variant="success">{r.winCount} win{r.winCount === 1 ? '' : 's'}</Badge>
+										{/if}
+									</span>
+								</li>
+							{/each}
+						</ul>
+					</details>
+				{/if}
+			</CardContent>
+		</Card>
+	{/if}
 
 	{#if credits && creditTransactions.length > 0}
 		<Card>
