@@ -42,7 +42,6 @@ export async function updateProfile(caller: AuthedUser, raw: unknown) {
 			bio: parsed.bio,
 			portfolio: parsed.portfolio,
 			experienceLevel: parsed.experienceLevel,
-			momoNumber: parsed.momoNumber,
 			whatsappNumber: parsed.whatsappNumber
 		});
 		await freelancerRepo.replaceSkills(tx, profile.id, parsed.skills);

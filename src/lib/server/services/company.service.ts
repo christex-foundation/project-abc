@@ -27,7 +27,6 @@ export async function updateProfile(caller: AuthedUser, raw: unknown) {
 		website: parsed.website,
 		logo: parsed.logo,
 		industry: parsed.industry,
-		country: parsed.country ?? 'SL',
-		monimePayoutMomoNumber: parsed.monimePayoutMomoNumber
+		country: parsed.country ?? 'SL'
 	});
 }

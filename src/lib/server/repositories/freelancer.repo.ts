@@ -15,7 +15,6 @@ export type UpdateProfileInput = {
 	bio?: string | null;
 	portfolio?: string | null;
 	experienceLevel?: string | null;
-	momoNumber?: string | null;
 	whatsappNumber?: string | null;
 };
 

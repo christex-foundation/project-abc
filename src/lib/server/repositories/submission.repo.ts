@@ -49,7 +49,6 @@ export const selectForSponsor = {
 			displayName: true,
 			headline: true,
 			portfolio: true,
-			momoNumber: true,
 			whatsappNumber: true,
 			bankDetails: true,
 			monimeFinancialAccountId: true,

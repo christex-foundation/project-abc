@@ -21,8 +21,7 @@ export const updateCompanyProfileInput = z.object({
 	website: optionalUrl(500),
 	logo: optionalUrl(500),
 	industry: optionalNullableString(120),
-	country: optionalNullableString(8),
-	monimePayoutMomoNumber: optionalNullableString(40)
+	country: optionalNullableString(8)
 });
 
 export type UpdateCompanyProfileInput = z.infer<typeof updateCompanyProfileInput>;

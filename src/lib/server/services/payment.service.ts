@@ -4,7 +4,6 @@ import { requireRole, type AuthedUser } from '../auth-helpers';
 import { monime } from '../monime/client';
 import * as paymentRepo from '../repositories/payment.repo';
 import * as bountyRepo from '../repositories/bounty.repo';
-import * as submissionRepo from '../repositories/submission.repo';
 
 const MAX_RETRIES = 3;
 
@@ -27,13 +26,9 @@ export async function retryPayout(caller: AuthedUser, paymentId: string) {
 		throw new AppError('INTERNAL', 'Bounty escrow account missing.');
 	}
 
-	let destinationMomo: string | null = payment.toEntity ?? null;
-	if (!destinationMomo && payment.submissionId) {
-		const sub = await submissionRepo.findByIdForSponsor(payment.submissionId);
-		destinationMomo = sub?.freelancer.momoNumber ?? null;
-	}
+	const destinationMomo = payment.toEntity;
 	if (!destinationMomo) {
-		throw new AppError('CONFLICT', 'No destination MoMo number on file for this payment.');
+		throw new AppError('CONFLICT', 'No payout destination on file for this payment.');
 	}
 
 	const referencePrefix = payment.type === PaymentType.REFUND ? 'refund' : 'prize';

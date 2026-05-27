@@ -291,94 +291,51 @@ export async function cancelBountyWithRefund(caller: AuthedUser, bountyId: strin
 		if (!bounty.escrowFinancialAccountId) {
 			throw new AppError('INTERNAL', 'Funded bounty is missing its escrow account.');
 		}
-
-		if (company?.monimeFinancialAccountId) {
-			// Preferred path: instant internal transfer back to company's financial account
-			const transfer = await monime.internalTransfers.create({
-				from: bounty.escrowFinancialAccountId,
-				to: company.monimeFinancialAccountId,
-				amount: bounty.escrowFundedAmount,
-				currency: bounty.currency,
-				reference: `refund:${bounty.id}`,
-				description: `Bounty cancellation refund – ${bounty.title}`
-			});
-
-			await prisma.$transaction(async (tx) => {
-				await paymentRepo.createPayout(
-					{
-						bountyId: bounty.id,
-						type: PaymentType.REFUND,
-						method: PaymentMethod.INTERNAL_TRANSFER,
-						amount: bounty.escrowFundedAmount,
-						currency: bounty.currency,
-						monimeTransferId: transfer.id,
-						fromEntity: bounty.escrowFinancialAccountId!,
-						toEntity: company.monimeFinancialAccountId!,
-						status: PaymentStatus.COMPLETED
-					},
-					tx
-				);
-				await bountyRepo.markCancelled(bounty.id, tx);
-			});
-
-			await notification.dispatch(caller.id, 'BOUNTY_CANCELLED', {
-				title: 'Refund processed',
-				message: `Refund for "${bounty.title}" has been returned to your payment account.`,
-				link: `/dashboard/company/bounties`,
-				email: {
-					bountyTitle: bounty.title,
-					refundedAmount: bounty.escrowFundedAmount,
-					currency: bounty.currency,
-					isSubmitter: false
-				}
-			});
-		} else {
-			// Legacy fallback: payout to registered MoMo number
-			const momo = company?.monimePayoutMomoNumber;
-			if (!momo) {
-				throw new AppError(
-					'CONFLICT',
-					'Set up your payment account or MoMo payout number before cancelling a funded bounty.'
-				);
-			}
-
-			const payout = await monime.payouts.create({
-				sourceAccountId: bounty.escrowFinancialAccountId,
-				destination: { type: 'MOMO', phoneNumber: momo },
-				amount: bounty.escrowFundedAmount,
-				currency: bounty.currency,
-				reference: `refund:${bounty.id}`
-			});
-
-			await prisma.$transaction(async (tx) => {
-				await paymentRepo.createPayout(
-					{
-						bountyId: bounty.id,
-						type: PaymentType.REFUND,
-						method: PaymentMethod.MOMO_PAYOUT,
-						amount: bounty.escrowFundedAmount,
-						currency: bounty.currency,
-						monimePayoutId: payout.id,
-						toEntity: momo,
-						status: PaymentStatus.PROCESSING
-					},
-					tx
-				);
-				await bountyRepo.markCancelled(bounty.id, tx);
-			});
-
-			await notification.dispatch(caller.id, 'BOUNTY_CANCELLED', {
-				title: 'Refund initiated',
-				message: `Refund for "${bounty.title}" is on its way to your MoMo.`,
-				link: `/dashboard/company/bounties`,
-				email: {
-					bountyTitle: bounty.title,
-					refundedAmount: bounty.escrowFundedAmount,
-					currency: bounty.currency,
-					isSubmitter: false
-				}
-			});
+		if (!company?.monimeFinancialAccountId) {
+			throw new AppError(
+				'CONFLICT',
+				'Set up your payment account before cancelling a funded bounty.'
+			);
 		}
+
+		const transfer = await monime.internalTransfers.create({
+			from: bounty.escrowFinancialAccountId,
+			to: company.monimeFinancialAccountId,
+			amount: bounty.escrowFundedAmount,
+			currency: bounty.currency,
+			reference: `refund:${bounty.id}`,
+			description: `Bounty cancellation refund – ${bounty.title}`
+		});
+
+		await prisma.$transaction(async (tx) => {
+			await paymentRepo.createPayout(
+				{
+					bountyId: bounty.id,
+					type: PaymentType.REFUND,
+					method: PaymentMethod.INTERNAL_TRANSFER,
+					amount: bounty.escrowFundedAmount,
+					currency: bounty.currency,
+					monimeTransferId: transfer.id,
+					fromEntity: bounty.escrowFinancialAccountId!,
+					toEntity: company.monimeFinancialAccountId!,
+					status: PaymentStatus.COMPLETED
+				},
+				tx
+			);
+			await bountyRepo.markCancelled(bounty.id, tx);
+		});
+
+		await notification.dispatch(caller.id, 'BOUNTY_CANCELLED', {
+			title: 'Refund processed',
+			message: `Refund for "${bounty.title}" has been returned to your payment account.`,
+			link: `/dashboard/company/bounties`,
+			email: {
+				bountyTitle: bounty.title,
+				refundedAmount: bounty.escrowFundedAmount,
+				currency: bounty.currency,
+				isSubmitter: false
+			}
+		});
 	}
 
 	if (isEmptyDraft) {

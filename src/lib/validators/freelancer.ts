@@ -24,7 +24,6 @@ export const updateFreelancerProfileInput = z.object({
 		.nullish()
 		.transform((v) => (v == null || v === '' ? null : v)),
 	experienceLevel: optionalNullableString(40),
-	momoNumber: optionalNullableString(40),
 	whatsappNumber: optionalNullableString(40),
 	skills: z.array(freelancerSkillInput).max(50).default([])
 });
