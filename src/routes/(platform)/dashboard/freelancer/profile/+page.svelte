@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { untrack } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import {
 		Badge,
 		Button,
@@ -13,6 +13,7 @@
 		Select,
 		Textarea
 	} from '$lib/components/ui';
+	import WithdrawalForm from '$lib/components/shared/WithdrawalForm.svelte';
 
 	let { data } = $props();
 
@@ -43,6 +44,60 @@
 	let saving = $state(false);
 	let savedAt = $state<Date | null>(null);
 	let errorMsg = $state<string | null>(null);
+
+	// Financial account
+	let accountId = $state<string | null>(
+		untrack(() => data.profile.monimeFinancialAccountId ?? null)
+	);
+	let uvan = $state<string | null>(untrack(() => data.profile.monimeUvan ?? null));
+	let balance = $state<number | null>(null);
+	let accountLoading = $state(false);
+	let setupLoading = $state(false);
+	let showWithdraw = $state(false);
+	let copied = $state(false);
+
+	onMount(async () => {
+		if (!accountId) return;
+		accountLoading = true;
+		try {
+			const res = await fetch('/api/users/me/financial-account');
+			if (res.ok) {
+				const body = await res.json();
+				balance = body.balance;
+				uvan = body.uvan ?? uvan;
+			}
+		} finally {
+			accountLoading = false;
+		}
+	});
+
+	async function setupAccount() {
+		setupLoading = true;
+		try {
+			const res = await fetch('/api/users/me/financial-account', { method: 'POST' });
+			if (res.ok) {
+				const body = await res.json();
+				accountId = body.accountId;
+				uvan = body.uvan;
+				balance = body.balance;
+			}
+		} finally {
+			setupLoading = false;
+		}
+	}
+
+	function copyUvan() {
+		if (uvan) {
+			navigator.clipboard.writeText(uvan);
+			copied = true;
+			setTimeout(() => (copied = false), 2000);
+		}
+	}
+
+	function formatMoney(minor: number | null, currency = 'SLE') {
+		if (minor == null) return '—';
+		return `${currency} ${(minor / 100).toLocaleString()}`;
+	}
 
 	function isSelected(skillId: string): boolean {
 		return selected.some((s) => s.skillId === skillId);
@@ -167,6 +222,57 @@
 					/>
 				</div>
 			</div>
+		</CardContent>
+	</Card>
+
+	<!-- Payment Account card -->
+	<Card>
+		<CardHeader>
+			<CardTitle>Payment account</CardTitle>
+			<CardDescription>
+				Your Monime financial account where prize payments are deposited. Withdraw to mobile money
+				at any time.
+			</CardDescription>
+		</CardHeader>
+		<CardContent class="space-y-4">
+			{#if !accountId}
+				<p class="text-sm text-zinc-500">
+					Set up a Monime payment account to receive prize payouts instantly and withdraw to your
+					mobile money.
+				</p>
+				<Button onclick={setupAccount} disabled={setupLoading} variant="outline">
+					{setupLoading ? 'Setting up…' : 'Set up payment account'}
+				</Button>
+			{:else}
+				<div class="space-y-3">
+					<div class="flex items-center justify-between rounded-md bg-zinc-50 px-3 py-2">
+						<div class="space-y-0.5">
+							<p class="text-xs font-medium text-zinc-500 uppercase tracking-wide">UVAN</p>
+							<p class="font-mono text-sm">{uvan ?? accountId}</p>
+						</div>
+						<Button variant="ghost" size="sm" onclick={copyUvan}>
+							{copied ? '✓ Copied' : 'Copy'}
+						</Button>
+					</div>
+					<div class="flex items-center justify-between rounded-md bg-zinc-50 px-3 py-2">
+						<div class="space-y-0.5">
+							<p class="text-xs font-medium text-zinc-500 uppercase tracking-wide">Balance</p>
+							<p class="text-sm font-semibold">
+								{accountLoading ? 'Loading…' : formatMoney(balance)}
+							</p>
+						</div>
+						<Button variant="outline" size="sm" onclick={() => (showWithdraw = !showWithdraw)}>
+							{showWithdraw ? 'Cancel' : 'Withdraw'}
+						</Button>
+					</div>
+					{#if showWithdraw}
+						<div class="rounded-md border p-4">
+							<p class="mb-3 text-sm font-medium">Withdraw to mobile money</p>
+							<WithdrawalForm {accountId} />
+						</div>
+					{/if}
+				</div>
+			{/if}
 		</CardContent>
 	</Card>
 
