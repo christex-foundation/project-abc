@@ -1,7 +1,12 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
 	import { invalidateAll } from '$app/navigation';
+	import { toast } from 'svelte-sonner';
+	import { PageHeader, Card, Button, Input } from '$lib/components/ui';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
+	import Pencil from '@lucide/svelte/icons/pencil';
+	import Trash2 from '@lucide/svelte/icons/trash-2';
+	import Plus from '@lucide/svelte/icons/plus';
 
 	let { data } = $props();
 
@@ -11,14 +16,12 @@
 	let renameTarget = $state<string | null>(null);
 	let renameValue = $state('');
 	let busy = $state(false);
-	let errorMsg = $state<string | null>(null);
 
 	const activeCategory = $derived(data.categories.find((c) => c.id === activeCategoryId) ?? null);
 
 	async function addCategory() {
 		if (!newCategoryName.trim()) return;
 		busy = true;
-		errorMsg = null;
 		try {
 			const res = await fetch('/api/admin/skill-categories', {
 				method: 'POST',
@@ -27,9 +30,10 @@
 			});
 			if (!res.ok) {
 				const j = await res.json().catch(() => ({}));
-				errorMsg = j?.error?.message ?? `Failed (${res.status})`;
+				toast.error(j?.error?.message ?? 'Failed.');
 				return;
 			}
+			toast.success(`Category "${newCategoryName.trim()}" added.`);
 			newCategoryName = '';
 			await invalidateAll();
 		} finally {
@@ -40,7 +44,6 @@
 	async function addSkill() {
 		if (!activeCategoryId || !newSkillName.trim()) return;
 		busy = true;
-		errorMsg = null;
 		try {
 			const res = await fetch('/api/admin/skills', {
 				method: 'POST',
@@ -49,9 +52,10 @@
 			});
 			if (!res.ok) {
 				const j = await res.json().catch(() => ({}));
-				errorMsg = j?.error?.message ?? `Failed (${res.status})`;
+				toast.error(j?.error?.message ?? 'Failed.');
 				return;
 			}
+			toast.success(`Skill "${newSkillName.trim()}" added.`);
 			newSkillName = '';
 			await invalidateAll();
 		} finally {
@@ -66,7 +70,6 @@
 			return;
 		}
 		busy = true;
-		errorMsg = null;
 		try {
 			const res = await fetch(`/api/admin/skills/${skillId}`, {
 				method: 'PATCH',
@@ -75,9 +78,10 @@
 			});
 			if (!res.ok) {
 				const j = await res.json().catch(() => ({}));
-				errorMsg = j?.error?.message ?? `Rename failed (${res.status})`;
+				toast.error(j?.error?.message ?? 'Rename failed.');
 				return;
 			}
+			toast.success('Skill renamed.');
 			renameTarget = null;
 			renameValue = '';
 			await invalidateAll();
@@ -89,14 +93,14 @@
 	async function deleteSkill(skillId: string, name: string) {
 		if (!confirm(`Delete skill "${name}"? Blocked if any freelancer/bounty references it.`)) return;
 		busy = true;
-		errorMsg = null;
 		try {
 			const res = await fetch(`/api/admin/skills/${skillId}`, { method: 'DELETE' });
 			if (!res.ok) {
 				const j = await res.json().catch(() => ({}));
-				errorMsg = j?.error?.message ?? `Delete failed (${res.status})`;
+				toast.error(j?.error?.message ?? 'Delete failed.');
 				return;
 			}
+			toast.success(`Skill "${name}" deleted.`);
 			await invalidateAll();
 		} finally {
 			busy = false;
@@ -104,38 +108,25 @@
 	}
 </script>
 
-<h1 class="text-2xl font-semibold">Skills taxonomy</h1>
-<p class="mt-1 text-sm text-zinc-500">
-	Manage the skill categories freelancers pick on their profile and sponsors pick on bounties.
-</p>
+<PageHeader
+	title="Skills taxonomy"
+	description="Manage the skill categories freelancers and sponsors choose from."
+/>
 
-{#if errorMsg}
-	<p class="mt-3 text-sm text-red-600">{errorMsg}</p>
-{/if}
-
-<div class="mt-6 grid gap-6 md:grid-cols-[280px_1fr]">
-	<aside class="rounded border border-zinc-200 bg-white">
+<div class="grid gap-6 md:grid-cols-[300px_1fr]">
+	<Card>
 		<div class="border-b border-zinc-100 p-3">
 			<form
+				class="flex gap-2"
 				onsubmit={(e) => {
 					e.preventDefault();
 					addCategory();
 				}}
-				class="flex gap-2"
 			>
-				<input
-					type="text"
-					bind:value={newCategoryName}
-					placeholder="New category"
-					class="flex-1 rounded border border-zinc-300 px-2 py-1.5 text-sm"
-				/>
-				<button
-					type="submit"
-					disabled={busy || !newCategoryName.trim()}
-					class="rounded bg-zinc-900 px-3 py-1.5 text-sm text-white disabled:opacity-50"
-				>
-					Add
-				</button>
+				<Input bind:value={newCategoryName} placeholder="New category" />
+				<Button type="submit" size="sm" disabled={busy || !newCategoryName.trim()}>
+					<Plus class="h-3.5 w-3.5" />
+				</Button>
 			</form>
 		</div>
 		<ul class="divide-y divide-zinc-100">
@@ -144,48 +135,48 @@
 					<button
 						type="button"
 						onclick={() => (activeCategoryId = c.id)}
-						class={`flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-zinc-50 ${c.id === activeCategoryId ? 'bg-zinc-100 font-medium' : ''}`}
+						class={[
+							'flex w-full items-center justify-between px-3 py-2 text-left text-sm transition-colors',
+							c.id === activeCategoryId
+								? 'bg-indigo-50 font-medium text-indigo-900'
+								: 'hover:bg-zinc-50'
+						]}
 					>
 						<span>{c.name}</span>
-						<span class="text-xs text-zinc-400">{c.skills.length}</span>
+						<span class="rounded-full bg-zinc-100 px-2 text-[10px] text-zinc-600"
+							>{c.skills.length}</span
+						>
 					</button>
 				</li>
 			{:else}
-				<li class="px-3 py-4 text-center text-xs text-zinc-500">No categories yet.</li>
+				<li class="px-3 py-6 text-center text-xs text-zinc-500">No categories yet.</li>
 			{/each}
 		</ul>
-	</aside>
+	</Card>
 
-	<section class="rounded border border-zinc-200 bg-white">
+	<Card>
 		{#if !activeCategory}
 			<div class="p-8">
 				<EmptyState title="Pick or create a category" />
 			</div>
 		{:else}
 			<header class="flex items-center justify-between border-b border-zinc-100 p-3">
-				<h2 class="text-base font-semibold">{activeCategory.name}</h2>
+				<h2 class="text-sm font-semibold">{activeCategory.name}</h2>
+				<span class="text-xs text-zinc-500">{activeCategory.skills.length} skills</span>
 			</header>
 			<div class="border-b border-zinc-100 p-3">
 				<form
+					class="flex gap-2"
 					onsubmit={(e) => {
 						e.preventDefault();
 						addSkill();
 					}}
-					class="flex gap-2"
 				>
-					<input
-						type="text"
-						bind:value={newSkillName}
-						placeholder="New skill name"
-						class="flex-1 rounded border border-zinc-300 px-3 py-1.5 text-sm"
-					/>
-					<button
-						type="submit"
-						disabled={busy || !newSkillName.trim()}
-						class="rounded bg-zinc-900 px-3 py-1.5 text-sm text-white disabled:opacity-50"
-					>
-						Add skill
-					</button>
+					<Input bind:value={newSkillName} placeholder="New skill name" />
+					<Button type="submit" size="sm" disabled={busy || !newSkillName.trim()}>
+						<Plus class="h-3.5 w-3.5" />
+						Add
+					</Button>
 				</form>
 			</div>
 			<ul class="divide-y divide-zinc-100">
@@ -193,52 +184,39 @@
 					<li class="flex items-center justify-between gap-2 px-3 py-2 text-sm">
 						{#if renameTarget === s.id}
 							<form
+								class="flex flex-1 gap-2"
 								onsubmit={(e) => {
 									e.preventDefault();
 									commitRename(s.id);
 								}}
-								class="flex flex-1 gap-2"
 							>
-								<input
-									type="text"
-									bind:value={renameValue}
-									class="flex-1 rounded border border-zinc-300 px-2 py-1 text-sm"
-								/>
-								<button
-									type="submit"
-									disabled={busy}
-									class="rounded bg-zinc-900 px-3 py-1 text-xs text-white disabled:opacity-50"
-								>
-									Save
-								</button>
-								<button
+								<Input bind:value={renameValue} class="!h-8 !text-sm" />
+								<Button type="submit" size="sm" disabled={busy}>Save</Button>
+								<Button
 									type="button"
+									variant="outline"
+									size="sm"
 									onclick={() => (renameTarget = null)}
-									class="rounded border border-zinc-300 px-2 py-1 text-xs"
 								>
 									Cancel
-								</button>
+								</Button>
 							</form>
 						{:else}
-							<span>{s.name}</span>
-							<div class="flex gap-2">
-								<button
-									type="button"
+							<span class="text-zinc-800">{s.name}</span>
+							<div class="flex gap-1">
+								<Button
+									variant="outline"
+									size="sm"
 									onclick={() => {
 										renameTarget = s.id;
 										renameValue = s.name;
 									}}
-									class="rounded border border-zinc-300 px-2 py-1 text-xs hover:bg-zinc-50"
 								>
-									Rename
-								</button>
-								<button
-									type="button"
-									onclick={() => deleteSkill(s.id, s.name)}
-									class="rounded border border-red-300 px-2 py-1 text-xs text-red-700 hover:bg-red-50"
-								>
-									Delete
-								</button>
+									<Pencil class="h-3 w-3" />
+								</Button>
+								<Button variant="destructive" size="sm" onclick={() => deleteSkill(s.id, s.name)}>
+									<Trash2 class="h-3 w-3" />
+								</Button>
 							</div>
 						{/if}
 					</li>
@@ -249,5 +227,5 @@
 				{/each}
 			</ul>
 		{/if}
-	</section>
+	</Card>
 </div>

@@ -2,7 +2,25 @@
 	import { untrack } from 'svelte';
 	import { invalidateAll, goto } from '$app/navigation';
 	import { page } from '$app/state';
+	import { toast } from 'svelte-sonner';
+	import {
+		PageHeader,
+		Card,
+		Button,
+		Input,
+		Select,
+		Checkbox,
+		StatusBadge,
+		Table,
+		TableHead,
+		TableBody,
+		TableRow,
+		TableCell
+	} from '$lib/components/ui';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
+	import Search from '@lucide/svelte/icons/search';
+	import Ban from '@lucide/svelte/icons/ban';
+	import { formatMoney, formatDate } from '$lib/utils';
 
 	let { data } = $props();
 
@@ -10,7 +28,6 @@
 	let status = $state(untrack(() => data.status));
 	let type = $state(untrack(() => data.type));
 	let busyId = $state<string | null>(null);
-	let errorMsg = $state<string | null>(null);
 
 	function applyFilters() {
 		const params = new URLSearchParams();
@@ -20,25 +37,17 @@
 		goto(`${page.url.pathname}?${params}`, { keepFocus: true });
 	}
 
-	function fmtMoney(minor: number, currency: string) {
-		return `${currency} ${(minor / 100).toFixed(2)}`;
-	}
-
-	function fmt(d: Date | string) {
-		return new Date(d).toLocaleDateString();
-	}
-
 	async function forceCancel(id: string, title: string) {
 		if (!confirm(`Force cancel "${title}"? This will refund the company.`)) return;
 		busyId = id;
-		errorMsg = null;
 		try {
 			const res = await fetch(`/api/admin/bounties/${id}/cancel`, { method: 'POST' });
 			if (!res.ok) {
 				const body = await res.json().catch(() => ({}));
-				errorMsg = body?.error?.message ?? `Cancel failed (${res.status})`;
+				toast.error(body?.error?.message ?? 'Cancel failed.');
 				return;
 			}
+			toast.success('Bounty cancelled.');
 			await invalidateAll();
 		} finally {
 			busyId = null;
@@ -47,7 +56,6 @@
 
 	async function toggleExempt(id: string, next: boolean) {
 		busyId = id;
-		errorMsg = null;
 		try {
 			const res = await fetch(`/api/admin/bounties/${id}/credits-exempt`, {
 				method: 'PATCH',
@@ -56,7 +64,7 @@
 			});
 			if (!res.ok) {
 				const body = await res.json().catch(() => ({}));
-				errorMsg = body?.error?.message ?? `Update failed (${res.status})`;
+				toast.error(body?.error?.message ?? 'Update failed.');
 				return;
 			}
 			await invalidateAll();
@@ -66,108 +74,110 @@
 	}
 </script>
 
-<h1 class="text-2xl font-semibold">Bounties</h1>
-<p class="mt-1 text-sm text-zinc-500">{data.bounties.length} shown</p>
+<PageHeader title="Bounties" description={`${data.bounties.length} bounties shown.`} />
 
-<section class="mt-4 flex flex-wrap items-end gap-3 rounded border border-zinc-200 bg-white p-4">
-	<label class="flex flex-col gap-1 text-xs">
-		Search
-		<input
-			type="search"
-			bind:value={search}
-			placeholder="title or slug"
-			class="w-64 rounded border border-zinc-300 px-3 py-1.5 text-sm"
-		/>
-	</label>
-	<label class="flex flex-col gap-1 text-xs">
-		Status
-		<select bind:value={status} class="rounded border border-zinc-300 px-3 py-1.5 text-sm">
-			<option value="">Any</option>
-			<option value="DRAFT">Draft</option>
-			<option value="FUNDED">Funded</option>
-			<option value="ACTIVE">Active</option>
-			<option value="JUDGING">Judging</option>
-			<option value="COMPLETED">Completed</option>
-			<option value="CANCELLED">Cancelled</option>
-		</select>
-	</label>
-	<label class="flex flex-col gap-1 text-xs">
-		Type
-		<select bind:value={type} class="rounded border border-zinc-300 px-3 py-1.5 text-sm">
-			<option value="">Any</option>
-			<option value="BOUNTY">Bounty</option>
-			<option value="PROJECT">Project</option>
-		</select>
-	</label>
-	<button
-		type="button"
-		onclick={applyFilters}
-		class="rounded bg-zinc-900 px-3 py-1.5 text-sm text-white"
+<Card class="mb-4 p-4">
+	<form
+		class="flex flex-wrap items-end gap-3"
+		onsubmit={(e) => {
+			e.preventDefault();
+			applyFilters();
+		}}
 	>
-		Apply
-	</button>
-	{#if errorMsg}<span class="text-sm text-red-600">{errorMsg}</span>{/if}
-</section>
+		<div class="min-w-64 flex-1">
+			<label class="block text-xs font-medium text-zinc-600">Search</label>
+			<div class="relative mt-1">
+				<Search class="absolute top-2.5 left-2.5 h-4 w-4 text-zinc-400" />
+				<Input class="!pl-8" type="search" bind:value={search} placeholder="title or slug" />
+			</div>
+		</div>
+		<div>
+			<label class="block text-xs font-medium text-zinc-600">Status</label>
+			<Select class="mt-1 !w-44" bind:value={status}>
+				<option value="">Any</option>
+				<option value="DRAFT">Draft</option>
+				<option value="FUNDED">Funded</option>
+				<option value="ACTIVE">Active</option>
+				<option value="JUDGING">Judging</option>
+				<option value="COMPLETED">Completed</option>
+				<option value="CANCELLED">Cancelled</option>
+			</Select>
+		</div>
+		<div>
+			<label class="block text-xs font-medium text-zinc-600">Type</label>
+			<Select class="mt-1 !w-36" bind:value={type}>
+				<option value="">Any</option>
+				<option value="BOUNTY">Bounty</option>
+				<option value="PROJECT">Project</option>
+			</Select>
+		</div>
+		<Button type="submit">Apply</Button>
+	</form>
+</Card>
 
 {#if data.bounties.length === 0}
-	<div class="mt-6">
-		<EmptyState title="No bounties match these filters" />
-	</div>
+	<EmptyState title="No bounties match these filters" />
 {:else}
-	<section class="mt-6 overflow-x-auto rounded border border-zinc-200 bg-white">
-		<table class="w-full text-sm">
-			<thead class="bg-zinc-50 text-left text-xs text-zinc-600 uppercase">
-				<tr>
-					<th class="px-4 py-2">Title</th>
-					<th class="px-4 py-2">Company</th>
-					<th class="px-4 py-2">Status</th>
-					<th class="px-4 py-2">Type</th>
-					<th class="px-4 py-2">Prize pool</th>
-					<th class="px-4 py-2">Subs</th>
-					<th class="px-4 py-2">Credits</th>
-					<th class="px-4 py-2">Deadline</th>
-					<th class="px-4 py-2"></th>
-				</tr>
-			</thead>
-			<tbody>
-				{#each data.bounties as b (b.id)}
-					<tr class="border-t border-zinc-100">
-						<td class="px-4 py-2">
-							<a href={`/bounties/${b.slug}`} class="font-medium hover:underline">{b.title}</a>
-						</td>
-						<td class="px-4 py-2 text-xs text-zinc-600">{b.company.companyName}</td>
-						<td class="px-4 py-2 text-xs">{b.status}</td>
-						<td class="px-4 py-2 text-xs">{b.type}</td>
-						<td class="px-4 py-2 text-xs">{fmtMoney(b.totalPrizePool, b.currency)}</td>
-						<td class="px-4 py-2 text-xs">{b._count.submissions}</td>
-						<td class="px-4 py-2 text-xs">
-							<label class="inline-flex items-center gap-1">
-								<input
-									type="checkbox"
-									checked={b.creditsExempt}
-									disabled={busyId === b.id}
-									onchange={(e) =>
-										toggleExempt(b.id, (e.currentTarget as HTMLInputElement).checked)}
-								/>
-								<span class="text-zinc-600">Exempt</span>
-							</label>
-						</td>
-						<td class="px-4 py-2 text-xs text-zinc-500">{fmt(b.submissionDeadline)}</td>
-						<td class="px-4 py-2 text-right">
-							{#if ['DRAFT', 'FUNDED', 'ACTIVE'].includes(b.status)}
-								<button
-									type="button"
-									onclick={() => forceCancel(b.id, b.title)}
-									disabled={busyId === b.id}
-									class="rounded border border-red-300 px-2 py-1 text-xs text-red-700 hover:bg-red-50 disabled:opacity-50"
-								>
-									Force cancel
-								</button>
-							{/if}
-						</td>
-					</tr>
-				{/each}
-			</tbody>
-		</table>
-	</section>
+	<Table>
+		<TableHead>
+			<TableRow hover={false}>
+				<TableCell header>Title</TableCell>
+				<TableCell header>Company</TableCell>
+				<TableCell header>Status</TableCell>
+				<TableCell header>Type</TableCell>
+				<TableCell header align="right">Prize pool</TableCell>
+				<TableCell header align="right">Subs</TableCell>
+				<TableCell header>Credits</TableCell>
+				<TableCell header align="right">Deadline</TableCell>
+				<TableCell header align="right">Actions</TableCell>
+			</TableRow>
+		</TableHead>
+		<TableBody>
+			{#each data.bounties as b (b.id)}
+				<TableRow>
+					<TableCell>
+						<a
+							href={`/admin/bounties/${b.id}`}
+							class="font-medium text-zinc-900 hover:text-indigo-600"
+						>
+							{b.title}
+						</a>
+					</TableCell>
+					<TableCell class="text-zinc-600">{b.company.companyName}</TableCell>
+					<TableCell><StatusBadge value={b.status} /></TableCell>
+					<TableCell><StatusBadge value={b.type} /></TableCell>
+					<TableCell align="right" class="tabular-nums">
+						{formatMoney(b.totalPrizePool, b.currency)}
+					</TableCell>
+					<TableCell align="right">{b._count.submissions}</TableCell>
+					<TableCell>
+						<label class="inline-flex items-center gap-1.5">
+							<Checkbox
+								checked={b.creditsExempt}
+								disabled={busyId === b.id}
+								onchange={(e) => toggleExempt(b.id, (e.currentTarget as HTMLInputElement).checked)}
+							/>
+							<span class="text-xs text-zinc-600">Exempt</span>
+						</label>
+					</TableCell>
+					<TableCell align="right" class="text-xs text-zinc-500">
+						{formatDate(b.submissionDeadline)}
+					</TableCell>
+					<TableCell align="right">
+						{#if ['DRAFT', 'FUNDED', 'ACTIVE'].includes(b.status)}
+							<Button
+								variant="destructive"
+								size="sm"
+								disabled={busyId === b.id}
+								onclick={() => forceCancel(b.id, b.title)}
+							>
+								<Ban class="h-3.5 w-3.5" />
+								Cancel
+							</Button>
+						{/if}
+					</TableCell>
+				</TableRow>
+			{/each}
+		</TableBody>
+	</Table>
 {/if}

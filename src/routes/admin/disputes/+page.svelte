@@ -2,10 +2,26 @@
 	import { untrack } from 'svelte';
 	import { invalidateAll, goto } from '$app/navigation';
 	import { page } from '$app/state';
+	import { toast } from 'svelte-sonner';
+	import {
+		PageHeader,
+		Card,
+		Button,
+		Select,
+		Label,
+		Textarea,
+		StatusBadge,
+		Table,
+		TableHead,
+		TableBody,
+		TableRow,
+		TableCell,
+		Drawer
+	} from '$lib/components/ui';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
+	import { formatDateTime } from '$lib/utils';
 
 	let { data } = $props();
-
 	type Row = (typeof data.disputes)[number];
 
 	let status = $state(untrack(() => data.status));
@@ -13,7 +29,6 @@
 	let draftStatus = $state<string>('');
 	let draftResolution = $state<string>('');
 	let saving = $state(false);
-	let errorMsg = $state<string | null>(null);
 
 	function applyFilters() {
 		const params = new URLSearchParams();
@@ -25,19 +40,16 @@
 		openId = d.id;
 		draftStatus = d.status;
 		draftResolution = d.resolution ?? '';
-		errorMsg = null;
 	}
 
 	function closeDrawer() {
 		openId = null;
 		draftStatus = '';
 		draftResolution = '';
-		errorMsg = null;
 	}
 
 	async function save(d: Row) {
 		saving = true;
-		errorMsg = null;
 		try {
 			const body: Record<string, string> = {};
 			if (draftStatus && draftStatus !== d.status) body.status = draftStatus;
@@ -45,7 +57,7 @@
 				body.resolution = draftResolution.trim();
 			}
 			if (Object.keys(body).length === 0) {
-				errorMsg = 'No changes.';
+				toast.error('No changes.');
 				return;
 			}
 			const res = await fetch(`/api/admin/disputes/${d.id}`, {
@@ -55,9 +67,10 @@
 			});
 			if (!res.ok) {
 				const j = await res.json().catch(() => ({}));
-				errorMsg = j?.error?.message ?? `Save failed (${res.status})`;
+				toast.error(j?.error?.message ?? 'Save failed.');
 				return;
 			}
+			toast.success('Dispute updated.');
 			closeDrawer();
 			await invalidateAll();
 		} finally {
@@ -65,163 +78,125 @@
 		}
 	}
 
-	function fmt(d: Date | string) {
-		return new Date(d).toLocaleString();
-	}
-
 	const openRow = $derived(data.disputes.find((d) => d.id === openId));
 </script>
 
-<h1 class="text-2xl font-semibold">Disputes</h1>
-<p class="mt-1 text-sm text-zinc-500">{data.disputes.length} shown</p>
+<PageHeader title="Disputes" description={`${data.disputes.length} cases shown.`} />
 
-<section class="mt-4 flex flex-wrap items-end gap-3 rounded border border-zinc-200 bg-white p-4">
-	<label class="flex flex-col gap-1 text-xs">
-		Status
-		<select bind:value={status} class="rounded border border-zinc-300 px-3 py-1.5 text-sm">
-			<option value="">Any</option>
-			<option value="OPEN">Open</option>
-			<option value="IN_REVIEW">In review</option>
-			<option value="RESOLVED">Resolved</option>
-		</select>
-	</label>
-	<button
-		type="button"
-		onclick={applyFilters}
-		class="rounded bg-zinc-900 px-3 py-1.5 text-sm text-white"
+<Card class="mb-4 p-4">
+	<form
+		class="flex flex-wrap items-end gap-3"
+		onsubmit={(e) => {
+			e.preventDefault();
+			applyFilters();
+		}}
 	>
-		Apply
-	</button>
-</section>
+		<div>
+			<label class="block text-xs font-medium text-zinc-600">Status</label>
+			<Select class="mt-1 !w-40" bind:value={status}>
+				<option value="">Any</option>
+				<option value="OPEN">Open</option>
+				<option value="IN_REVIEW">In review</option>
+				<option value="RESOLVED">Resolved</option>
+			</Select>
+		</div>
+		<Button type="submit">Apply</Button>
+	</form>
+</Card>
 
 {#if data.disputes.length === 0}
-	<div class="mt-6">
-		<EmptyState title="No disputes" description="Nothing has been escalated yet." />
-	</div>
+	<EmptyState title="No disputes" description="Nothing has been escalated yet." />
 {:else}
-	<section class="mt-6 overflow-x-auto rounded border border-zinc-200 bg-white">
-		<table class="w-full text-sm">
-			<thead class="bg-zinc-50 text-left text-xs text-zinc-600 uppercase">
-				<tr>
-					<th class="px-4 py-2">Bounty</th>
-					<th class="px-4 py-2">Raised by</th>
-					<th class="px-4 py-2">Reason</th>
-					<th class="px-4 py-2">Status</th>
-					<th class="px-4 py-2">Created</th>
-					<th class="px-4 py-2"></th>
-				</tr>
-			</thead>
-			<tbody>
-				{#each data.disputes as d (d.id)}
-					<tr class="border-t border-zinc-100">
-						<td class="px-4 py-2">
-							<a href={`/bounties/${d.bounty.slug}`} class="hover:underline">{d.bounty.title}</a>
-						</td>
-						<td class="px-4 py-2 text-xs">
+	<Table>
+		<TableHead>
+			<TableRow hover={false}>
+				<TableCell header>Bounty</TableCell>
+				<TableCell header>Raised by</TableCell>
+				<TableCell header>Reason</TableCell>
+				<TableCell header>Status</TableCell>
+				<TableCell header align="right">Created</TableCell>
+				<TableCell header align="right">Action</TableCell>
+			</TableRow>
+		</TableHead>
+		<TableBody>
+			{#each data.disputes as d (d.id)}
+				<TableRow>
+					<TableCell>
+						<a
+							href={`/admin/bounties/${d.bounty.id ?? ''}`}
+							class="font-medium text-zinc-900 hover:text-indigo-600"
+						>
+							{d.bounty.title}
+						</a>
+					</TableCell>
+					<TableCell class="text-xs">
+						<a href={`/admin/users/${d.raisedBy.id}`} class="hover:text-indigo-600">
 							{d.raisedBy.name ?? d.raisedBy.email}
-							<span class="ml-1 text-zinc-400">({d.raisedBy.role})</span>
-						</td>
-						<td class="max-w-xs truncate px-4 py-2 text-xs text-zinc-600">{d.reason}</td>
-						<td class="px-4 py-2 text-xs">
-							<span
-								class={d.status === 'RESOLVED'
-									? 'text-green-700'
-									: d.status === 'OPEN'
-										? 'text-red-600'
-										: 'text-amber-600'}
-							>
-								{d.status}
-							</span>
-						</td>
-						<td class="px-4 py-2 text-xs text-zinc-500">{fmt(d.createdAt)}</td>
-						<td class="px-4 py-2 text-right">
-							<button
-								type="button"
-								onclick={() => openDrawer(d)}
-								class="rounded border border-zinc-300 px-2 py-1 text-xs hover:bg-zinc-50"
-							>
-								Review
-							</button>
-						</td>
-					</tr>
-				{/each}
-			</tbody>
-		</table>
-	</section>
+						</a>
+						<span class="ml-1 text-zinc-400">({d.raisedBy.role.toLowerCase()})</span>
+					</TableCell>
+					<TableCell class="max-w-xs truncate text-xs text-zinc-600">{d.reason}</TableCell>
+					<TableCell><StatusBadge value={d.status} /></TableCell>
+					<TableCell align="right" class="text-xs text-zinc-500"
+						>{formatDateTime(d.createdAt)}</TableCell
+					>
+					<TableCell align="right">
+						<Button variant="outline" size="sm" onclick={() => openDrawer(d)}>Review</Button>
+					</TableCell>
+				</TableRow>
+			{/each}
+		</TableBody>
+	</Table>
 {/if}
 
-{#if openId && openRow}
-	<div
-		role="dialog"
-		aria-modal="true"
-		aria-labelledby="dispute-drawer-title"
-		class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-	>
-		<button
-			type="button"
-			aria-label="Close drawer"
-			onclick={closeDrawer}
-			class="absolute inset-0 cursor-default"
-		></button>
-		<div class="relative w-full max-w-lg rounded-lg bg-white p-6 shadow-xl">
-			<h2 id="dispute-drawer-title" class="text-base font-semibold">Review dispute</h2>
-			<dl class="mt-3 space-y-2 text-sm">
-				<div>
-					<dt class="text-xs text-zinc-500">Bounty</dt>
-					<dd>{openRow.bounty.title}</dd>
-				</div>
-				<div>
-					<dt class="text-xs text-zinc-500">Raised by</dt>
-					<dd>{openRow.raisedBy.name ?? openRow.raisedBy.email} ({openRow.raisedBy.role})</dd>
-				</div>
-				<div>
-					<dt class="text-xs text-zinc-500">Reason</dt>
-					<dd class="whitespace-pre-wrap text-zinc-700">{openRow.reason}</dd>
-				</div>
-			</dl>
-			<div class="mt-4 space-y-3">
-				<label class="block text-xs">
-					Status
-					<select
-						bind:value={draftStatus}
-						class="mt-1 block w-full rounded border border-zinc-300 px-3 py-1.5 text-sm"
-					>
-						<option value="OPEN">Open</option>
-						<option value="IN_REVIEW">In review</option>
-						<option value="RESOLVED">Resolved</option>
-					</select>
-				</label>
-				<label class="block text-xs">
-					Resolution (sets status to Resolved when filled and notifies the raiser)
-					<textarea
-						bind:value={draftResolution}
-						rows={4}
-						maxlength={2000}
-						placeholder="Describe the resolution shared with the raiser."
-						class="mt-1 block w-full rounded border border-zinc-300 px-3 py-2 text-sm"
-					></textarea>
-				</label>
-				{#if errorMsg}
-					<p class="text-sm text-red-600">{errorMsg}</p>
-				{/if}
+<Drawer
+	open={openId !== null}
+	onClose={closeDrawer}
+	title="Review dispute"
+	description={openRow ? openRow.bounty.title : ''}
+	width="md"
+>
+	{#if openRow}
+		<dl class="space-y-3 text-sm">
+			<div>
+				<dt class="text-xs text-zinc-500">Raised by</dt>
+				<dd>
+					{openRow.raisedBy.name ?? openRow.raisedBy.email} ({openRow.raisedBy.role.toLowerCase()})
+				</dd>
 			</div>
-			<div class="mt-5 flex justify-end gap-2">
-				<button
-					type="button"
-					onclick={closeDrawer}
-					class="rounded border border-zinc-300 px-3 py-1.5 text-sm"
-				>
-					Cancel
-				</button>
-				<button
-					type="button"
-					onclick={() => save(openRow)}
-					disabled={saving}
-					class="rounded bg-zinc-900 px-3 py-1.5 text-sm text-white disabled:opacity-50"
-				>
-					{saving ? 'Saving…' : 'Save'}
-				</button>
+			<div>
+				<dt class="text-xs text-zinc-500">Reason</dt>
+				<dd class="whitespace-pre-wrap text-zinc-700">{openRow.reason}</dd>
+			</div>
+		</dl>
+		<div class="mt-5 space-y-3">
+			<div>
+				<Label for="d-status">Status</Label>
+				<Select id="d-status" bind:value={draftStatus}>
+					<option value="OPEN">Open</option>
+					<option value="IN_REVIEW">In review</option>
+					<option value="RESOLVED">Resolved</option>
+				</Select>
+			</div>
+			<div>
+				<Label for="d-resolution">Resolution</Label>
+				<Textarea
+					id="d-resolution"
+					bind:value={draftResolution}
+					rows={4}
+					maxlength={2000}
+					placeholder="Describe the resolution shared with the raiser."
+				/>
+				<p class="mt-1 text-[11px] text-zinc-500">
+					When set, this also moves status to Resolved and notifies the raiser.
+				</p>
 			</div>
 		</div>
-	</div>
-{/if}
+	{/if}
+	{#snippet footer()}
+		<Button variant="outline" onclick={closeDrawer}>Cancel</Button>
+		<Button disabled={saving || !openRow} onclick={() => openRow && save(openRow)}>
+			{saving ? 'Saving…' : 'Save'}
+		</Button>
+	{/snippet}
+</Drawer>

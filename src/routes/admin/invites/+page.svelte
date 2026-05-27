@@ -1,94 +1,108 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
+	import { toast } from 'svelte-sonner';
+	import {
+		PageHeader,
+		Card,
+		Button,
+		Input,
+		Label,
+		StatusBadge,
+		Table,
+		TableHead,
+		TableBody,
+		TableRow,
+		TableCell
+	} from '$lib/components/ui';
+	import MailPlus from '@lucide/svelte/icons/mail-plus';
+	import { formatDateTime } from '$lib/utils';
 
 	let { data } = $props();
 
 	let email = $state('');
 	let companyName = $state('');
 	let submitting = $state(false);
-	let error = $state<string | null>(null);
-	let okMsg = $state<string | null>(null);
 
 	async function submit(e: SubmitEvent) {
 		e.preventDefault();
-		error = null;
-		okMsg = null;
 		submitting = true;
-		const res = await fetch('/api/admin/invites', {
-			method: 'POST',
-			headers: { 'content-type': 'application/json' },
-			body: JSON.stringify({ email, companyName: companyName || undefined })
-		});
-		submitting = false;
-		if (!res.ok) {
-			const body = await res.json().catch(() => ({}));
-			error = body?.error?.message ?? 'Failed to create invite.';
-			return;
+		try {
+			const res = await fetch('/api/admin/invites', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ email, companyName: companyName || undefined })
+			});
+			if (!res.ok) {
+				const body = await res.json().catch(() => ({}));
+				toast.error(body?.error?.message ?? 'Failed to create invite.');
+				return;
+			}
+			toast.success(`Invite sent to ${email}.`);
+			email = '';
+			companyName = '';
+			await invalidateAll();
+		} finally {
+			submitting = false;
 		}
-		okMsg = `Invite sent to ${email}.`;
-		email = '';
-		companyName = '';
-		await invalidateAll();
-	}
-
-	function fmt(d: Date | string) {
-		return new Date(d).toLocaleString();
 	}
 </script>
 
-<h1 class="text-2xl font-semibold">Company invites</h1>
+<PageHeader
+	title="Company invites"
+	description="Invite companies by email. Acceptance issues a password-reset link."
+/>
 
-<section class="mt-6 rounded border border-zinc-200 bg-white p-5">
-	<h2 class="font-semibold">Invite a company</h2>
-	<form class="mt-3 grid gap-3 md:grid-cols-[1fr_1fr_auto]" onsubmit={submit}>
-		<input
-			type="email"
-			required
-			placeholder="founder@example.com"
-			bind:value={email}
-			class="rounded border border-zinc-300 px-3 py-2 text-sm"
-		/>
-		<input
-			type="text"
-			placeholder="Company name (optional)"
-			bind:value={companyName}
-			class="rounded border border-zinc-300 px-3 py-2 text-sm"
-		/>
-		<button
-			type="submit"
-			disabled={submitting}
-			class="rounded bg-zinc-900 px-4 py-2 text-sm text-white disabled:opacity-50"
-		>
+<Card class="mb-4 p-5">
+	<h2 class="text-sm font-semibold text-zinc-900">Invite a company</h2>
+	<form class="mt-3 grid gap-3 md:grid-cols-[1fr_1fr_auto] md:items-end" onsubmit={submit}>
+		<div>
+			<Label for="i-email">Email</Label>
+			<Input
+				id="i-email"
+				type="email"
+				required
+				bind:value={email}
+				placeholder="founder@example.com"
+			/>
+		</div>
+		<div>
+			<Label for="i-company">Company name (optional)</Label>
+			<Input id="i-company" bind:value={companyName} placeholder="Christex Foundation" />
+		</div>
+		<Button type="submit" disabled={submitting}>
+			<MailPlus class="h-4 w-4" />
 			{submitting ? 'Sending…' : 'Send invite'}
-		</button>
+		</Button>
 	</form>
-	{#if okMsg}<p class="mt-2 text-sm text-green-700">{okMsg}</p>{/if}
-	{#if error}<p class="mt-2 text-sm text-red-600">{error}</p>{/if}
-</section>
+</Card>
 
-<section class="mt-6 rounded border border-zinc-200 bg-white">
-	<table class="w-full text-sm">
-		<thead class="bg-zinc-50 text-left text-xs text-zinc-600 uppercase">
-			<tr>
-				<th class="px-4 py-2">Email</th>
-				<th class="px-4 py-2">Company</th>
-				<th class="px-4 py-2">Status</th>
-				<th class="px-4 py-2">Created</th>
-				<th class="px-4 py-2">Accepted</th>
-			</tr>
-		</thead>
-		<tbody>
-			{#each data.invites as inv (inv.id)}
-				<tr class="border-t border-zinc-100">
-					<td class="px-4 py-2">{inv.email}</td>
-					<td class="px-4 py-2">{inv.companyName ?? '—'}</td>
-					<td class="px-4 py-2">{inv.status}</td>
-					<td class="px-4 py-2">{fmt(inv.createdAt)}</td>
-					<td class="px-4 py-2">{inv.acceptedAt ? fmt(inv.acceptedAt) : '—'}</td>
-				</tr>
-			{:else}
-				<tr><td colspan="5" class="px-4 py-6 text-center text-zinc-500">No invites yet.</td></tr>
-			{/each}
-		</tbody>
-	</table>
-</section>
+<Table>
+	<TableHead>
+		<TableRow hover={false}>
+			<TableCell header>Email</TableCell>
+			<TableCell header>Company</TableCell>
+			<TableCell header>Status</TableCell>
+			<TableCell header align="right">Created</TableCell>
+			<TableCell header align="right">Accepted</TableCell>
+		</TableRow>
+	</TableHead>
+	<TableBody>
+		{#each data.invites as inv (inv.id)}
+			<TableRow>
+				<TableCell class="font-medium text-zinc-900">{inv.email}</TableCell>
+				<TableCell class="text-zinc-600">{inv.companyName ?? '—'}</TableCell>
+				<TableCell><StatusBadge value={inv.status} /></TableCell>
+				<TableCell align="right" class="text-xs text-zinc-500"
+					>{formatDateTime(inv.createdAt)}</TableCell
+				>
+				<TableCell align="right" class="text-xs text-zinc-500">
+					{inv.acceptedAt ? formatDateTime(inv.acceptedAt) : '—'}
+				</TableCell>
+			</TableRow>
+		{:else}
+			<TableRow hover={false}>
+				<TableCell colspan={5} align="center" class="py-8 text-zinc-500">No invites yet.</TableCell>
+			</TableRow>
+		{/each}
+	</TableBody>
+</Table>
