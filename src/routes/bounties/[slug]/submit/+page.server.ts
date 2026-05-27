@@ -3,6 +3,7 @@ import { requireAuth, requireRole } from '$lib/server/auth-helpers';
 import { AppError } from '$lib/server/http';
 import * as bountyService from '$lib/server/services/bounty.service';
 import * as submissionService from '$lib/server/services/submission.service';
+import * as creditService from '$lib/server/services/credit.service';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ params, locals }) => {
@@ -22,7 +23,8 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 	if (new Date(bounty.submissionDeadline).getTime() <= Date.now()) {
 		throw error(409, 'The submission deadline has passed.');
 	}
-	return { bounty };
+	const credits = await creditService.getBalanceForCaller(caller);
+	return { bounty, credits };
 };
 
 export const actions: Actions = {

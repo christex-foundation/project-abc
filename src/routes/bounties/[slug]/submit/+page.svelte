@@ -17,10 +17,14 @@
 	let { data, form } = $props();
 
 	const bounty = $derived(data.bounty);
+	const credits = $derived(data.credits);
 	const eligibility = $derived.by(() => {
 		const e = bounty.eligibility;
 		return Array.isArray(e) ? (e as Array<{ question: string; optional?: boolean }>) : [];
 	});
+	const creditExempt = $derived(bounty.creditsExempt === true);
+	const willCharge = $derived(!!credits && !creditExempt);
+	const noCredits = $derived(willCharge && (credits?.balance ?? 0) < 1);
 
 	let otherInfoHtml = $state<string>(
 		untrack(() => (form?.values?.otherInfo as string | null) ?? '')
@@ -55,6 +59,24 @@
 	{#if form?.message}
 		<div class="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">
 			{form.message}
+		</div>
+	{/if}
+
+	{#if credits && creditExempt}
+		<div
+			class="rounded-md border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-800"
+		>
+			This bounty is credit-exempt — submitting will not use a credit.
+		</div>
+	{:else if credits && noCredits}
+		<div class="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+			You have no credits remaining this month (0 / {credits.monthlyAllocation}). Credits reset on
+			the 1st of next month.
+		</div>
+	{:else if credits}
+		<div class="rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-700">
+			Cost: 1 credit. You have <span class="font-medium">{credits.balance}</span> of
+			{credits.monthlyAllocation} this month.
 		</div>
 	{/if}
 
@@ -137,9 +159,16 @@
 			</Card>
 		{/if}
 
-		<div class="flex justify-end gap-2">
-			<Button variant="outline" href={`/bounties/${bounty.slug}`}>Cancel</Button>
-			<Button type="submit">Submit work</Button>
+		<div class="flex flex-col items-end gap-2">
+			<div class="flex justify-end gap-2">
+				<Button variant="outline" href={`/bounties/${bounty.slug}`}>Cancel</Button>
+				<Button type="submit" disabled={noCredits}>Submit work</Button>
+			</div>
+			{#if willCharge}
+				<p class="text-xs text-zinc-500">
+					Credits are spent at submission time and are not refunded.
+				</p>
+			{/if}
 		</div>
 	</form>
 </article>

@@ -44,6 +44,17 @@
 	const activeCount = $derived(submissions.filter((s) => !s.bounty.isWinnersAnnounced).length);
 	const winsCount = $derived(submissions.filter((s) => s.isWinner).length);
 	const recentSubmissions = $derived(submissions.slice(0, 5));
+	const credits = $derived(data.credits);
+	const creditTransactions = $derived(data.creditTransactions);
+
+	const REASON_LABEL: Record<string, string> = {
+		MONTHLY_RESET: 'Monthly reset',
+		SUBMISSION_SPEND: 'Submission',
+		WIN_BONUS: 'Win bonus',
+		SPAM_PENALTY: 'Spam penalty',
+		ADMIN_GRANT: 'Admin grant',
+		ADMIN_REVOKE: 'Admin revoke'
+	};
 </script>
 
 <div class="space-y-6">
@@ -80,13 +91,64 @@
 				<div class="text-2xl font-semibold">{winsCount}</div>
 			</CardContent>
 		</Card>
+		{#if credits}
+			<Card>
+				<CardContent class="py-4">
+					<div class="text-xs text-zinc-500 uppercase">Credits this month</div>
+					<div class="text-2xl font-semibold">
+						{credits.balance} / {credits.monthlyAllocation}
+					</div>
+					<div class="mt-1 text-xs text-zinc-500">Resets on the 1st</div>
+				</CardContent>
+			</Card>
+		{/if}
 	</div>
+
+	{#if credits && creditTransactions.length > 0}
+		<Card>
+			<CardHeader>
+				<CardTitle class="text-base">Recent credit activity</CardTitle>
+			</CardHeader>
+			<CardContent class="space-y-2">
+				{#each creditTransactions as t (t.id)}
+					<div class="flex items-center justify-between gap-2 border-b py-2 text-sm last:border-0">
+						<div class="min-w-0 flex-1">
+							<div class="text-sm">
+								{REASON_LABEL[t.reason] ?? t.reason}
+								{#if t.submission?.bounty?.title}
+									<span class="text-zinc-500">— {t.submission.bounty.title}</span>
+								{/if}
+							</div>
+							{#if t.notes}
+								<div class="text-xs text-zinc-500">{t.notes}</div>
+							{/if}
+						</div>
+						<div class="flex shrink-0 items-center gap-2 text-xs">
+							<span
+								class={t.delta > 0
+									? 'font-medium text-green-700'
+									: t.delta < 0
+										? 'font-medium text-red-600'
+										: 'text-zinc-500'}
+							>
+								{t.delta > 0 ? '+' : ''}{t.delta}
+							</span>
+							<span class="text-zinc-400">→ {t.balanceAfter}</span>
+						</div>
+					</div>
+				{/each}
+			</CardContent>
+		</Card>
+	{/if}
 
 	<Card>
 		<CardHeader>
 			<div class="flex items-center justify-between">
 				<CardTitle class="text-base">Matched to your skills</CardTitle>
-				<a href="/dashboard/freelancer/recommendations" class="text-sm text-zinc-500 hover:underline">
+				<a
+					href="/dashboard/freelancer/recommendations"
+					class="text-sm text-zinc-500 hover:underline"
+				>
 					See all →
 				</a>
 			</div>
@@ -139,7 +201,9 @@
 				</div>
 			{:else}
 				{#each recentSubmissions as s (s.id)}
-					<div class="flex flex-wrap items-center justify-between gap-2 border-b py-2 last:border-0">
+					<div
+						class="flex flex-wrap items-center justify-between gap-2 border-b py-2 last:border-0"
+					>
 						<div class="min-w-0 flex-1">
 							<a
 								href={`/bounties/${s.bounty.slug}`}
