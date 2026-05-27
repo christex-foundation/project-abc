@@ -1,4 +1,4 @@
-import { BountyStatus, PaymentStatus, PaymentType } from '@prisma/client';
+import { BountyStatus, PaymentMethod, PaymentStatus, PaymentType } from '@prisma/client';
 import { prisma } from '../db';
 import { AppError } from '../http';
 import { requireRole, type AuthedUser } from '../auth-helpers';
@@ -9,6 +9,7 @@ import * as companyRepo from '../repositories/company.repo';
 import * as userRepo from '../repositories/user.repo';
 import * as submissionRepo from '../repositories/submission.repo';
 import * as notification from './notification.service';
+import { ensureCompanyAccount } from './financial-account.service';
 
 function appUrl(): string {
 	return process.env.PUBLIC_APP_URL?.trim() || 'http://localhost:5173';
@@ -39,6 +40,84 @@ async function ensureEscrowAccount(bountyId: string, currentId: string | null, t
 	});
 	await bountyRepo.setEscrowAccount(bountyId, account.id);
 	return account.id;
+}
+
+/**
+ * Fund a bounty via an instant internal transfer from the company's Monime
+ * financial account to the bounty's per-bounty escrow account. Synchronous —
+ * the bounty is marked FUNDED immediately (no webhook needed).
+ */
+export async function fundFromFinancialAccount(
+	caller: AuthedUser,
+	bountyId: string
+): Promise<void> {
+	requireRole(caller, 'COMPANY', 'ADMIN');
+	const bounty = await loadOwnedBounty(caller, bountyId);
+	if (bounty.status !== BountyStatus.DRAFT) {
+		throw new AppError('CONFLICT', 'Only DRAFT bounties can be funded.');
+	}
+
+	// Ensure the company has a financial account
+	const companyAccountId = await ensureCompanyAccount(caller);
+
+	// Ensure the bounty has a per-bounty escrow account
+	const escrowId = await ensureEscrowAccount(
+		bounty.id,
+		bounty.escrowFinancialAccountId,
+		bounty.title
+	);
+
+	// Check balance
+	const balance = await monime.financialAccounts.getBalance(companyAccountId);
+	if (balance.available < bounty.totalPrizePool) {
+		throw new AppError(
+			'CONFLICT',
+			`Insufficient balance. Available: ${balance.available}, required: ${bounty.totalPrizePool}. Please top up your account or use checkout funding.`
+		);
+	}
+
+	// Perform internal transfer (synchronous)
+	const transfer = await monime.internalTransfers.create({
+		from: companyAccountId,
+		to: escrowId,
+		amount: bounty.totalPrizePool,
+		currency: bounty.currency,
+		reference: `fund:${bounty.id}`,
+		description: `Bounty escrow funding – ${bounty.title}`
+	});
+
+	// Persist and mark funded in a transaction
+	await prisma.$transaction(async (tx) => {
+		await paymentRepo.createDeposit(
+			{
+				bountyId: bounty.id,
+				amount: bounty.totalPrizePool,
+				currency: bounty.currency,
+				method: PaymentMethod.INTERNAL_TRANSFER,
+				monimeTransferId: transfer.id,
+				fromEntity: companyAccountId,
+				toEntity: escrowId,
+				status: PaymentStatus.COMPLETED
+			},
+			tx
+		);
+		await bountyRepo.markFunded(bounty.id, bounty.totalPrizePool, tx);
+	});
+
+	const owner = await userRepo.findByCompanyProfileId(bounty.companyProfileId);
+	if (owner) {
+		await notification.dispatch(owner.id, 'BOUNTY_FUNDED', {
+			title: 'Bounty funded',
+			message: `Escrow for "${bounty.title}" is now locked (internal transfer).`,
+			link: `/dashboard/company/bounties`,
+			email: {
+				bountyTitle: bounty.title,
+				bountyUrl: `${appUrl()}/bounties/${bounty.slug}`,
+				totalPrizePool: bounty.totalPrizePool,
+				currency: bounty.currency
+			}
+		});
+	}
 }
 
 export async function createFundingCheckoutSession(
@@ -209,52 +288,97 @@ export async function cancelBountyWithRefund(caller: AuthedUser, bountyId: strin
 		await bountyRepo.markCancelled(bounty.id);
 	} else {
 		const company = await companyRepo.findByUserId(caller.id);
-		const momo = company?.monimePayoutMomoNumber;
-		if (!momo) {
-			throw new AppError(
-				'CONFLICT',
-				'Set your company MoMo payout number before cancelling a funded bounty.'
-			);
-		}
 		if (!bounty.escrowFinancialAccountId) {
 			throw new AppError('INTERNAL', 'Funded bounty is missing its escrow account.');
 		}
 
-		const payout = await monime.payouts.create({
-			sourceAccountId: bounty.escrowFinancialAccountId,
-			destination: { type: 'MOMO', phoneNumber: momo },
-			amount: bounty.escrowFundedAmount,
-			currency: bounty.currency,
-			reference: `refund:${bounty.id}`
-		});
-
-		await prisma.$transaction(async (tx) => {
-			await paymentRepo.createPayout(
-				{
-					bountyId: bounty.id,
-					type: PaymentType.REFUND,
-					amount: bounty.escrowFundedAmount,
-					currency: bounty.currency,
-					monimePayoutId: payout.id,
-					toEntity: momo,
-					status: PaymentStatus.PROCESSING
-				},
-				tx
-			);
-			await bountyRepo.markCancelled(bounty.id, tx);
-		});
-
-		await notification.dispatch(caller.id, 'BOUNTY_CANCELLED', {
-			title: 'Refund initiated',
-			message: `Refund for "${bounty.title}" is on its way to your MoMo.`,
-			link: `/dashboard/company/bounties`,
-			email: {
-				bountyTitle: bounty.title,
-				refundedAmount: bounty.escrowFundedAmount,
+		if (company?.monimeFinancialAccountId) {
+			// Preferred path: instant internal transfer back to company's financial account
+			const transfer = await monime.internalTransfers.create({
+				from: bounty.escrowFinancialAccountId,
+				to: company.monimeFinancialAccountId,
+				amount: bounty.escrowFundedAmount,
 				currency: bounty.currency,
-				isSubmitter: false
+				reference: `refund:${bounty.id}`,
+				description: `Bounty cancellation refund – ${bounty.title}`
+			});
+
+			await prisma.$transaction(async (tx) => {
+				await paymentRepo.createPayout(
+					{
+						bountyId: bounty.id,
+						type: PaymentType.REFUND,
+						method: PaymentMethod.INTERNAL_TRANSFER,
+						amount: bounty.escrowFundedAmount,
+						currency: bounty.currency,
+						monimeTransferId: transfer.id,
+						fromEntity: bounty.escrowFinancialAccountId!,
+						toEntity: company.monimeFinancialAccountId!,
+						status: PaymentStatus.COMPLETED
+					},
+					tx
+				);
+				await bountyRepo.markCancelled(bounty.id, tx);
+			});
+
+			await notification.dispatch(caller.id, 'BOUNTY_CANCELLED', {
+				title: 'Refund processed',
+				message: `Refund for "${bounty.title}" has been returned to your payment account.`,
+				link: `/dashboard/company/bounties`,
+				email: {
+					bountyTitle: bounty.title,
+					refundedAmount: bounty.escrowFundedAmount,
+					currency: bounty.currency,
+					isSubmitter: false
+				}
+			});
+		} else {
+			// Legacy fallback: payout to registered MoMo number
+			const momo = company?.monimePayoutMomoNumber;
+			if (!momo) {
+				throw new AppError(
+					'CONFLICT',
+					'Set up your payment account or MoMo payout number before cancelling a funded bounty.'
+				);
 			}
-		});
+
+			const payout = await monime.payouts.create({
+				sourceAccountId: bounty.escrowFinancialAccountId,
+				destination: { type: 'MOMO', phoneNumber: momo },
+				amount: bounty.escrowFundedAmount,
+				currency: bounty.currency,
+				reference: `refund:${bounty.id}`
+			});
+
+			await prisma.$transaction(async (tx) => {
+				await paymentRepo.createPayout(
+					{
+						bountyId: bounty.id,
+						type: PaymentType.REFUND,
+						method: PaymentMethod.MOMO_PAYOUT,
+						amount: bounty.escrowFundedAmount,
+						currency: bounty.currency,
+						monimePayoutId: payout.id,
+						toEntity: momo,
+						status: PaymentStatus.PROCESSING
+					},
+					tx
+				);
+				await bountyRepo.markCancelled(bounty.id, tx);
+			});
+
+			await notification.dispatch(caller.id, 'BOUNTY_CANCELLED', {
+				title: 'Refund initiated',
+				message: `Refund for "${bounty.title}" is on its way to your MoMo.`,
+				link: `/dashboard/company/bounties`,
+				email: {
+					bountyTitle: bounty.title,
+					refundedAmount: bounty.escrowFundedAmount,
+					currency: bounty.currency,
+					isSubmitter: false
+				}
+			});
+		}
 	}
 
 	if (isEmptyDraft) {
@@ -290,6 +414,32 @@ async function fanOutBountyCancelledToSubmitters(bountyId: string, bountyTitle: 
 async function handlePayoutTerminal(event: MonimeEvent) {
 	const monimePayoutId = event.data?.payoutId ?? event.data?.id;
 	if (!monimePayoutId) return;
+
+	// Check if this is a user withdrawal payout (AccountWithdrawal record)
+	const withdrawal = await paymentRepo.findWithdrawalByPayoutId(monimePayoutId);
+	if (withdrawal) {
+		if (event.type === 'payout.completed') {
+			await paymentRepo.markWithdrawalStatus(withdrawal.id, 'COMPLETED');
+			await notification.dispatch(withdrawal.userId, 'PAYOUT_COMPLETED', {
+				title: 'Withdrawal completed',
+				message: `Your withdrawal of ${withdrawal.amount} ${withdrawal.currency} to ${withdrawal.holderName} (${withdrawal.providerName}) has been processed.`,
+				link: '/dashboard/settings'
+			});
+		} else {
+			await paymentRepo.markWithdrawalStatus(withdrawal.id, 'FAILED', {
+				failureCode: event.data?.failureCode,
+				failureMessage: event.data?.failureMessage
+			});
+			await notification.dispatch(withdrawal.userId, 'PAYOUT_FAILED', {
+				title: 'Withdrawal failed',
+				message: `Your withdrawal to ${withdrawal.toPhoneNumber} failed. Please try again.`,
+				link: '/dashboard/settings'
+			});
+		}
+		return;
+	}
+
+	// Otherwise it's a bounty prize payout or refund
 	const payment = await paymentRepo.findByMonimePayoutId(monimePayoutId);
 	if (!payment) {
 		console.warn('[escrow] payout webhook for unknown payment', monimePayoutId);

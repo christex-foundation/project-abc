@@ -1,4 +1,4 @@
-import { BountyStatus, BountyType, PaymentStatus, PaymentType } from '@prisma/client';
+import { BountyStatus, BountyType, PaymentMethod, PaymentStatus, PaymentType } from '@prisma/client';
 import { prisma } from '../db';
 import { AppError } from '../http';
 import { requireRole, type AuthedUser } from '../auth-helpers';
@@ -77,10 +77,10 @@ export async function announceWinners(caller: AuthedUser, bountyId: string) {
 
 	// Validation — per winner.
 	for (const w of winners) {
-		if (!w.freelancer.momoNumber) {
+		if (!w.freelancer.monimeFinancialAccountId) {
 			throw new AppError(
 				'CONFLICT',
-				`${w.freelancer.displayName} has no MoMo number set — cannot pay out.`
+				`${w.freelancer.displayName} has not set up their payment account — cannot pay out.`
 			);
 		}
 		if (w.prizeAmount == null || w.prizeAmount <= 0) {
@@ -119,53 +119,60 @@ export async function announceWinners(caller: AuthedUser, bountyId: string) {
 		);
 	}
 
-	// Initiate Monime payouts — outside the DB transaction so a slow/flaky
-	// external call doesn't hold a write lock open.
-	const payoutResults: Array<{
+	// Initiate Monime internal transfers (account → account, synchronous) — outside
+	// the DB transaction so a slow/flaky external call doesn't hold a write lock open.
+	const transferResults: Array<{
 		submissionId: string;
-		monimePayoutId: string;
+		monimeTransferId: string;
 		amount: number;
-		toEntity: string;
+		toAccountId: string;
+		freelancerUserId: string;
 	}> = [];
 
 	for (const w of winners) {
-		const payout = await withRetry(() =>
-			monime.payouts.create({
-				sourceAccountId: bounty.escrowFinancialAccountId!,
-				destination: { type: 'MOMO', phoneNumber: w.freelancer.momoNumber! },
+		const transfer = await withRetry(() =>
+			monime.internalTransfers.create({
+				from: bounty.escrowFinancialAccountId!,
+				to: w.freelancer.monimeFinancialAccountId!,
 				amount: w.prizeAmount!,
 				currency: bounty.currency,
-				reference: `prize:${w.id}`
+				reference: `prize:${w.id}`,
+				description: `Prize payout – ${bounty.title}`
 			})
 		);
-		payoutResults.push({
+		transferResults.push({
 			submissionId: w.id,
-			monimePayoutId: payout.id,
+			monimeTransferId: transfer.id,
 			amount: w.prizeAmount!,
-			toEntity: w.freelancer.momoNumber!
+			toAccountId: w.freelancer.monimeFinancialAccountId!,
+			freelancerUserId: w.freelancer.user.id
 		});
 	}
 
-	// Persist Payment rows + flip bounty in one tx.
+	// Persist Payment rows + flip bounty + mark submissions paid in one tx.
+	// Internal transfers are synchronous so we set status = COMPLETED immediately.
 	await prisma.$transaction(async (tx) => {
-		for (const p of payoutResults) {
+		for (const p of transferResults) {
 			await paymentRepo.createPayout(
 				{
 					bountyId: bounty.id,
 					submissionId: p.submissionId,
 					type: PaymentType.PRIZE_PAYOUT,
+					method: PaymentMethod.INTERNAL_TRANSFER,
 					amount: p.amount,
 					currency: bounty.currency,
-					monimePayoutId: p.monimePayoutId,
-					toEntity: p.toEntity,
-					status: PaymentStatus.PROCESSING
+					monimeTransferId: p.monimeTransferId,
+					toEntity: p.toAccountId,
+					fromEntity: bounty.escrowFinancialAccountId!,
+					status: PaymentStatus.COMPLETED
 				},
 				tx
 			);
+			await submissionRepo.markPaid(p.submissionId, tx);
 			if (bounty.type === BountyType.PROJECT) {
 				await submissionRepo.appendPaymentDetails(
 					p.submissionId,
-					{ monimePayoutId: p.monimePayoutId, amount: p.amount, tranche: 1 },
+					{ monimeTransferId: p.monimeTransferId, amount: p.amount, tranche: 1 },
 					tx
 				);
 			}
@@ -189,7 +196,7 @@ export async function announceWinners(caller: AuthedUser, bountyId: string) {
 			return notification.dispatch(s.freelancer.user.id, 'WINNERS_ANNOUNCED', {
 				title: isWinner ? 'You won!' : 'Winners announced',
 				message: isWinner
-					? `You won "${bounty.title}" — payout initiated.`
+					? `You won "${bounty.title}" — prize transferred to your payment account.`
 					: `Winners were announced for "${bounty.title}".`,
 				link: bountyUrl,
 				email: {
@@ -207,7 +214,7 @@ export async function announceWinners(caller: AuthedUser, bountyId: string) {
 
 	const fresh = await bountyRepo.findBountyById(bountyId);
 	if (!fresh) throw new AppError('INTERNAL', 'Failed to reload bounty.');
-	return { bounty: fresh, payouts: payoutResults };
+	return { bounty: fresh, transfers: transferResults };
 }
 
 export async function payProjectTranche(
@@ -237,8 +244,8 @@ export async function payProjectTranche(
 	if (!bounty.escrowFinancialAccountId) {
 		throw new AppError('INTERNAL', 'Bounty is missing its escrow account.');
 	}
-	if (!submission.freelancer.momoNumber) {
-		throw new AppError('CONFLICT', 'Winner has no MoMo number set.');
+	if (!submission.freelancer.monimeFinancialAccountId) {
+		throw new AppError('CONFLICT', 'Winner has not set up their payment account.');
 	}
 	if (submission.isPaid) {
 		throw new AppError('CONFLICT', 'All tranches have already been paid.');
@@ -273,15 +280,19 @@ export async function payProjectTranche(
 	const nextTrancheNumber =
 		(lastPrize ? prior.filter((p) => p.type === PaymentType.PRIZE_PAYOUT).length : 0) + 1;
 
-	const payout = await withRetry(() =>
-		monime.payouts.create({
-			sourceAccountId: bounty.escrowFinancialAccountId!,
-			destination: { type: 'MOMO', phoneNumber: submission.freelancer.momoNumber! },
+	// Internal transfer (synchronous) — no webhook needed
+	const transfer = await withRetry(() =>
+		monime.internalTransfers.create({
+			from: bounty.escrowFinancialAccountId!,
+			to: submission.freelancer.monimeFinancialAccountId!,
 			amount,
 			currency: bounty.currency,
-			reference: `tranche:${submission.id}:${nextTrancheNumber}`
+			reference: `tranche:${submission.id}:${nextTrancheNumber}`,
+			description: `Project tranche ${nextTrancheNumber} – ${bounty.title}`
 		})
 	);
+
+	const isFinalTranche = final || completedSoFar + amount >= bounty.totalPrizePool;
 
 	await prisma.$transaction(async (tx) => {
 		await paymentRepo.createPayout(
@@ -289,23 +300,28 @@ export async function payProjectTranche(
 				bountyId: bounty.id,
 				submissionId: submission.id,
 				type: PaymentType.PRIZE_PAYOUT,
+				method: PaymentMethod.INTERNAL_TRANSFER,
 				amount,
 				currency: bounty.currency,
-				monimePayoutId: payout.id,
-				toEntity: submission.freelancer.momoNumber!,
-				status: PaymentStatus.PROCESSING
+				monimeTransferId: transfer.id,
+				fromEntity: bounty.escrowFinancialAccountId!,
+				toEntity: submission.freelancer.monimeFinancialAccountId!,
+				status: PaymentStatus.COMPLETED
 			},
 			tx
 		);
 		await submissionRepo.appendPaymentDetails(
 			submission.id,
-			{ monimePayoutId: payout.id, amount, tranche: nextTrancheNumber, final },
+			{ monimeTransferId: transfer.id, amount, tranche: nextTrancheNumber, final },
 			tx
 		);
+		if (isFinalTranche) {
+			await submissionRepo.markPaid(submission.id, tx);
+		}
 	});
 
 	return {
-		monimePayoutId: payout.id,
+		monimeTransferId: transfer.id,
 		tranche: nextTrancheNumber,
 		amount
 	};
