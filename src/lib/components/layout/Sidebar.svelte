@@ -44,6 +44,9 @@
 			<a class="block rounded px-3 py-2 hover:bg-zinc-100" href="/settings/notifications">
 				Notification settings
 			</a>
+			<a class="block rounded px-3 py-2 hover:bg-zinc-100" href="/settings/account">
+				Account &amp; data
+			</a>
 		{/if}
 		{#if isAdminHost}
 			<!-- Admin host: when an admin lands on a non-admin path we still surface a route to /admin. -->
