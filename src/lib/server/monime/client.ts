@@ -4,7 +4,12 @@ import { AppError } from '../http';
 
 type Json = Record<string, unknown>;
 
-type CreateFinancialAccountInput = { name: string; currency?: string };
+type CreateFinancialAccountInput = {
+	name: string;
+	currency?: string;
+	/** Optional idempotency reference — used to recover an account that was already created. */
+	reference?: string;
+};
 type CreateCheckoutInput = {
 	financialAccountId: string;
 	amount: number; // minor units
@@ -26,7 +31,31 @@ type CreateTransferInput = {
 	amount: number; // minor units
 	currency?: string;
 	reference: string;
+	description?: string;
+	metadata?: Json;
 };
+
+interface FinancialAccountResult {
+	id: string;
+	uvan?: string;
+	name: string;
+	currency: string;
+	reference?: string;
+}
+
+interface ProviderKycResult {
+	account: {
+		id: string;
+		name: string;
+		holderName: string;
+		metadata?: Json;
+	};
+	provider: {
+		id: string;
+		type: 'momo' | 'bank' | 'wallet';
+		name: string;
+	};
+}
 
 function baseUrl(): string {
 	return env.MONIME_BASE_URL?.trim() || 'https://api.monime.io';
@@ -55,6 +84,12 @@ async function request<T>(path: string, method: 'GET' | 'POST', body?: Json): Pr
 	if (!res.ok) {
 		throw new AppError('INTERNAL', `Monime ${method} ${path} failed (${res.status}).`, parsed);
 	}
+	// Unwrap Monime envelope: { success, data: {...} } or { success, result: {...} }
+	if (parsed !== null && typeof parsed === 'object') {
+		const obj = parsed as Record<string, unknown>;
+		if ('data' in obj) return obj.data as T;
+		if ('result' in obj) return obj.result as T;
+	}
 	return (parsed ?? {}) as T;
 }
 
@@ -67,34 +102,57 @@ function safeParse(text: string): unknown {
 }
 
 // Money helpers — Monime expects amounts as { currency, value } in minor units
-// per their financial-account documentation. We keep all internal arithmetic in
-// minor units; the conversion lives at this boundary.
 function money(amount: number, currency = 'SLE') {
 	return { currency, value: amount };
 }
 
 export const monime = {
 	financialAccounts: {
-		async create(input: CreateFinancialAccountInput) {
-			const res = await request<{ result: { id: string } }>('/v1/financial-accounts', 'POST', {
+		async create(input: CreateFinancialAccountInput): Promise<{ id: string; uvan?: string }> {
+			const body: Json = {
 				name: input.name,
 				currency: input.currency ?? 'SLE'
-			});
-			return { id: res.result.id };
+			};
+			if (input.reference) body['reference'] = input.reference;
+			const res = await request<FinancialAccountResult>('/v1/financial-accounts', 'POST', body);
+			return { id: res.id, uvan: res.uvan };
 		},
 
-		async getBalance(id: string) {
-			const res = await request<{ result: { balance: { available: { value: number } } } }>(
+		async getById(id: string): Promise<{ id: string; uvan?: string }> {
+			const res = await request<FinancialAccountResult>(
 				`/v1/financial-accounts/${encodeURIComponent(id)}`,
 				'GET'
 			);
-			return { available: res.result.balance.available.value };
+			return { id: res.id, uvan: res.uvan };
+		},
+
+		/** Find the first account matching a reference — used for idempotency recovery. */
+		async findByReference(reference: string): Promise<{ id: string; uvan?: string } | null> {
+			const res = await request<FinancialAccountResult[] | { items: FinancialAccountResult[] }>(
+				`/v1/financial-accounts?reference=${encodeURIComponent(reference)}`,
+				'GET'
+			);
+			const list: FinancialAccountResult[] = Array.isArray(res)
+				? res
+				: 'items' in res
+					? res.items
+					: [];
+			const match = list.find((a) => a.reference === reference);
+			if (!match) return null;
+			return { id: match.id, uvan: match.uvan };
+		},
+
+		async getBalance(id: string) {
+			const res = await request<{
+				balance: { available: { value: number } };
+			}>(`/v1/financial-accounts/${encodeURIComponent(id)}?withBalance=true`, 'GET');
+			return { available: res.balance.available.value };
 		}
 	},
 
 	checkoutSessions: {
 		async create(input: CreateCheckoutInput) {
-			const res = await request<{ result: { id: string; redirectUrl: string } }>(
+			const res = await request<{ id: string; redirectUrl: string }>(
 				'/v1/checkout-sessions',
 				'POST',
 				{
@@ -105,35 +163,54 @@ export const monime = {
 					cancelUrl: input.cancelUrl
 				}
 			);
-			return { id: res.result.id, url: res.result.redirectUrl };
+			return { id: res.id, url: res.redirectUrl };
 		}
 	},
 
 	payouts: {
 		async create(input: CreatePayoutInput) {
-			const res = await request<{ result: { id: string; status: string } }>('/v1/payouts', 'POST', {
+			const res = await request<{ id: string; status: string }>('/v1/payouts', 'POST', {
 				sourceAccountId: input.sourceAccountId,
 				destination: input.destination,
 				amount: money(input.amount, input.currency),
 				reference: input.reference
 			});
-			return { id: res.result.id, status: res.result.status };
+			return { id: res.id, status: res.status };
 		}
 	},
 
 	internalTransfers: {
 		async create(input: CreateTransferInput) {
-			const res = await request<{ result: { id: string; status: string } }>(
+			const body: Json = {
+				sourceFinancialAccount: { id: input.from },
+				destinationFinancialAccount: { id: input.to },
+				amount: money(input.amount, input.currency),
+				reference: input.reference
+			};
+			if (input.description) body['description'] = input.description;
+			if (input.metadata) body['metadata'] = input.metadata;
+			const res = await request<{ id: string; status: string }>(
 				'/v1/internal-transfers',
 				'POST',
-				{
-					sourceAccountId: input.from,
-					destinationAccountId: input.to,
-					amount: money(input.amount, input.currency),
-					reference: input.reference
-				}
+				body
 			);
-			return { id: res.result.id, status: res.result.status };
+			return { id: res.id, status: res.status };
+		}
+	},
+
+	providerKyc: {
+		async get(
+			providerId: string,
+			phoneNumber: string
+		): Promise<{ holderName: string; providerName: string }> {
+			const res = await request<ProviderKycResult>(
+				`/v1/provider-kyc/${encodeURIComponent(providerId)}?accountId=${encodeURIComponent(phoneNumber)}`,
+				'GET'
+			);
+			return {
+				holderName: res.account.holderName,
+				providerName: res.provider.name
+			};
 		}
 	}
 };
