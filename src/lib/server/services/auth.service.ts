@@ -5,10 +5,16 @@ import { AppError } from '../http';
 import { getSetting } from '../settings';
 import * as companyRepo from '../repositories/company.repo';
 import * as freelancerRepo from '../repositories/freelancer.repo';
+import * as referralService from './referral.service';
 
 type CompanySelfRegister = { enabled?: boolean } | null;
 
-export async function registerFreelancer(input: { email: string; password: string; name: string }) {
+export async function registerFreelancer(input: {
+	email: string;
+	password: string;
+	name: string;
+	referralCode?: string;
+}) {
 	const result = await auth.api.signUpEmail({
 		body: { email: input.email, password: input.password, name: input.name }
 	});
@@ -19,7 +25,20 @@ export async function registerFreelancer(input: { email: string; password: strin
 		where: { id: result.user.id },
 		data: { role: UserRole.FREELANCER, isActive: true }
 	});
-	await freelancerRepo.createEmpty(result.user.id, input.name);
+	const profile = await freelancerRepo.createEmpty(result.user.id, input.name);
+	// Best-effort referral attachment. Failures here (bad/expired/capped code)
+	// must never block account creation — the freelancer can still join FOW.
+	try {
+		await referralService.applyReferralCodeAtSignup(
+			result.user.id,
+			profile.id,
+			input.email,
+			null,
+			input.referralCode ?? null
+		);
+	} catch (e) {
+		console.error('[auth.service] referral attach failed:', e);
+	}
 	return { userId: result.user.id };
 }
 

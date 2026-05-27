@@ -17,6 +17,7 @@ import * as paymentRepo from '../repositories/payment.repo';
 import * as userRepo from '../repositories/user.repo';
 import * as notification from './notification.service';
 import * as creditService from './credit.service';
+import * as referralService from './referral.service';
 import {
 	createSubmissionInput,
 	setLabelInput,
@@ -146,6 +147,9 @@ export async function create(caller: AuthedUser, bountyId: string, raw: unknown)
 		if (shouldCharge) {
 			await creditService.spendForSubmission(freelancer.id, created.id, tx);
 		}
+		// Referral: credit the referrer on this freelancer's first non-spam submission.
+		// No-op when the feature is disabled or the freelancer has no referrer.
+		await referralService.onFirstNonSpamSubmission(freelancer.id, created.id, tx);
 		return created;
 	});
 
@@ -229,7 +233,14 @@ export async function setLabel(caller: AuthedUser, submissionId: string, raw: un
 	const updated = await submissionRepo.setLabel(submission.id, parsed.label);
 
 	if (parsed.label === SubmissionLabel.SPAM && submission.label !== SubmissionLabel.SPAM) {
-		await creditService.penalizeSpam(submission.freelancerProfileId, submission.id, prisma);
+		await prisma.$transaction(async (tx) => {
+			await creditService.penalizeSpam(submission.freelancerProfileId, submission.id, tx);
+			await referralService.onSubmissionLabelledSpam(
+				submission.freelancerProfileId,
+				submission.id,
+				tx
+			);
+		});
 	}
 
 	if (parsed.label === SubmissionLabel.SHORTLISTED) {

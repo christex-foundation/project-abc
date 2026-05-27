@@ -15,6 +15,7 @@ import * as submissionRepo from '../repositories/submission.repo';
 import * as paymentRepo from '../repositories/payment.repo';
 import * as notification from './notification.service';
 import * as creditService from './credit.service';
+import * as referralService from './referral.service';
 
 function appUrl(): string {
 	return process.env.PUBLIC_APP_URL?.trim() || 'http://localhost:5173';
@@ -189,6 +190,14 @@ export async function announceWinners(caller: AuthedUser, bountyId: string) {
 			if (creditConfig.enabled) {
 				await creditService.grantWinBonus(p.freelancerProfileId, p.submissionId, bounty.id, tx);
 			}
+			// Referral: per-win bonus to the winner's referrer (if any). No-op when
+			// the referral system is disabled or there is no referrer.
+			await referralService.onReferredWin(
+				p.freelancerProfileId,
+				p.submissionId,
+				bounty.id,
+				tx
+			);
 		}
 		await bountyRepo.markCompletedAndAnnounced(bounty.id, tx);
 	});
