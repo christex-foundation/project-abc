@@ -29,7 +29,6 @@
 	let bio = $state(untrack(() => data.profile.bio ?? ''));
 	let portfolio = $state(untrack(() => data.profile.portfolio ?? ''));
 	let experienceLevel = $state(untrack(() => data.profile.experienceLevel ?? ''));
-	let momoNumber = $state(untrack(() => data.profile.momoNumber ?? ''));
 	let whatsappNumber = $state(untrack(() => data.profile.whatsappNumber ?? ''));
 
 	let selected = $state<SelectedSkill[]>(
@@ -130,7 +129,6 @@
 					bio: bio || null,
 					portfolio: portfolio || null,
 					experienceLevel: experienceLevel || null,
-					momoNumber: momoNumber || null,
 					whatsappNumber: whatsappNumber || null,
 					skills: selected
 				})
@@ -198,7 +196,7 @@
 					placeholder="What you build, the problems you like, where you've shipped."
 				/>
 			</div>
-			<div class="grid gap-4 sm:grid-cols-3">
+			<div class="grid gap-4 sm:grid-cols-2">
 				<div class="space-y-1">
 					<Label for="portfolio">Portfolio URL</Label>
 					<Input
@@ -208,10 +206,6 @@
 						maxlength={500}
 						placeholder="https://"
 					/>
-				</div>
-				<div class="space-y-1">
-					<Label for="momoNumber">Mobile money</Label>
-					<Input id="momoNumber" bind:value={momoNumber} maxlength={40} placeholder="+232 …" />
 				</div>
 				<div class="space-y-1">
 					<Label for="whatsappNumber">WhatsApp</Label>

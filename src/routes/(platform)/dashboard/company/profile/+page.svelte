@@ -22,7 +22,6 @@
 	let logo = $state(untrack(() => data.profile.logo ?? ''));
 	let industry = $state(untrack(() => data.profile.industry ?? ''));
 	let country = $state(untrack(() => data.profile.country ?? 'SL'));
-	let momo = $state(untrack(() => data.profile.monimePayoutMomoNumber ?? ''));
 
 	let saving = $state(false);
 	let savedAt = $state<Date | null>(null);
@@ -93,8 +92,7 @@
 					website: website || null,
 					logo: logo || null,
 					industry: industry || null,
-					country: country || 'SL',
-					monimePayoutMomoNumber: momo || null
+					country: country || 'SL'
 				})
 			});
 			if (!res.ok) {
@@ -170,21 +168,6 @@
 					<Label for="country">Country</Label>
 					<Input id="country" bind:value={country} maxlength={8} placeholder="SL" />
 				</div>
-			</div>
-		</CardContent>
-	</Card>
-
-	<Card>
-		<CardHeader>
-			<CardTitle>Payout</CardTitle>
-			<CardDescription>
-				Required before cancelling a funded bounty — refunds land here.
-			</CardDescription>
-		</CardHeader>
-		<CardContent>
-			<div class="space-y-1">
-				<Label for="momo">Mobile money number</Label>
-				<Input id="momo" bind:value={momo} maxlength={40} placeholder="+232 …" autocomplete="tel" />
 			</div>
 		</CardContent>
 	</Card>

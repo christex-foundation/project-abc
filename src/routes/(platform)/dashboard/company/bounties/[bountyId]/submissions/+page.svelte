@@ -138,7 +138,7 @@
 	{:else}
 		<div class="space-y-4">
 			{#each submissions as s (s.id)}
-				{@const hasPayoutMethod = !!s.freelancer.momoNumber}
+				{@const hasPayoutMethod = !!s.freelancer.monimeFinancialAccountId}
 				<Card>
 					<CardHeader>
 						<div class="flex flex-wrap items-center justify-between gap-2">
@@ -159,7 +159,7 @@
 									</Badge>
 								{/if}
 								{#if !hasPayoutMethod}
-									<Badge variant="destructive">No MoMo set</Badge>
+									<Badge variant="destructive">No payment account</Badge>
 								{/if}
 							</div>
 						</div>
