@@ -4,7 +4,18 @@ import type { Skill, SkillCategory } from '@prisma/client';
 export async function listAllWithCategories() {
 	return prisma.skillCategory.findMany({
 		orderBy: { name: 'asc' },
-		include: { skills: { orderBy: { name: 'asc' } } }
+		include: {
+			skills: {
+				orderBy: { name: 'asc' },
+				select: {
+					id: true,
+					name: true,
+					slug: true,
+					categoryId: true,
+					parentSkillId: true
+				}
+			}
+		}
 	});
 }
 
