@@ -21,6 +21,20 @@
 
 	const totalMinor = $derived(data.bounty.totalPrizePool);
 	const overMomoLimit = $derived(totalMinor > MOMO_DAILY_LIMIT_MINOR);
+
+	// Payment method selection
+	type Method = 'checkout' | 'internal_transfer';
+	let selectedMethod = $state<Method>('checkout');
+
+	const hasAccount = $derived(!!data.account?.accountId);
+	const accountBalance = $derived(data.account?.balance ?? 0);
+	const accountUvan = $derived(data.account?.uvan ?? null);
+	const hasSufficientBalance = $derived(hasAccount && accountBalance >= totalMinor);
+
+	// Derive form action based on selected method
+	const formAction = $derived(
+		selectedMethod === 'internal_transfer' ? '?/fundInternal' : '?/fundCheckout'
+	);
 </script>
 
 <div class="mx-auto max-w-2xl space-y-6">
@@ -44,6 +58,7 @@
 		</div>
 	{/if}
 
+	<!-- Prize breakdown -->
 	<Card>
 		<CardHeader>
 			<CardTitle>Prize breakdown</CardTitle>
@@ -79,11 +94,96 @@
 	{#if overMomoLimit}
 		<div class="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
 			<strong>Heads up:</strong> this amount exceeds the SLE 15,000 daily Mobile Money limit. Use a bank
-			transfer on the Monime checkout if MoMo is rejected.
+			transfer on the Monime checkout, or fund from your payment account if you have sufficient balance.
 		</div>
 	{/if}
 
-	<form method="POST">
-		<Button type="submit" class="w-full" size="lg">Proceed to payment</Button>
+	<!-- Payment method selector -->
+	<div class="space-y-3">
+		<p class="text-sm font-medium text-zinc-700">Choose payment method</p>
+
+		<!-- Option 1: Monime checkout -->
+		<button
+			type="button"
+			onclick={() => (selectedMethod = 'checkout')}
+			class="w-full rounded-lg border-2 p-4 text-left transition-colors
+				{selectedMethod === 'checkout'
+				? 'border-zinc-900 bg-zinc-50'
+				: 'border-zinc-200 hover:border-zinc-300'}"
+		>
+			<div class="flex items-start gap-3">
+				<div
+					class="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2
+					{selectedMethod === 'checkout' ? 'border-zinc-900' : 'border-zinc-400'}"
+				>
+					{#if selectedMethod === 'checkout'}
+						<div class="h-2 w-2 rounded-full bg-zinc-900"></div>
+					{/if}
+				</div>
+				<div>
+					<p class="font-medium text-zinc-900">Pay via Monime checkout</p>
+					<p class="mt-0.5 text-sm text-zinc-500">
+						Card, mobile money, or bank transfer · Redirects to Monime's secure payment page
+					</p>
+				</div>
+			</div>
+		</button>
+
+		<!-- Option 2: Account balance (only shown if account exists) -->
+		{#if hasAccount}
+			<button
+				type="button"
+				onclick={() => hasSufficientBalance && (selectedMethod = 'internal_transfer')}
+				disabled={!hasSufficientBalance}
+				class="w-full rounded-lg border-2 p-4 text-left transition-colors
+					{selectedMethod === 'internal_transfer'
+					? 'border-zinc-900 bg-zinc-50'
+					: hasSufficientBalance
+						? 'border-zinc-200 hover:border-zinc-300'
+						: 'cursor-not-allowed border-zinc-200 opacity-60'}"
+			>
+				<div class="flex items-start gap-3">
+					<div
+						class="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2
+						{selectedMethod === 'internal_transfer' ? 'border-zinc-900' : 'border-zinc-400'}"
+					>
+						{#if selectedMethod === 'internal_transfer'}
+							<div class="h-2 w-2 rounded-full bg-zinc-900"></div>
+						{/if}
+					</div>
+					<div class="flex-1">
+						<div class="flex items-center gap-2">
+							<p class="font-medium text-zinc-900">Pay from account balance</p>
+							<Badge variant="outline" class="text-xs">Instant</Badge>
+						</div>
+						<p class="mt-0.5 text-sm text-zinc-500">
+							{#if accountUvan}UVAN: {accountUvan} · {/if}Balance: {formatMoney(accountBalance, data.bounty.currency)}
+						</p>
+						{#if !hasSufficientBalance}
+							<p class="mt-1 text-xs text-red-600">
+								Insufficient balance — need {formatMoney(totalMinor, data.bounty.currency)}, have
+								{formatMoney(accountBalance, data.bounty.currency)}
+							</p>
+						{/if}
+					</div>
+				</div>
+			</button>
+		{:else}
+			<div class="rounded-lg border-2 border-dashed border-zinc-200 p-4 text-sm text-zinc-400">
+				<p class="font-medium">Pay from account balance</p>
+				<p class="mt-0.5">
+					<a href="/dashboard/company/profile" class="underline hover:text-zinc-600">
+						Set up your payment account
+					</a>
+					on your profile page to use this option.
+				</p>
+			</div>
+		{/if}
+	</div>
+
+	<form method="POST" action={formAction}>
+		<Button type="submit" class="w-full" size="lg">
+			{selectedMethod === 'internal_transfer' ? 'Fund from account balance' : 'Proceed to payment'}
+		</Button>
 	</form>
 </div>
