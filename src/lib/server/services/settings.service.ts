@@ -4,10 +4,12 @@ import { AppError } from '../http';
 import { requireRole, type AuthedUser } from '../auth-helpers';
 import { companySelfRegisterValue } from '$lib/validators/settings';
 import { freelancerCreditSystemValue } from '$lib/validators/credit';
+import { freelancerReferralSystemValue } from '$lib/validators/referral';
 
 const VALIDATORS: Record<string, { parse: (v: unknown) => unknown }> = {
 	COMPANY_SELF_REGISTER: companySelfRegisterValue,
-	FREELANCER_CREDIT_SYSTEM: freelancerCreditSystemValue
+	FREELANCER_CREDIT_SYSTEM: freelancerCreditSystemValue,
+	FREELANCER_REFERRAL_SYSTEM: freelancerReferralSystemValue
 };
 
 export async function getAll(): Promise<Record<string, unknown>> {

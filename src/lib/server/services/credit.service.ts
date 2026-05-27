@@ -39,7 +39,7 @@ export function currentPeriodKey(now: Date = new Date()): string {
  *
  * Returns the (possibly reset) balance and the current period key.
  */
-async function ensureCurrentPeriod(
+export async function ensureCurrentPeriod(
 	freelancerProfileId: string,
 	monthlyAllocation: number,
 	tx: Prisma.TransactionClient
