@@ -238,9 +238,9 @@ model FreelancerProfile {
   proofOfWorks       ProofOfWork[]
   creditTransactions CreditTransaction[]
 
-  referrer           FreelancerProfile?  @relation("FreelancerReferrals", fields: [referrerProfileId], references: [id], onDelete: SetNull)
+  referrer            FreelancerProfile?  @relation("FreelancerReferrals", fields: [referrerProfileId], references: [id], onDelete: SetNull)
   referredFreelancers FreelancerProfile[] @relation("FreelancerReferrals")
-  referralCreditTxns CreditTransaction[] @relation("CreditTxnReferred")
+  referralCreditTxns  CreditTransaction[] @relation("CreditTxnReferred")
 
   @@index([referrerProfileId])
 }
@@ -328,13 +328,16 @@ model ProofOfWorkSkill {
 
 model Bounty {
   // Identity
-  id               String  @id @default(cuid())
-  companyProfileId String
-  title            String
-  slug             String  @unique
-  description      String // sanitised HTML
-  requirements     String? // sanitised HTML
-  deliverables     String? // sanitised HTML
+  id                  String  @id @default(cuid())
+  companyProfileId    String?
+  // Captured when the owning company deletes their account so the bounty can be
+  // attributed in the UI even after the FK is set to NULL (GDPR account deletion).
+  companyNameSnapshot String?
+  title               String
+  slug                String  @unique
+  description         String // sanitised HTML
+  requirements        String? // sanitised HTML
+  deliverables        String? // sanitised HTML
 
   // Type & status
   type   BountyType   @default(BOUNTY)
@@ -382,7 +385,7 @@ model Bounty {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  company            CompanyProfile      @relation(fields: [companyProfileId], references: [id])
+  company            CompanyProfile?     @relation(fields: [companyProfileId], references: [id], onDelete: SetNull)
   prizeTiers         PrizeTier[]
   skills             BountySkill[]
   submissions        Submission[]
@@ -427,9 +430,12 @@ model BountySkill {
 // =============================================================================
 
 model Submission {
-  id                  String @id @default(cuid())
-  bountyId            String
-  freelancerProfileId String
+  id                     String  @id @default(cuid())
+  bountyId               String
+  freelancerProfileId    String?
+  // Captured when the freelancer deletes their account so the sponsor can still
+  // attribute the submission after the FK is set to NULL (GDPR account deletion).
+  freelancerNameSnapshot String?
 
   // Content
   link      String
@@ -466,7 +472,7 @@ model Submission {
   updatedAt DateTime @updatedAt
 
   bounty             Bounty              @relation(fields: [bountyId], references: [id], onDelete: Cascade)
-  freelancer         FreelancerProfile   @relation(fields: [freelancerProfileId], references: [id])
+  freelancer         FreelancerProfile?  @relation(fields: [freelancerProfileId], references: [id], onDelete: SetNull)
   payments           Payment[]
   creditTransactions CreditTransaction[]
 
@@ -550,17 +556,20 @@ model AccountWithdrawal {
 // =============================================================================
 
 model Dispute {
-  id         String   @id @default(cuid())
-  bountyId   String
-  raisedById String
-  reason     String
-  status     String   @default("OPEN")
-  resolution String?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id                    String   @id @default(cuid())
+  bountyId              String
+  // Nullable so the User row can be deleted under GDPR — the dispute survives
+  // with `raisedById = NULL` (and `raisedByEmailSnapshot` for ops).
+  raisedById            String?
+  raisedByEmailSnapshot String?
+  reason                String
+  status                String   @default("OPEN")
+  resolution            String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 
   bounty   Bounty @relation(fields: [bountyId], references: [id])
-  raisedBy User   @relation(fields: [raisedById], references: [id])
+  raisedBy User?  @relation(fields: [raisedById], references: [id], onDelete: SetNull)
 
   @@index([bountyId])
   @@index([raisedById])
@@ -577,7 +586,7 @@ model Setting {
   updatedAt   DateTime @updatedAt
   updatedById String?
 
-  updatedBy User? @relation(fields: [updatedById], references: [id])
+  updatedBy User? @relation(fields: [updatedById], references: [id], onDelete: SetNull)
 }
 
 // =============================================================================
@@ -588,14 +597,14 @@ model CompanyInvite {
   id             String       @id @default(cuid())
   email          String
   companyName    String?
-  invitedById    String
+  invitedById    String?
   status         InviteStatus @default(PENDING)
   acceptedUserId String?
   createdAt      DateTime     @default(now())
   acceptedAt     DateTime?
 
-  invitedBy    User  @relation("InviteCreatedBy", fields: [invitedById], references: [id])
-  acceptedUser User? @relation("InviteAcceptedBy", fields: [acceptedUserId], references: [id])
+  invitedBy    User? @relation("InviteCreatedBy", fields: [invitedById], references: [id], onDelete: SetNull)
+  acceptedUser User? @relation("InviteAcceptedBy", fields: [acceptedUserId], references: [id], onDelete: SetNull)
   // NOTE: partial-unique index `(email) WHERE status = 'PENDING'` is appended
   // as raw SQL in the initial migration — Prisma does not yet support partial
   // unique indexes declaratively.
@@ -681,11 +690,31 @@ model CreditTransaction {
   freelancer FreelancerProfile  @relation(fields: [freelancerProfileId], references: [id], onDelete: Cascade)
   submission Submission?        @relation(fields: [submissionId], references: [id], onDelete: SetNull)
   bounty     Bounty?            @relation(fields: [bountyId], references: [id], onDelete: SetNull)
-  adminUser  User?              @relation("CreditTxnAdmin", fields: [adminUserId], references: [id])
+  adminUser  User?              @relation("CreditTxnAdmin", fields: [adminUserId], references: [id], onDelete: SetNull)
   referred   FreelancerProfile? @relation("CreditTxnReferred", fields: [referredProfileId], references: [id], onDelete: SetNull)
 
   @@index([freelancerProfileId, createdAt])
   @@index([submissionId])
   @@index([reason, periodKey])
   @@index([referredProfileId])
+}
+
+// =============================================================================
+// GDPR account-deletion audit log.
+// Has no FK to User on purpose — the row must survive the user's deletion so
+// that we retain a record of who was erased, when, and by whom (self vs admin).
+// =============================================================================
+
+model AccountDeletionLog {
+  id              String   @id @default(cuid())
+  deletedUserId   String
+  deletedEmail    String
+  deletedRole     UserRole
+  deletedAt       DateTime @default(now())
+  // null = self-serve deletion; non-null = admin id that triggered it
+  deletedByUserId String?
+  reason          String?
+
+  @@index([deletedAt])
+  @@index([deletedByUserId])
 }
