@@ -1,5 +1,13 @@
 <script lang="ts">
-	import { Badge, Button, Card, CardContent, CardHeader, CardTitle, CardDescription } from '$lib/components/ui';
+	import {
+		Badge,
+		Button,
+		Card,
+		CardContent,
+		CardHeader,
+		CardTitle,
+		CardDescription
+	} from '$lib/components/ui';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import WithdrawalForm from '$lib/components/shared/WithdrawalForm.svelte';
 
@@ -83,7 +91,9 @@
 			<CardContent class="py-4">
 				<div class="flex items-center justify-between">
 					<div>
-						<p class="text-xs font-medium text-zinc-500 uppercase tracking-wide">Payment account balance</p>
+						<p class="text-xs font-medium tracking-wide text-zinc-500 uppercase">
+							Payment account balance
+						</p>
 						<p class="text-2xl font-semibold">
 							{formatMoney(account.balance, currency)}
 						</p>

@@ -195,17 +195,21 @@
 						<table class="w-full text-sm">
 							<thead class="text-left text-xs text-zinc-500 uppercase">
 								<tr>
-									<th class="pb-1 pr-4">#</th>
-									<th class="pb-1 pr-4">Amount</th>
-									<th class="pb-1 pr-4">Method</th>
-									<th class="pb-1 pr-4">Final</th>
+									<th class="pr-4 pb-1">#</th>
+									<th class="pr-4 pb-1">Amount</th>
+									<th class="pr-4 pb-1">Method</th>
+									<th class="pr-4 pb-1">Final</th>
 									<th class="pb-1">Monime reference</th>
 								</tr>
 							</thead>
 							<tbody>
 								{#each tranches as t, i (t.monimeTransferId ?? t.monimePayoutId ?? i)}
 									{@const monimeRef = t.monimeTransferId ?? t.monimePayoutId ?? null}
-									{@const trancheMethod = t.monimeTransferId ? 'INTERNAL_TRANSFER' : t.monimePayoutId ? 'MOMO_PAYOUT' : null}
+									{@const trancheMethod = t.monimeTransferId
+										? 'INTERNAL_TRANSFER'
+										: t.monimePayoutId
+											? 'MOMO_PAYOUT'
+											: null}
 									{@const trancheLabel = methodLabel(trancheMethod)}
 									<tr class="border-t">
 										<td class="py-1 pr-4">{t.tranche}</td>

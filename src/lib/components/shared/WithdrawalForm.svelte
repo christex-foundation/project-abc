@@ -76,7 +76,9 @@
 
 <div class="space-y-4">
 	{#if withdrawSuccess}
-		<div class="rounded-md border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+		<div
+			class="rounded-md border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-800"
+		>
 			Withdrawal initiated — funds will arrive in your mobile money account shortly.
 		</div>
 	{/if}
@@ -125,11 +127,7 @@
 			<p class="text-sm text-red-600">{withdrawError}</p>
 		{/if}
 
-		<Button
-			onclick={submitWithdraw}
-			disabled={withdrawLoading || !amountMajor}
-			class="w-full"
-		>
+		<Button onclick={submitWithdraw} disabled={withdrawLoading || !amountMajor} class="w-full">
 			{withdrawLoading ? 'Processing…' : 'Withdraw'}
 		</Button>
 	{/if}

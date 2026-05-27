@@ -116,7 +116,9 @@
 			</CardHeader>
 			<CardContent class="space-y-2">
 				{#each recentBounties as b (b.id)}
-					<div class="flex flex-wrap items-center justify-between gap-2 border-b py-2 last:border-0">
+					<div
+						class="flex flex-wrap items-center justify-between gap-2 border-b py-2 last:border-0"
+					>
 						<div class="min-w-0 flex-1">
 							<div class="truncate text-sm font-medium">{b.title}</div>
 							<div class="mt-1 flex flex-wrap items-center gap-1.5">

@@ -157,7 +157,8 @@
 							<Badge variant="outline" class="text-xs">Instant</Badge>
 						</div>
 						<p class="mt-0.5 text-sm text-zinc-500">
-							{#if accountUvan}UVAN: {accountUvan} · {/if}Balance: {formatMoney(accountBalance, data.bounty.currency)}
+							{#if accountUvan}UVAN: {accountUvan} ·
+							{/if}Balance: {formatMoney(accountBalance, data.bounty.currency)}
 						</p>
 						{#if !hasSufficientBalance}
 							<p class="mt-1 text-xs text-red-600">

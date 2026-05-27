@@ -77,7 +77,10 @@ export async function ensureCompanyAccount(caller: AuthedUser): Promise<string> 
 	const profile = await companyRepo.findByUserId(caller.id);
 	if (!profile) throw new AppError('NOT_FOUND', 'Company profile not found.');
 	if (!profile.companyName)
-		throw new AppError('CONFLICT', 'Complete your company profile before setting up a payment account.');
+		throw new AppError(
+			'CONFLICT',
+			'Complete your company profile before setting up a payment account.'
+		);
 	if (profile.monimeFinancialAccountId) return profile.monimeFinancialAccountId;
 	const { id } = await createAndPersistCompanyAccount(profile.id, profile.companyName);
 	return id;
@@ -250,9 +253,7 @@ export async function withdraw(
  * Called after a successful profile save to lazily provision a Monime account.
  * Non-blocking — errors are caught and logged so they don't fail the profile save.
  */
-export async function tryProvisionAccountAfterProfileUpdate(
-	caller: AuthedUser
-): Promise<void> {
+export async function tryProvisionAccountAfterProfileUpdate(caller: AuthedUser): Promise<void> {
 	try {
 		if (caller.role === 'COMPANY') {
 			await ensureCompanyAccount(caller);

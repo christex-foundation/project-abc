@@ -28,7 +28,9 @@
 	let errorMsg = $state<string | null>(null);
 
 	// Financial account
-	let accountId = $state<string | null>(untrack(() => data.profile.monimeFinancialAccountId ?? null));
+	let accountId = $state<string | null>(
+		untrack(() => data.profile.monimeFinancialAccountId ?? null)
+	);
 	let uvan = $state<string | null>(untrack(() => data.profile.monimeUvan ?? null));
 	let balance = $state<number | null>(null);
 	let accountLoading = $state(false);
@@ -193,7 +195,7 @@
 				<div class="space-y-3">
 					<div class="flex items-center justify-between rounded-md bg-zinc-50 px-3 py-2">
 						<div class="space-y-0.5">
-							<p class="text-xs font-medium text-zinc-500 uppercase tracking-wide">UVAN</p>
+							<p class="text-xs font-medium tracking-wide text-zinc-500 uppercase">UVAN</p>
 							<p class="font-mono text-sm">{uvan ?? accountId}</p>
 						</div>
 						<Button variant="ghost" size="sm" onclick={copyUvan}>
@@ -202,7 +204,7 @@
 					</div>
 					<div class="flex items-center justify-between rounded-md bg-zinc-50 px-3 py-2">
 						<div class="space-y-0.5">
-							<p class="text-xs font-medium text-zinc-500 uppercase tracking-wide">Balance</p>
+							<p class="text-xs font-medium tracking-wide text-zinc-500 uppercase">Balance</p>
 							<p class="text-sm font-semibold">
 								{accountLoading ? 'Loading…' : formatMoney(balance)}
 							</p>

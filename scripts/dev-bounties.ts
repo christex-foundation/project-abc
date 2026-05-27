@@ -20,11 +20,12 @@ async function ensureCompanyProfile() {
 		create: {
 			userId: user.id,
 			companyName: 'Christex Foundation',
-			description: 'A technology foundation advancing digital skills and entrepreneurship in Sierra Leone.',
+			description:
+				'A technology foundation advancing digital skills and entrepreneurship in Sierra Leone.',
 			industry: 'Technology / Non-profit',
 			country: 'SL',
-			website: 'https://christexfoundation.org',
-		},
+			website: 'https://christexfoundation.org'
+		}
 	});
 }
 
@@ -38,8 +39,8 @@ async function ensureFreelancerProfile() {
 			displayName: 'Test Freelancer',
 			headline: 'Full-stack developer & mobile money specialist',
 			bio: 'Based in Freetown. Experienced in TypeScript, mobile integrations, and community tech.',
-			experienceLevel: 'intermediate',
-		},
+			experienceLevel: 'intermediate'
+		}
 	});
 }
 
@@ -69,7 +70,7 @@ async function seedBounties(companyProfileId: string, freelancerProfileId: strin
 			judgingDeadline: future(45),
 			publishedAt: past(5),
 			description:
-				'<p>We need a comprehensive developer guide covering how to integrate with Sierra Leone\'s top mobile money APIs — Orange Money, Afrimoney, and Monime. The guide should be practical, include working code samples, and be accessible to intermediate developers.</p>',
+				"<p>We need a comprehensive developer guide covering how to integrate with Sierra Leone's top mobile money APIs — Orange Money, Afrimoney, and Monime. The guide should be practical, include working code samples, and be accessible to intermediate developers.</p>",
 			requirements:
 				'<ul><li>Cover at least 2 of the 3 major SL mobile money providers</li><li>Include working code samples in JavaScript/TypeScript or Python</li><li>Cover authentication, transfers, and webhook handling</li><li>Published publicly (GitHub, Dev.to, personal blog, etc.)</li></ul>',
 			deliverables:
@@ -78,13 +79,13 @@ async function seedBounties(companyProfileId: string, freelancerProfileId: strin
 				create: [
 					{ position: 1, amount: 3_000_000 * SLE, label: '1st Place' },
 					{ position: 2, amount: 1_200_000 * SLE, label: '2nd Place' },
-					{ position: 3, amount: 800_000 * SLE, label: '3rd Place' },
-				],
+					{ position: 3, amount: 800_000 * SLE, label: '3rd Place' }
+				]
 			},
 			skills: {
-				create: b1Skills.map((id) => ({ skillId: id, isRequired: false })),
-			},
-		},
+				create: b1Skills.map((id) => ({ skillId: id, isRequired: false }))
+			}
+		}
 	});
 	console.log(`✓ Bounty: ${b1.title}`);
 
@@ -108,18 +109,18 @@ async function seedBounties(companyProfileId: string, freelancerProfileId: strin
 			judgingDeadline: future(35),
 			publishedAt: past(3),
 			description:
-				'<p>We are commissioning a field research report on digital access barriers facing youth (18–30) in Freetown\'s Western Area. The findings will inform our 2026 digital inclusion program design.</p>',
+				"<p>We are commissioning a field research report on digital access barriers facing youth (18–30) in Freetown's Western Area. The findings will inform our 2026 digital inclusion program design.</p>",
 			requirements:
 				'<ul><li>Primary research: minimum 20 interviews or a structured survey with 50+ respondents</li><li>Cover access to devices, internet costs, digital literacy, and platform usage</li><li>Disaggregate data by gender and urban/peri-urban location</li></ul>',
 			deliverables:
 				'<ul><li>PDF report (10–20 pages, excluding appendices)</li><li>Raw data in Excel or Google Sheets</li><li>Executive summary (1 page)</li></ul>',
 			prizeTiers: {
-				create: [{ position: 1, amount: 2_000_000 * SLE, label: 'Winner' }],
+				create: [{ position: 1, amount: 2_000_000 * SLE, label: 'Winner' }]
 			},
 			skills: {
-				create: b2Skills.map((id) => ({ skillId: id, isRequired: false })),
-			},
-		},
+				create: b2Skills.map((id) => ({ skillId: id, isRequired: false }))
+			}
+		}
 	});
 	console.log(`✓ Bounty: ${b2.title}`);
 
@@ -150,12 +151,12 @@ async function seedBounties(companyProfileId: string, freelancerProfileId: strin
 			deliverables:
 				'<ul><li>Figma file (shared link, view access)</li><li>Exported PNG previews of all key screens</li><li>Short loom/video walkthrough (optional but preferred)</li></ul>',
 			prizeTiers: {
-				create: [{ position: 1, amount: 3_500_000 * SLE, label: 'Selected Designer' }],
+				create: [{ position: 1, amount: 3_500_000 * SLE, label: 'Selected Designer' }]
 			},
 			skills: {
-				create: b3Skills.map((id) => ({ skillId: id, isRequired: true })),
-			},
-		},
+				create: b3Skills.map((id) => ({ skillId: id, isRequired: true }))
+			}
+		}
 	});
 	console.log(`✓ Bounty: ${b3.title}`);
 
@@ -187,12 +188,12 @@ async function seedBounties(companyProfileId: string, freelancerProfileId: strin
 			deliverables:
 				'<ul><li>GitHub repo (public or shared)</li><li>Deployed bot (link or QR code to start chat)</li><li>Short demo video (2–5 min)</li></ul>',
 			prizeTiers: {
-				create: [{ position: 1, amount: 6_000_000 * SLE, label: 'Winner' }],
+				create: [{ position: 1, amount: 6_000_000 * SLE, label: 'Winner' }]
 			},
 			skills: {
-				create: b4Skills.map((id) => ({ skillId: id, isRequired: false })),
-			},
-		},
+				create: b4Skills.map((id) => ({ skillId: id, isRequired: false }))
+			}
+		}
 	});
 	console.log(`✓ Bounty: ${b4.title}`);
 
@@ -222,24 +223,25 @@ async function seedBounties(companyProfileId: string, freelancerProfileId: strin
 				create: [
 					{ position: 1, amount: 700_000 * SLE, label: '1st Place' },
 					{ position: 2, amount: 500_000 * SLE, label: '2nd Place' },
-					{ position: 99, amount: 300_000 * SLE, label: 'Bonus Prize' },
-				],
+					{ position: 99, amount: 300_000 * SLE, label: 'Bonus Prize' }
+				]
 			},
 			description:
-				'<p>Create short explainer content (video, illustrated post, or thread) that teaches a tech concept in Krio — Sierra Leone\'s lingua franca. Topics: what is the internet, how mobile money works, or how to stay safe online.</p>',
+				"<p>Create short explainer content (video, illustrated post, or thread) that teaches a tech concept in Krio — Sierra Leone's lingua franca. Topics: what is the internet, how mobile money works, or how to stay safe online.</p>",
 			requirements:
 				'<ul><li>Content must be primarily in Krio</li><li>Published on a public platform (TikTok, Facebook, Instagram, YouTube, or Twitter/X)</li><li>Minimum 500 views within the submission window</li></ul>',
-			deliverables: '<ul><li>Public post/video link</li><li>Screenshot of view count at submission time</li></ul>',
+			deliverables:
+				'<ul><li>Public post/video link</li><li>Screenshot of view count at submission time</li></ul>',
 			skills: {
-				create: b5Skills.map((id) => ({ skillId: id, isRequired: false })),
-			},
-		},
+				create: b5Skills.map((id) => ({ skillId: id, isRequired: false }))
+			}
+		}
 	});
 	console.log(`✓ Bounty: ${b5.title}`);
 
 	// --- Submission on bounty 4 (JUDGING) from the test freelancer ---
 	const existingSubmission = await prisma.submission.findUnique({
-		where: { bountyId_freelancerProfileId: { bountyId: b4.id, freelancerProfileId } },
+		where: { bountyId_freelancerProfileId: { bountyId: b4.id, freelancerProfileId } }
 	});
 	if (!existingSubmission) {
 		await prisma.submission.create({
@@ -250,8 +252,8 @@ async function seedBounties(companyProfileId: string, freelancerProfileId: strin
 				otherInfo:
 					'<p>Built with Node.js + Twilio WhatsApp Sandbox. Deployed on Railway. Supports 5 job categories and sends alerts daily at 9am SL time. Demo QR code in the README.</p>',
 				status: SubmissionStatus.PENDING,
-				ask: 5_500_000 * SLE,
-			},
+				ask: 5_500_000 * SLE
+			}
 		});
 		console.log('✓ Submission: freelancer → WhatsApp Bot bounty');
 	} else {
