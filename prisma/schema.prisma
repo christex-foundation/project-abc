@@ -194,27 +194,32 @@ model Verification {
 // =============================================================================
 
 model CompanyProfile {
-  id                       String   @id @default(cuid())
-  userId                   String   @unique
+  id                       String    @id @default(cuid())
+  userId                   String    @unique
   companyName              String
   description              String?
   website                  String?
   logo                     String?
   industry                 String?
-  country                  String   @default("SL")
-  verified                 Boolean  @default(false)
+  country                  String    @default("SL")
+  verified                 Boolean   @default(false)
   monimeFinancialAccountId String? // Monime financial account UUID
   monimeUvan               String? // UVAN identifier
-  createdAt                DateTime @default(now())
-  updatedAt                DateTime @updatedAt
+  // Verified withdrawal destination (KYC'd at setup; reused for every withdrawal)
+  withdrawalPhone          String?
+  withdrawalHolderName     String?
+  withdrawalProviderName   String?
+  withdrawalVerifiedAt     DateTime?
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
 
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   bounties Bounty[]
 }
 
 model FreelancerProfile {
-  id                       String   @id @default(cuid())
-  userId                   String   @unique
+  id                       String    @id @default(cuid())
+  userId                   String    @unique
   displayName              String
   headline                 String?
   bio                      String?
@@ -225,12 +230,17 @@ model FreelancerProfile {
   aiEmbedding              Float[]
   monimeFinancialAccountId String? // Monime financial account UUID
   monimeUvan               String? // UVAN identifier
-  creditsBalance           Int      @default(0)
+  // Verified withdrawal destination (KYC'd at setup; reused for every withdrawal)
+  withdrawalPhone          String?
+  withdrawalHolderName     String?
+  withdrawalProviderName   String?
+  withdrawalVerifiedAt     DateTime?
+  creditsBalance           Int       @default(0)
   creditsPeriodKey         String? // "YYYY-MM" of the cached balance; null = never initialized
   // Referral — set once at signup when the new freelancer redeemed a code; immutable thereafter.
   referrerProfileId        String?
-  createdAt                DateTime @default(now())
-  updatedAt                DateTime @updatedAt
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
 
   user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   skills             FreelancerSkill[]

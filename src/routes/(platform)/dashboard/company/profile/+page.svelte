@@ -27,16 +27,33 @@
 	let savedAt = $state<Date | null>(null);
 	let errorMsg = $state<string | null>(null);
 
-	// Financial account
+	// Wallet — the balance lives on Monime; we just fetch and render it.
 	let accountId = $state<string | null>(
 		untrack(() => data.profile.monimeFinancialAccountId ?? null)
 	);
-	let uvan = $state<string | null>(untrack(() => data.profile.monimeUvan ?? null));
 	let balance = $state<number | null>(null);
 	let accountLoading = $state(false);
-	let setupLoading = $state(false);
+	let activating = $state(false);
+
+	// Verified mobile money refund destination (KYC'd at setup)
+	type Destination = { phone: string; holderName: string; providerName: string };
+	let destination = $state<Destination | null>(
+		untrack(() =>
+			data.profile.withdrawalPhone && data.profile.withdrawalVerifiedAt
+				? {
+						phone: data.profile.withdrawalPhone,
+						holderName: data.profile.withdrawalHolderName ?? '',
+						providerName: data.profile.withdrawalProviderName ?? ''
+					}
+				: null
+		)
+	);
+	let editingDestination = $state(false);
+	let destPhone = $state('');
+	let destSaving = $state(false);
+	let destError = $state<string | null>(null);
+
 	let showWithdraw = $state(false);
-	let copied = $state(false);
 
 	onMount(async () => {
 		if (!accountId) return;
@@ -46,34 +63,60 @@
 			if (res.ok) {
 				const body = await res.json();
 				balance = body.balance;
-				uvan = body.uvan ?? uvan;
 			}
 		} finally {
 			accountLoading = false;
 		}
 	});
 
-	async function setupAccount() {
-		setupLoading = true;
+	async function activateWallet() {
+		activating = true;
 		try {
 			const res = await fetch('/api/users/me/financial-account', { method: 'POST' });
 			if (res.ok) {
 				const body = await res.json();
 				accountId = body.accountId;
-				uvan = body.uvan;
 				balance = body.balance;
 			}
 		} finally {
-			setupLoading = false;
+			activating = false;
 		}
 	}
 
-	function copyUvan() {
-		if (uvan) {
-			navigator.clipboard.writeText(uvan);
-			copied = true;
-			setTimeout(() => (copied = false), 2000);
+	async function saveDestination() {
+		const trimmed = destPhone.trim();
+		if (!trimmed) return;
+		destSaving = true;
+		destError = null;
+		try {
+			const res = await fetch('/api/users/me/withdrawal-destination', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ phone: trimmed })
+			});
+			const body = await res.json();
+			if (!res.ok) {
+				destError = body?.error?.message ?? `Couldn't verify number (${res.status}).`;
+				return;
+			}
+			destination = {
+				phone: body.destination.phone,
+				holderName: body.destination.holderName,
+				providerName: body.destination.providerName
+			};
+			editingDestination = false;
+			destPhone = '';
+		} catch {
+			destError = 'Network error — please try again.';
+		} finally {
+			destSaving = false;
 		}
+	}
+
+	function startEditDestination() {
+		destPhone = destination?.phone ?? '';
+		destError = null;
+		editingDestination = true;
 	}
 
 	function formatMoney(minor: number | null, currency = 'SLE') {
@@ -174,34 +217,24 @@
 		</CardContent>
 	</Card>
 
-	<!-- Payment Account card -->
+	<!-- Wallet card -->
 	<Card>
 		<CardHeader>
-			<CardTitle>Payment account</CardTitle>
+			<CardTitle>Wallet</CardTitle>
 			<CardDescription>
-				Your Monime financial account for instant bounty funding and receiving refunds.
+				Fund bounties instantly from your balance and receive refunds without checkout redirects.
 			</CardDescription>
 		</CardHeader>
 		<CardContent class="space-y-4">
 			{#if !accountId}
 				<p class="text-sm text-zinc-500">
-					Set up a Monime payment account to fund bounties instantly from your balance and receive
-					refunds directly — no checkout redirect needed.
+					Activate your wallet to fund bounties instantly and receive refunds.
 				</p>
-				<Button onclick={setupAccount} disabled={setupLoading} variant="outline">
-					{setupLoading ? 'Setting up…' : 'Set up payment account'}
+				<Button onclick={activateWallet} disabled={activating} variant="outline">
+					{activating ? 'Activating…' : 'Activate wallet'}
 				</Button>
 			{:else}
 				<div class="space-y-3">
-					<div class="flex items-center justify-between rounded-md bg-zinc-50 px-3 py-2">
-						<div class="space-y-0.5">
-							<p class="text-xs font-medium tracking-wide text-zinc-500 uppercase">UVAN</p>
-							<p class="font-mono text-sm">{uvan ?? accountId}</p>
-						</div>
-						<Button variant="ghost" size="sm" onclick={copyUvan}>
-							{copied ? '✓ Copied' : 'Copy'}
-						</Button>
-					</div>
 					<div class="flex items-center justify-between rounded-md bg-zinc-50 px-3 py-2">
 						<div class="space-y-0.5">
 							<p class="text-xs font-medium tracking-wide text-zinc-500 uppercase">Balance</p>
@@ -209,14 +242,74 @@
 								{accountLoading ? 'Loading…' : formatMoney(balance)}
 							</p>
 						</div>
-						<Button variant="outline" size="sm" onclick={() => (showWithdraw = !showWithdraw)}>
+						<Button
+							variant="outline"
+							size="sm"
+							onclick={() => (showWithdraw = !showWithdraw)}
+							disabled={!destination}
+							title={destination ? '' : 'Set up your refund mobile number first'}
+						>
 							{showWithdraw ? 'Cancel' : 'Withdraw'}
 						</Button>
 					</div>
-					{#if showWithdraw}
+
+					<!-- Refund destination -->
+					<div class="rounded-md border p-3">
+						<div class="mb-2 flex items-center justify-between">
+							<p class="text-xs font-medium tracking-wide text-zinc-500 uppercase">
+								Refund mobile money
+							</p>
+							{#if destination && !editingDestination}
+								<Button variant="ghost" size="sm" onclick={startEditDestination}>
+									Change number
+								</Button>
+							{/if}
+						</div>
+
+						{#if destination && !editingDestination}
+							<div class="space-y-0.5">
+								<p class="font-mono text-sm">+{destination.phone}</p>
+								<p class="text-xs text-zinc-600">
+									{destination.holderName} · {destination.providerName}
+								</p>
+							</div>
+						{:else}
+							<p class="mb-2 text-xs text-zinc-500">
+								If we ever refund you, it goes straight to this verified number.
+							</p>
+							<div class="flex gap-2">
+								<Input
+									type="tel"
+									bind:value={destPhone}
+									placeholder="23276000000"
+									maxlength={20}
+									class="flex-1"
+								/>
+								<Button onclick={saveDestination} disabled={destSaving || !destPhone.trim()}>
+									{destSaving ? 'Verifying…' : 'Verify & save'}
+								</Button>
+								{#if editingDestination && destination}
+									<Button
+										variant="ghost"
+										onclick={() => {
+											editingDestination = false;
+											destError = null;
+										}}
+									>
+										Cancel
+									</Button>
+								{/if}
+							</div>
+							{#if destError}
+								<p class="mt-1.5 text-xs text-red-600">{destError}</p>
+							{/if}
+						{/if}
+					</div>
+
+					{#if showWithdraw && destination}
 						<div class="rounded-md border p-4">
 							<p class="mb-3 text-sm font-medium">Withdraw to mobile money</p>
-							<WithdrawalForm {accountId} />
+							<WithdrawalForm {destination} />
 						</div>
 					{/if}
 				</div>

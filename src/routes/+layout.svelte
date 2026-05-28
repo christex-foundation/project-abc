@@ -17,7 +17,12 @@
 	const showTopNav = $derived(!!data.user && !isAdminPath);
 
 	const wallet = $derived(
-		data.wallet ?? { creditsBalance: null, walletBalanceMinor: null, currencyDisplay: 'Le' }
+		data.wallet ?? {
+			creditsBalance: null,
+			walletBalanceMinor: null,
+			currencyDisplay: 'Le',
+			withdrawalDestination: null
+		}
 	);
 </script>
 

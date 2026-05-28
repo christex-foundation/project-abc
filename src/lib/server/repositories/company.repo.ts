@@ -40,3 +40,24 @@ export async function setFinancialAccount(
 		data: { monimeFinancialAccountId: accountId, monimeUvan: uvan }
 	});
 }
+
+export type WithdrawalDestinationInput = {
+	phone: string;
+	holderName: string;
+	providerName: string;
+};
+
+export async function setWithdrawalDestination(
+	profileId: string,
+	dest: WithdrawalDestinationInput
+): Promise<void> {
+	await prisma.companyProfile.update({
+		where: { id: profileId },
+		data: {
+			withdrawalPhone: dest.phone,
+			withdrawalHolderName: dest.holderName,
+			withdrawalProviderName: dest.providerName,
+			withdrawalVerifiedAt: new Date()
+		}
+	});
+}

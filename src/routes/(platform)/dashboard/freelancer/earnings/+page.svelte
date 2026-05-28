@@ -24,6 +24,7 @@
 
 	const earnings = $derived(data.earnings);
 	const account = $derived(data.account);
+	const destination = $derived(data.destination);
 
 	const totalEarned = $derived(
 		earnings.filter((e) => e.status === 'COMPLETED').reduce((s, e) => s + e.amount, 0)
@@ -85,15 +86,13 @@
 		<p class="text-sm text-zinc-500">Payout history across every bounty you've won.</p>
 	</header>
 
-	<!-- Payment account balance card -->
+	<!-- Wallet balance card -->
 	{#if account.accountId}
 		<Card>
 			<CardContent class="py-4">
 				<div class="flex items-center justify-between">
 					<div>
-						<p class="text-xs font-medium tracking-wide text-zinc-500 uppercase">
-							Payment account balance
-						</p>
+						<p class="text-xs font-medium tracking-wide text-zinc-500 uppercase">Wallet balance</p>
 						<p class="text-2xl font-semibold">
 							{formatMoney(account.balance, currency)}
 						</p>
@@ -101,14 +100,27 @@
 							<p class="mt-0.5 font-mono text-xs text-zinc-400">{account.uvan}</p>
 						{/if}
 					</div>
-					<Button variant="outline" onclick={() => (showWithdraw = !showWithdraw)}>
+					<Button
+						variant="outline"
+						onclick={() => (showWithdraw = !showWithdraw)}
+						disabled={!destination}
+						title={destination ? '' : 'Set up your withdrawal mobile number first'}
+					>
 						{showWithdraw ? 'Cancel' : 'Withdraw →'}
 					</Button>
 				</div>
-				{#if showWithdraw}
+				{#if !destination}
+					<p class="mt-2 text-xs text-zinc-500">
+						<a href="/dashboard/freelancer/profile" class="underline hover:text-zinc-700">
+							Set up your withdrawal mobile money number
+						</a>
+						on your profile to enable withdrawals.
+					</p>
+				{/if}
+				{#if showWithdraw && destination}
 					<div class="mt-4 rounded-md border p-4">
 						<p class="mb-3 text-sm font-medium">Withdraw to mobile money</p>
-						<WithdrawalForm accountId={account.accountId} />
+						<WithdrawalForm {destination} />
 					</div>
 				{/if}
 			</CardContent>
@@ -116,7 +128,7 @@
 	{:else}
 		<div class="rounded-md border border-dashed border-zinc-200 px-4 py-3 text-sm text-zinc-500">
 			<a href="/dashboard/freelancer/profile" class="underline hover:text-zinc-700">
-				Set up your payment account
+				Activate your wallet
 			</a>
 			on your profile to withdraw earnings to mobile money.
 		</div>

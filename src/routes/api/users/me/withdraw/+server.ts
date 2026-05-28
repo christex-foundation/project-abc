@@ -1,12 +1,11 @@
 /**
  * POST /api/users/me/withdraw
  *
- * Initiates a withdrawal from the caller's Monime financial account to a
- * mobile money number. KYC is verified inline before the payout is created.
+ * Initiates a withdrawal from the caller's wallet to their saved, verified
+ * mobile money number. The destination must have been configured via
+ * POST /api/users/me/withdrawal-destination before calling this endpoint.
  *
- * Body: { phoneNumber: string; amount: number }
- *   - phoneNumber: full SL number without '+', e.g. "23277123456"
- *   - amount: in minor units (SLE cents)
+ * Body: { amount: number } — minor units (SLE cents)
  *
  * Returns: { withdrawalId: string; monimePayoutId: string }
  *
@@ -21,8 +20,6 @@ import { withdraw } from '$lib/server/services/financial-account.service';
 import type { RequestHandler } from './$types';
 
 const withdrawInput = z.object({
-	/** Full Sierra Leone phone number without '+', e.g. "23277123456" */
-	phoneNumber: z.string().min(8).max(20),
 	/** Amount in minor units (SLE cents). Must be positive. */
 	amount: z.number().int().positive()
 });

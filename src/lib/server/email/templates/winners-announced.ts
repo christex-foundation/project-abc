@@ -39,10 +39,10 @@ export function winnersAnnounced({
 			subject,
 			text: `Congratulations ${freelancerName} — you won ${place ? `${place} ` : ''}on "${bountyTitle}".${
 				amountStr ? `\n\nPrize: ${amountStr}` : ''
-			}\nPayout is being deposited to your Monime payment account.\n\nBounty: ${bountyUrl}`,
+			}\nPayout is being deposited to your wallet.\n\nBounty: ${bountyUrl}`,
 			html: `<p>Congratulations ${escapeHtml(freelancerName)} — you won${place ? ` <strong>${escapeHtml(place)}</strong>` : ''} on <a href="${bountyUrl}">${escapeHtml(bountyTitle)}</a>.</p>
 ${amountStr ? `<p><strong>Prize:</strong> ${escapeHtml(amountStr)}</p>` : ''}
-<p>Payout is being deposited to your Monime payment account.</p>`
+<p>Payout is being deposited to your wallet.</p>`
 		};
 	}
 

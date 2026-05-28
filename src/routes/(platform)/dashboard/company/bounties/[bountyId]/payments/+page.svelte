@@ -207,7 +207,7 @@
 									<th class="pr-4 pb-1">Amount</th>
 									<th class="pr-4 pb-1">Method</th>
 									<th class="pr-4 pb-1">Final</th>
-									<th class="pb-1">Monime reference</th>
+									<th class="pb-1">Payment reference</th>
 								</tr>
 							</thead>
 							<tbody>

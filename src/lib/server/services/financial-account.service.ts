@@ -7,9 +7,11 @@
  *
  * Key flows:
  *  - Lazy account creation: triggered on profile completion (profile update handler).
- *  - Balance query: used on the financial account dashboard page.
- *  - KYC verification: run before any withdrawal to mobile money.
- *  - Withdrawal: payout from financial account → mobile money (async; webhook finalises).
+ *  - Balance query: used on the wallet section of the profile page.
+ *  - Withdrawal destination: user sets a verified mobile money number once
+ *    (KYC runs at setup) and every subsequent withdrawal goes straight to it.
+ *  - Withdrawal: payout from financial account → verified mobile money number
+ *    (async; webhook finalises).
  */
 
 import { lookupMobileOperator, isLookupError } from 'mobile-operator-lookup';
@@ -134,12 +136,12 @@ export async function getAccountInfo(caller: AuthedUser): Promise<{
 }
 
 /**
- * Verify KYC for a Sierra Leone mobile money number before withdrawal.
+ * Verify KYC for a Sierra Leone mobile money number.
  * Uses `mobile-operator-lookup` to identify the operator → Monime provider KYC.
  *
  * @param phoneNumber - Full number without '+', e.g. "23277123456"
  */
-export async function verifyKycForWithdrawal(
+export async function verifyKycForPhone(
 	phoneNumber: string
 ): Promise<{ holderName: string; providerName: string; operatorCode: string }> {
 	const result = lookupMobileOperator('+' + phoneNumber);
@@ -154,7 +156,7 @@ export async function verifyKycForWithdrawal(
 		if (!kyc.holderName) {
 			throw new AppError(
 				'BAD_REQUEST',
-				'This number is not registered on any supported mobile money wallet.'
+				'This number is not registered on any supported mobile money account.'
 			);
 		}
 		return {
@@ -171,37 +173,135 @@ export async function verifyKycForWithdrawal(
 	}
 }
 
+export type WithdrawalDestination = {
+	phone: string;
+	holderName: string;
+	providerName: string;
+	verifiedAt: Date;
+};
+
 /**
- * Withdraw from the caller's Monime financial account to a mobile money number.
- * KYC is verified inline — the holder name must be present before the payout is created.
+ * Returns the caller's saved verified withdrawal destination, or null if not set.
+ */
+export async function getWithdrawalDestination(
+	caller: AuthedUser
+): Promise<WithdrawalDestination | null> {
+	if (caller.role === 'COMPANY') {
+		const profile = await companyRepo.findByUserId(caller.id);
+		if (!profile?.withdrawalPhone || !profile.withdrawalVerifiedAt) return null;
+		return {
+			phone: profile.withdrawalPhone,
+			holderName: profile.withdrawalHolderName ?? '',
+			providerName: profile.withdrawalProviderName ?? '',
+			verifiedAt: profile.withdrawalVerifiedAt
+		};
+	}
+	if (caller.role === 'FREELANCER') {
+		const profile = await freelancerRepo.findByUserId(caller.id);
+		if (!profile?.withdrawalPhone || !profile.withdrawalVerifiedAt) return null;
+		return {
+			phone: profile.withdrawalPhone,
+			holderName: profile.withdrawalHolderName ?? '',
+			providerName: profile.withdrawalProviderName ?? '',
+			verifiedAt: profile.withdrawalVerifiedAt
+		};
+	}
+	return null;
+}
+
+/**
+ * Verify KYC for a candidate mobile money number and save it as the caller's
+ * default withdrawal destination. Subsequent withdrawals reuse these fields
+ * without re-running KYC.
+ */
+export async function setWithdrawalDestination(
+	caller: AuthedUser,
+	phoneNumber: string
+): Promise<WithdrawalDestination> {
+	requireRole(caller, 'COMPANY', 'FREELANCER');
+
+	// Canonical form is without a leading '+'; tolerate input that includes one.
+	const normalized = phoneNumber.replace(/^\+/, '');
+
+	const kyc = await verifyKycForPhone(normalized);
+
+	if (caller.role === 'COMPANY') {
+		const profile = await companyRepo.findByUserId(caller.id);
+		if (!profile) throw new AppError('NOT_FOUND', 'Company profile not found.');
+		await companyRepo.setWithdrawalDestination(profile.id, {
+			phone: normalized,
+			holderName: kyc.holderName,
+			providerName: kyc.providerName
+		});
+	} else {
+		const profile = await freelancerRepo.findByUserId(caller.id);
+		if (!profile) throw new AppError('NOT_FOUND', 'Freelancer profile not found.');
+		await freelancerRepo.setWithdrawalDestination(profile.id, {
+			phone: normalized,
+			holderName: kyc.holderName,
+			providerName: kyc.providerName
+		});
+	}
+
+	return {
+		phone: normalized,
+		holderName: kyc.holderName,
+		providerName: kyc.providerName,
+		verifiedAt: new Date()
+	};
+}
+
+/**
+ * Withdraw from the caller's Monime financial account to their saved, verified
+ * mobile money number. KYC is NOT re-run — it was verified at setup time.
  *
  * The payout is asynchronous; the `payout.completed`/`payout.failed` webhook in
  * escrow.service will finalize the `AccountWithdrawal` record.
  */
 export async function withdraw(
 	caller: AuthedUser,
-	input: { phoneNumber: string; amount: number }
+	input: { amount: number }
 ): Promise<{ withdrawalId: string; monimePayoutId: string }> {
 	requireRole(caller, 'COMPANY', 'FREELANCER');
 
 	if (input.amount <= 0) throw new AppError('BAD_REQUEST', 'Amount must be greater than zero.');
 
-	// Resolve the caller's financial account
-	let accountId: string | null = null;
+	// Resolve the caller's financial account + verified destination
 	const role = caller.role as 'COMPANY' | 'FREELANCER';
+	let accountId: string | null = null;
+	let destination: WithdrawalDestination | null = null;
 
 	if (role === 'COMPANY') {
 		const profile = await companyRepo.findByUserId(caller.id);
 		accountId = profile?.monimeFinancialAccountId ?? null;
+		if (profile?.withdrawalPhone && profile.withdrawalVerifiedAt) {
+			destination = {
+				phone: profile.withdrawalPhone,
+				holderName: profile.withdrawalHolderName ?? '',
+				providerName: profile.withdrawalProviderName ?? '',
+				verifiedAt: profile.withdrawalVerifiedAt
+			};
+		}
 	} else {
 		const profile = await freelancerRepo.findByUserId(caller.id);
 		accountId = profile?.monimeFinancialAccountId ?? null;
+		if (profile?.withdrawalPhone && profile.withdrawalVerifiedAt) {
+			destination = {
+				phone: profile.withdrawalPhone,
+				holderName: profile.withdrawalHolderName ?? '',
+				providerName: profile.withdrawalProviderName ?? '',
+				verifiedAt: profile.withdrawalVerifiedAt
+			};
+		}
 	}
 
 	if (!accountId) {
+		throw new AppError('CONFLICT', 'Your wallet is not set up yet.');
+	}
+	if (!destination) {
 		throw new AppError(
 			'CONFLICT',
-			'You must set up your payment account before withdrawing funds.'
+			'Add a verified mobile money number on your profile before withdrawing.'
 		);
 	}
 
@@ -214,13 +314,10 @@ export async function withdraw(
 		);
 	}
 
-	// KYC check
-	const kyc = await verifyKycForWithdrawal(input.phoneNumber);
-
 	// Create Monime payout
 	const payout = await monime.payouts.create({
 		sourceAccountId: accountId,
-		destination: { type: 'MOMO', phoneNumber: input.phoneNumber },
+		destination: { type: 'MOMO', phoneNumber: destination.phone },
 		amount: input.amount,
 		currency: 'SLE',
 		reference: `withdraw_${caller.id}_${Date.now()}`
@@ -231,9 +328,9 @@ export async function withdraw(
 		userId: caller.id,
 		role,
 		fromAccountId: accountId,
-		toPhoneNumber: input.phoneNumber,
-		holderName: kyc.holderName,
-		providerName: kyc.providerName,
+		toPhoneNumber: destination.phone,
+		holderName: destination.holderName,
+		providerName: destination.providerName,
 		amount: input.amount,
 		currency: 'SLE',
 		monimePayoutId: payout.id
@@ -242,7 +339,7 @@ export async function withdraw(
 	// Notify user
 	await notification.dispatch(caller.id, 'PAYOUT_COMPLETED', {
 		title: 'Withdrawal initiated',
-		message: `Your withdrawal of ${input.amount} SLE to ${kyc.holderName} (${kyc.providerName}) is being processed.`,
+		message: `Your withdrawal of ${input.amount} SLE to ${destination.holderName} (${destination.providerName}) is being processed.`,
 		link: '/dashboard/settings'
 	});
 

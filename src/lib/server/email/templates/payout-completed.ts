@@ -27,10 +27,10 @@ export function payoutCompleted({
 
 Amount: ${amountStr}
 
-Check your MoMo wallet for the transfer.`,
+Check your mobile money for the transfer.`,
 		html: `<p>Your payout for <strong>${escapeHtml(bountyTitle)}</strong> has settled${escapeHtml(trancheBit)}.</p>
 <p><strong>Amount:</strong> ${escapeHtml(amountStr)}</p>
-<p>Check your MoMo wallet for the transfer.</p>`
+<p>Check your mobile money for the transfer.</p>`
 	};
 }
 

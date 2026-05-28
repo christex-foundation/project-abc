@@ -97,7 +97,7 @@
 	{#if overMomoLimit}
 		<div class="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
 			<strong>Heads up:</strong> this amount exceeds the SLE 15,000 daily Mobile Money limit. Use a bank
-			transfer on the Monime checkout, or fund from your payment account if you have sufficient balance.
+			transfer on the secure checkout, or fund from your wallet if you have sufficient balance.
 		</div>
 	{/if}
 
@@ -105,7 +105,7 @@
 	<div class="space-y-3">
 		<p class="text-sm font-medium text-zinc-700">Choose payment method</p>
 
-		<!-- Option 1: Monime checkout -->
+		<!-- Option 1: Hosted checkout -->
 		<button
 			type="button"
 			onclick={() => (selectedMethod = 'checkout')}
@@ -124,15 +124,15 @@
 					{/if}
 				</div>
 				<div>
-					<p class="font-medium text-zinc-900">Pay via Monime checkout</p>
+					<p class="font-medium text-zinc-900">Pay via card or mobile money</p>
 					<p class="mt-0.5 text-sm text-zinc-500">
-						Card, mobile money, or bank transfer · Redirects to Monime's secure payment page
+						Card, mobile money, or bank transfer · Redirects to a secure payment page
 					</p>
 				</div>
 			</div>
 		</button>
 
-		<!-- Option 2: Account balance (only shown if account exists) -->
+		<!-- Option 2: Wallet balance (only shown if wallet exists) -->
 		{#if hasAccount}
 			<button
 				type="button"
@@ -156,11 +156,11 @@
 					</div>
 					<div class="flex-1">
 						<div class="flex items-center gap-2">
-							<p class="font-medium text-zinc-900">Pay from account balance</p>
+							<p class="font-medium text-zinc-900">Pay from wallet</p>
 							<Badge variant="outline" class="text-xs">Instant</Badge>
 						</div>
 						<p class="mt-0.5 text-sm text-zinc-500">
-							{#if accountUvan}UVAN: {accountUvan} ·
+							{#if accountUvan}Wallet: {accountUvan} ·
 							{/if}Balance: {formatMoney(accountBalance, data.bounty.currency)}
 						</p>
 						{#if !hasSufficientBalance}
@@ -174,10 +174,10 @@
 			</button>
 		{:else}
 			<div class="rounded-lg border-2 border-dashed border-zinc-200 p-4 text-sm text-zinc-400">
-				<p class="font-medium">Pay from account balance</p>
+				<p class="font-medium">Pay from wallet</p>
 				<p class="mt-0.5">
 					<a href="/dashboard/company/profile" class="underline hover:text-zinc-600">
-						Set up your payment account
+						Activate your wallet
 					</a>
 					on your profile page to use this option.
 				</p>

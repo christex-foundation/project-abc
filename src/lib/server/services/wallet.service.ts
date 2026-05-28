@@ -19,6 +19,7 @@ export type WalletSummary = {
 	creditsBalance: number | null;
 	walletBalanceMinor: number | null;
 	currencyDisplay: string;
+	withdrawalDestination: financialAccount.WithdrawalDestination | null;
 };
 
 type CacheEntry = { value: WalletSummary; expiresAt: number };
@@ -41,9 +42,10 @@ export async function getWalletSummary(user: AuthedUser): Promise<WalletSummary>
 
 	// Both reads are safe to fail-soft: an outage on Monime or a missing
 	// freelancer profile shouldn't break the topnav.
-	const [credits, account] = await Promise.allSettled([
+	const [credits, account, destination] = await Promise.allSettled([
 		creditService.getBalanceForCaller(user),
-		financialAccount.getAccountInfo(user)
+		financialAccount.getAccountInfo(user),
+		financialAccount.getWithdrawalDestination(user)
 	]);
 
 	const value: WalletSummary = {
@@ -54,7 +56,8 @@ export async function getWalletSummary(user: AuthedUser): Promise<WalletSummary>
 				: null,
 		// Display label is the short form used in chips ("Le 1.25M") — the canonical
 		// currency code on the platform is always "SLE".
-		currencyDisplay: 'Le'
+		currencyDisplay: 'Le',
+		withdrawalDestination: destination.status === 'fulfilled' ? destination.value : null
 	};
 
 	CACHE.set(key, { value, expiresAt: now + TTL_MS });
