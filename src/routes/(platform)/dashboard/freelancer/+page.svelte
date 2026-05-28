@@ -21,6 +21,7 @@
 	const earnings = $derived(data.earnings);
 	const recommendations = $derived(data.recommendations);
 	const notifications = $derived(data.notifications);
+	const isProfileComplete = $derived(data.isProfileComplete);
 
 	const totalEarned = $derived(
 		earnings.filter((e) => e.status === 'COMPLETED').reduce((s, e) => s + e.amount, 0)
@@ -306,13 +307,20 @@
 			</div>
 		</CardHeader>
 		<CardContent>
-			{#if recommendations.length === 0}
+			{#if recommendations.length === 0 && !isProfileComplete}
 				<div class="space-y-3 py-4 text-center">
 					<div class="text-ink-soft text-sm">
 						Complete your profile — add a headline, bio, and at least one skill — and we'll match
 						you to live bounties.
 					</div>
 					<Button href="/dashboard/freelancer/profile" size="sm">Complete your profile</Button>
+				</div>
+			{:else if recommendations.length === 0}
+				<div class="space-y-3 py-4 text-center">
+					<div class="text-ink-soft text-sm">
+						We're matching you to live bounties — check back soon, or browse all open bounties.
+					</div>
+					<Button href="/bounties" size="sm">Browse bounties</Button>
 				</div>
 			{:else}
 				<div class="grid gap-3 md:grid-cols-2">
