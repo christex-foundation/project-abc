@@ -10,7 +10,7 @@
 		e.preventDefault();
 		error = null;
 		loading = true;
-		const res = await authClient.requestPasswordReset({ email, redirectTo: '/login' });
+		const res = await authClient.requestPasswordReset({ email, redirectTo: '/reset-password' });
 		loading = false;
 		if (res.error) {
 			error = res.error.message ?? 'Failed to send reset link.';

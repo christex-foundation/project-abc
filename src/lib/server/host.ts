@@ -37,6 +37,7 @@ const ADMIN_HOST_PATH_ALLOWLIST = [
 	/^\/api\//,
 	/^\/login$/,
 	/^\/forgot-password$/,
+	/^\/reset-password$/,
 	/^\/accept-invite$/,
 	/^\/verify-email$/,
 	/^\/robots\.txt$/,
