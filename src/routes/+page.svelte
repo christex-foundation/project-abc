@@ -228,7 +228,7 @@
 					Post once. Fund once. Pay winners.
 				</h3>
 				<p class="text-ink-soft mt-2 text-sm">
-					Monime escrow holds the prize pool until you announce. No payroll, no contracts — just
+					Funded escrow holds the prize pool until you announce. No payroll, no contracts — just
 					results.
 				</p>
 			</article>
