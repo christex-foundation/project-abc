@@ -1,4 +1,145 @@
 @import 'tailwindcss';
 
-/* Tailwind v4 customizations land here. shadcn-svelte init will append its
-   own block below — leave room for it. */
+/* ── Fonts (bundled, no Google CDN — see CLAUDE.md mobile-first rule) ───────── */
+@import '@fontsource-variable/fraunces';
+@import '@fontsource-variable/geist';
+@import '@fontsource-variable/geist-mono';
+
+/* ── Design tokens — "Bold African Editorial" ────────────────────────────────
+   Terracotta / forest / ochre on cream. Used across the new logged-in shell,
+   home, browse, projects, and re-skinned freelancer / company dashboards.
+   Existing zinc-based pages keep working untouched. */
+@theme {
+	--font-sans:
+		'Geist Variable', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
+		Roboto, sans-serif;
+	--font-display: 'Fraunces Variable', ui-serif, Georgia, 'Times New Roman', serif;
+	--font-mono:
+		'Geist Mono Variable', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+	--color-ink: #1a1a1a;
+	--color-ink-soft: #3f3f46;
+	--color-cream: #faf7f2;
+	--color-paper: #f2ede3;
+	--color-bone: #e8e0d0;
+	--color-terracotta: #c2410c;
+	--color-terracotta-soft: #fde6d7;
+	--color-forest: #14532d;
+	--color-forest-soft: #d6ead9;
+	--color-ochre: #d97706;
+	--color-ochre-soft: #fdebc8;
+	--color-clay: #92400e;
+
+	--ease-out-emphatic: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ── Body background defaults to cream on the new shell.
+   Layout sets bg-cream explicitly; this is just a safety net. */
+:root {
+	color-scheme: light;
+}
+
+/* ── Motion ────────────────────────────────────────────────────────────────── */
+
+@keyframes fow-fade-up {
+	from {
+		opacity: 0;
+		transform: translateY(16px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+@keyframes fow-marquee {
+	from {
+		transform: translateX(0);
+	}
+	to {
+		transform: translateX(-50%);
+	}
+}
+
+@keyframes fow-pulse-soft {
+	0%,
+	100% {
+		opacity: 1;
+	}
+	50% {
+		opacity: 0.55;
+	}
+}
+
+/* Cascading reveal on a section's children. Children opt in by setting
+   `data-reveal-step="N"` (1-based). One-shot — replays only on full reload. */
+.fow-reveal > [data-reveal-step] {
+	opacity: 0;
+	transform: translateY(16px);
+	animation: fow-fade-up 0.7s var(--ease-out-emphatic) forwards;
+}
+.fow-reveal > [data-reveal-step='1'] {
+	animation-delay: 0ms;
+}
+.fow-reveal > [data-reveal-step='2'] {
+	animation-delay: 60ms;
+}
+.fow-reveal > [data-reveal-step='3'] {
+	animation-delay: 120ms;
+}
+.fow-reveal > [data-reveal-step='4'] {
+	animation-delay: 180ms;
+}
+.fow-reveal > [data-reveal-step='5'] {
+	animation-delay: 240ms;
+}
+.fow-reveal > [data-reveal-step='6'] {
+	animation-delay: 300ms;
+}
+.fow-reveal > [data-reveal-step='7'] {
+	animation-delay: 360ms;
+}
+.fow-reveal > [data-reveal-step='8'] {
+	animation-delay: 420ms;
+}
+
+.fow-marquee {
+	animation: fow-marquee 45s linear infinite;
+	will-change: transform;
+}
+.fow-marquee:hover,
+.fow-marquee[data-paused='true'] {
+	animation-play-state: paused;
+}
+
+/* Subtle "live" dot used by the stat panel / ticker. */
+.fow-pulse {
+	animation: fow-pulse-soft 1.6s ease-in-out infinite;
+}
+
+/* Lift + accent reveal on bounty / project cards. */
+.fow-card {
+	transition:
+		transform 220ms var(--ease-out-emphatic),
+		border-color 220ms ease,
+		box-shadow 220ms ease;
+	border-left: 2px solid transparent;
+}
+.fow-card:hover {
+	transform: translateY(-2px);
+	border-left-color: var(--color-terracotta);
+	box-shadow: 0 12px 28px -18px rgba(26, 26, 26, 0.35);
+}
+
+/* Reduced-motion: kill all decorative animations. */
+@media (prefers-reduced-motion: reduce) {
+	.fow-reveal > [data-reveal-step],
+	.fow-marquee,
+	.fow-pulse,
+	.fow-card {
+		animation: none !important;
+		transition: none !important;
+		opacity: 1 !important;
+		transform: none !important;
+	}
+}
