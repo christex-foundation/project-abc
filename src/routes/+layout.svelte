@@ -2,8 +2,8 @@
 	import '../app.css';
 	import favicon from '$lib/assets/favicon.svg';
 	import Header from '$lib/components/layout/Header.svelte';
+	import TopNav from '$lib/components/layout/TopNav.svelte';
 	import BottomNav from '$lib/components/layout/BottomNav.svelte';
-	import Sidebar from '$lib/components/layout/Sidebar.svelte';
 	import { MetaTags } from 'svelte-meta-tags';
 	import { page } from '$app/state';
 	import { env } from '$env/dynamic/public';
@@ -11,9 +11,14 @@
 
 	let { data, children } = $props();
 
-	// Admin uses its own shell (sidebar + topbar) so suppress public chrome there.
+	// Admin lives on a separate subdomain (CLAUDE.md hard rule) and uses its own
+	// chrome — suppress the public shell on admin paths.
 	const isAdminPath = $derived(page.url.pathname.startsWith('/admin'));
-	const showSidebar = $derived(data.user && !isAdminPath);
+	const showTopNav = $derived(!!data.user && !isAdminPath);
+
+	const wallet = $derived(
+		data.wallet ?? { creditsBalance: null, walletBalanceMinor: null, currencyDisplay: 'Le' }
+	);
 </script>
 
 <svelte:head>
@@ -37,16 +42,20 @@
 {#if isAdminPath}
 	{@render children()}
 {:else}
-	<div class="min-h-screen bg-zinc-50 text-zinc-900">
-		<Header user={data.user} isAdminHost={data.isAdminHost} adminUrl={env.PUBLIC_ADMIN_URL} />
-		<div class="mx-auto flex max-w-6xl gap-6 px-4 py-6 pb-24 md:pb-6">
-			{#if showSidebar}
-				<Sidebar user={data.user} isAdminHost={data.isAdminHost} />
-			{/if}
-			<main class="flex-1">
-				{@render children()}
-			</main>
-		</div>
+	<div class="bg-cream text-ink min-h-screen font-sans">
+		{#if showTopNav && data.user}
+			<TopNav
+				user={data.user}
+				isAdminHost={data.isAdminHost}
+				adminUrl={env.PUBLIC_ADMIN_URL}
+				{wallet}
+			/>
+		{:else}
+			<Header user={data.user} isAdminHost={data.isAdminHost} adminUrl={env.PUBLIC_ADMIN_URL} />
+		{/if}
+		<main class="mx-auto max-w-6xl px-4 pt-6 pb-24 md:pb-10">
+			{@render children()}
+		</main>
 		<BottomNav user={data.user} />
 	</div>
 {/if}
