@@ -21,6 +21,15 @@ export async function registerFreelancer(input: {
 	if (!result?.user?.id) {
 		throw new AppError('BAD_REQUEST', 'Sign-up failed.');
 	}
+	// Better Auth returns a synthetic, un-persisted user when the email already
+	// exists and requireEmailVerification is true (anti-enumeration). Short-circuit
+	// silently so the route still redirects to /verify-email without leaking that
+	// the address is taken — and without P2025'ing on the phantom id.
+	const persisted = await prisma.user.findUnique({
+		where: { id: result.user.id },
+		select: { id: true }
+	});
+	if (!persisted) return { userId: result.user.id };
 	await prisma.user.update({
 		where: { id: result.user.id },
 		data: { role: UserRole.FREELANCER, isActive: true }
@@ -59,6 +68,13 @@ export async function registerCompany(input: {
 	if (!result?.user?.id) {
 		throw new AppError('BAD_REQUEST', 'Sign-up failed.');
 	}
+	// See registerFreelancer: Better Auth returns an un-persisted synthetic user
+	// for duplicate emails when requireEmailVerification is true.
+	const persisted = await prisma.user.findUnique({
+		where: { id: result.user.id },
+		select: { id: true }
+	});
+	if (!persisted) return { userId: result.user.id };
 	await prisma.user.update({
 		where: { id: result.user.id },
 		data: { role: UserRole.COMPANY, isActive: true }
