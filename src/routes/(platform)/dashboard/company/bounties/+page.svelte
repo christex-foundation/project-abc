@@ -1,9 +1,15 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { SvelteSet } from 'svelte/reactivity';
 	import { Button, Card, CardHeader, CardTitle, CardContent, Badge } from '$lib/components/ui';
 	import RaiseDisputeButton from '$lib/components/shared/RaiseDisputeButton.svelte';
+	import { trackSubmit } from '$lib/client/forms';
 
 	let { data, form } = $props();
+
+	const busy = new SvelteSet<string>();
+	const submitFor = (key: string) =>
+		trackSubmit((v) => (v ? busy.add(key) : busy.delete(key)));
 
 	function confirmCancel(e: Event, title: string, isDraft: boolean) {
 		const msg = isDraft
@@ -108,7 +114,7 @@
 											<form
 												method="POST"
 												action="?/cancel"
-												use:enhance
+												use:enhance={submitFor(`${b.id}:cancel`)}
 												onsubmit={(e) => confirmCancel(e, b.title, true)}
 												class="flex-1"
 											>
@@ -117,22 +123,35 @@
 													size="sm"
 													variant="outline"
 													type="submit"
+													disabled={busy.has(`${b.id}:cancel`)}
 													class="w-full text-red-600"
 												>
-													Discard
+													{busy.has(`${b.id}:cancel`) ? 'Discarding…' : 'Discard'}
 												</Button>
 											</form>
 										</div>
 									{:else if s === 'FUNDED'}
 										<div class="flex gap-2">
-											<form method="POST" action="?/publish" use:enhance class="flex-1">
+											<form
+												method="POST"
+												action="?/publish"
+												use:enhance={submitFor(`${b.id}:publish`)}
+												class="flex-1"
+											>
 												<input type="hidden" name="bountyId" value={b.id} />
-												<Button size="sm" type="submit" class="w-full">Publish</Button>
+												<Button
+													size="sm"
+													type="submit"
+													disabled={busy.has(`${b.id}:publish`)}
+													class="w-full"
+												>
+													{busy.has(`${b.id}:publish`) ? 'Publishing…' : 'Publish'}
+												</Button>
 											</form>
 											<form
 												method="POST"
 												action="?/cancel"
-												use:enhance
+												use:enhance={submitFor(`${b.id}:cancel`)}
 												onsubmit={(e) => confirmCancel(e, b.title, false)}
 												class="flex-1"
 											>
@@ -141,9 +160,10 @@
 													size="sm"
 													variant="outline"
 													type="submit"
+													disabled={busy.has(`${b.id}:cancel`)}
 													class="w-full text-red-600"
 												>
-													Cancel &amp; refund
+													{busy.has(`${b.id}:cancel`) ? 'Cancelling…' : 'Cancel & refund'}
 												</Button>
 											</form>
 										</div>
@@ -161,7 +181,7 @@
 												<form
 													method="POST"
 													action="?/cancel"
-													use:enhance
+													use:enhance={submitFor(`${b.id}:cancel`)}
 													onsubmit={(e) => confirmCancel(e, b.title, false)}
 													class="flex-1"
 												>
@@ -170,9 +190,10 @@
 														size="sm"
 														variant="outline"
 														type="submit"
+														disabled={busy.has(`${b.id}:cancel`)}
 														class="w-full text-red-600"
 													>
-														Cancel &amp; refund
+														{busy.has(`${b.id}:cancel`) ? 'Cancelling…' : 'Cancel & refund'}
 													</Button>
 												</form>
 											{/if}

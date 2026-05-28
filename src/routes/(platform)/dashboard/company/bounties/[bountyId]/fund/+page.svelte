@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { enhance } from '$app/forms';
 	import {
 		Button,
 		Card,
@@ -9,8 +10,10 @@
 		CardFooter,
 		Badge
 	} from '$lib/components/ui';
+	import { trackSubmit } from '$lib/client/forms';
 
 	let { data, form } = $props();
+	let submitting = $state(false);
 
 	// SLE MoMo daily limit (Afrimoney) is 15,000 SLE major units.
 	const MOMO_DAILY_LIMIT_MINOR = 15_000 * 100;
@@ -182,9 +185,13 @@
 		{/if}
 	</div>
 
-	<form method="POST" action={formAction}>
-		<Button type="submit" class="w-full" size="lg">
-			{selectedMethod === 'internal_transfer' ? 'Fund from account balance' : 'Proceed to payment'}
+	<form method="POST" action={formAction} use:enhance={trackSubmit((v) => (submitting = v))}>
+		<Button type="submit" class="w-full" size="lg" disabled={submitting}>
+			{#if submitting}
+				{selectedMethod === 'internal_transfer' ? 'Funding…' : 'Redirecting…'}
+			{:else}
+				{selectedMethod === 'internal_transfer' ? 'Fund from account balance' : 'Proceed to payment'}
+			{/if}
 		</Button>
 	</form>
 </div>

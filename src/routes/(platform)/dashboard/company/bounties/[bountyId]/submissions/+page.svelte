@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { SvelteSet } from 'svelte/reactivity';
 	import {
 		Badge,
 		Button,
@@ -13,8 +14,13 @@
 		Textarea
 	} from '$lib/components/ui';
 	import { SubmissionLabel } from '@prisma/client';
+	import { trackSubmit } from '$lib/client/forms';
 
 	let { data, form } = $props();
+
+	const busy = new SvelteSet<string>();
+	const submitFor = (key: string) =>
+		trackSubmit((v) => (v ? busy.add(key) : busy.delete(key)));
 
 	const LABEL_VALUES = [
 		'UNREVIEWED',
@@ -94,15 +100,21 @@
 					</Button>
 				{/if}
 				{#if showJudgingButton}
-					<form method="POST" action="?/judging" use:enhance>
-						<Button type="submit">Move to judging</Button>
+					<form
+						method="POST"
+						action="?/judging"
+						use:enhance={submitFor(`${bounty.id}:judging`)}
+					>
+						<Button type="submit" disabled={busy.has(`${bounty.id}:judging`)}>
+							{busy.has(`${bounty.id}:judging`) ? 'Moving…' : 'Move to judging'}
+						</Button>
 					</form>
 				{/if}
 				{#if showAnnounceButton}
 					<form
 						method="POST"
 						action="?/announce"
-						use:enhance
+						use:enhance={submitFor(`${bounty.id}:announce`)}
 						onsubmit={(e) => {
 							const ok = confirm(
 								`Announce ${winnerCount} winner${winnerCount === 1 ? '' : 's'} and trigger payouts? This cannot be undone.`
@@ -110,7 +122,11 @@
 							if (!ok) e.preventDefault();
 						}}
 					>
-						<Button type="submit">Announce winners ({winnerCount})</Button>
+						<Button type="submit" disabled={busy.has(`${bounty.id}:announce`)}>
+							{busy.has(`${bounty.id}:announce`)
+								? 'Announcing…'
+								: `Announce winners (${winnerCount})`}
+						</Button>
 					</form>
 				{/if}
 			</div>
@@ -220,7 +236,12 @@
 						{/if}
 
 						<div class="grid gap-3 sm:grid-cols-2">
-							<form method="POST" action="?/label" use:enhance class="space-y-1">
+							<form
+								method="POST"
+								action="?/label"
+								use:enhance={submitFor(`${s.id}:label`)}
+								class="space-y-1"
+							>
 								<Label for={`label-${s.id}`}>Label</Label>
 								<input type="hidden" name="submissionId" value={s.id} />
 								<div class="flex gap-2">
@@ -229,18 +250,36 @@
 											<option value={v}>{v}</option>
 										{/each}
 									</Select>
-									<Button type="submit" size="sm" variant="outline">Save</Button>
+									<Button
+										type="submit"
+										size="sm"
+										variant="outline"
+										disabled={busy.has(`${s.id}:label`)}
+									>
+										{busy.has(`${s.id}:label`) ? 'Saving…' : 'Save'}
+									</Button>
 								</div>
 							</form>
 
 							{#if allowToggleWinner}
-								<form method="POST" action="?/toggleWinner" use:enhance class="space-y-1">
+								<form
+									method="POST"
+									action="?/toggleWinner"
+									use:enhance={submitFor(`${s.id}:toggleWinner`)}
+									class="space-y-1"
+								>
 									<Label for={`pos-${s.id}`}>Winner position</Label>
 									<input type="hidden" name="submissionId" value={s.id} />
 									{#if s.isWinner}
 										<input type="hidden" name="isWinner" value="0" />
-										<Button type="submit" size="sm" variant="outline" class="w-full text-red-600">
-											Remove as winner
+										<Button
+											type="submit"
+											size="sm"
+											variant="outline"
+											disabled={busy.has(`${s.id}:toggleWinner`)}
+											class="w-full text-red-600"
+										>
+											{busy.has(`${s.id}:toggleWinner`) ? 'Updating…' : 'Remove as winner'}
 										</Button>
 									{:else}
 										<input type="hidden" name="isWinner" value="1" />
@@ -254,7 +293,13 @@
 												placeholder={bounty.type === 'PROJECT' ? '1' : '1–99'}
 												class="flex-1"
 											/>
-											<Button type="submit" size="sm">Mark winner</Button>
+											<Button
+												type="submit"
+												size="sm"
+												disabled={busy.has(`${s.id}:toggleWinner`)}
+											>
+												{busy.has(`${s.id}:toggleWinner`) ? 'Saving…' : 'Mark winner'}
+											</Button>
 										</div>
 									{/if}
 								</form>
@@ -262,24 +307,34 @@
 								<div class="space-y-1">
 									<Label>Freelancer-visible status</Label>
 									<div class="flex gap-2">
-										<form method="POST" action="?/shortlist" use:enhance>
+										<form
+											method="POST"
+											action="?/shortlist"
+											use:enhance={submitFor(`${s.id}:shortlist`)}
+										>
 											<input type="hidden" name="submissionId" value={s.id} />
 											<Button
 												type="submit"
 												size="sm"
 												variant={s.status === 'APPROVED' ? 'default' : 'outline'}
+												disabled={busy.has(`${s.id}:shortlist`)}
 											>
-												Shortlist
+												{busy.has(`${s.id}:shortlist`) ? 'Saving…' : 'Shortlist'}
 											</Button>
 										</form>
-										<form method="POST" action="?/reject" use:enhance>
+										<form
+											method="POST"
+											action="?/reject"
+											use:enhance={submitFor(`${s.id}:reject`)}
+										>
 											<input type="hidden" name="submissionId" value={s.id} />
 											<Button
 												type="submit"
 												size="sm"
 												variant={s.status === 'REJECTED' ? 'destructive' : 'outline'}
+												disabled={busy.has(`${s.id}:reject`)}
 											>
-												Reject
+												{busy.has(`${s.id}:reject`) ? 'Saving…' : 'Reject'}
 											</Button>
 										</form>
 									</div>
@@ -287,21 +342,45 @@
 							{/if}
 						</div>
 
-						<form method="POST" action="?/notes" use:enhance class="space-y-1">
+						<form
+							method="POST"
+							action="?/notes"
+							use:enhance={submitFor(`${s.id}:notes`)}
+							class="space-y-1"
+						>
 							<Label for={`notes-${s.id}`}>Private notes (sponsor only)</Label>
 							<input type="hidden" name="submissionId" value={s.id} />
 							<Textarea id={`notes-${s.id}`} name="notes" rows={2} value={s.notes ?? ''} />
 							<div class="flex justify-end">
-								<Button type="submit" size="sm" variant="outline">Save notes</Button>
+								<Button
+									type="submit"
+									size="sm"
+									variant="outline"
+									disabled={busy.has(`${s.id}:notes`)}
+								>
+									{busy.has(`${s.id}:notes`) ? 'Saving…' : 'Save notes'}
+								</Button>
 							</div>
 						</form>
 
-						<form method="POST" action="?/feedback" use:enhance class="space-y-1">
+						<form
+							method="POST"
+							action="?/feedback"
+							use:enhance={submitFor(`${s.id}:feedback`)}
+							class="space-y-1"
+						>
 							<Label for={`fb-${s.id}`}>Feedback for the freelancer</Label>
 							<input type="hidden" name="submissionId" value={s.id} />
 							<Textarea id={`fb-${s.id}`} name="feedback" rows={2} value={s.feedback ?? ''} />
 							<div class="flex justify-end">
-								<Button type="submit" size="sm" variant="outline">Save feedback</Button>
+								<Button
+									type="submit"
+									size="sm"
+									variant="outline"
+									disabled={busy.has(`${s.id}:feedback`)}
+								>
+									{busy.has(`${s.id}:feedback`) ? 'Saving…' : 'Save feedback'}
+								</Button>
 							</div>
 						</form>
 					</CardContent>

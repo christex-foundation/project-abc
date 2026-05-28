@@ -12,9 +12,11 @@
 		Badge
 	} from '$lib/components/ui';
 	import RichTextEditor from '$lib/components/editor/RichTextEditor.svelte';
+	import { trackSubmit } from '$lib/client/forms';
 	import { untrack } from 'svelte';
 
 	let { data, form } = $props();
+	let submitting = $state(false);
 
 	const bounty = $derived(data.bounty);
 	const credits = $derived(data.credits);
@@ -80,7 +82,7 @@
 		</div>
 	{/if}
 
-	<form method="POST" use:enhance class="space-y-6">
+	<form method="POST" use:enhance={trackSubmit((v) => (submitting = v))} class="space-y-6">
 		<Card>
 			<CardHeader><CardTitle>Your submission</CardTitle></CardHeader>
 			<CardContent class="space-y-4">
@@ -162,7 +164,9 @@
 		<div class="flex flex-col items-end gap-2">
 			<div class="flex justify-end gap-2">
 				<Button variant="outline" href={`/bounties/${bounty.slug}`}>Cancel</Button>
-				<Button type="submit" disabled={noCredits}>Submit work</Button>
+				<Button type="submit" disabled={noCredits || submitting}>
+					{submitting ? 'Submitting…' : 'Submit work'}
+				</Button>
 			</div>
 			{#if willCharge}
 				<p class="text-xs text-zinc-500">

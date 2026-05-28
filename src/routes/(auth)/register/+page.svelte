@@ -1,8 +1,10 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { trackSubmit } from '$lib/client/forms';
 
 	let { data, form } = $props();
 	let role = $state<'FREELANCER' | 'COMPANY'>('FREELANCER');
+	let submitting = $state(false);
 	const referralCode = $derived(data.referralCode);
 </script>
 
@@ -36,7 +38,7 @@
 <form
 	method="POST"
 	action={role === 'FREELANCER' ? '?/freelancer' : '?/company'}
-	use:enhance
+	use:enhance={trackSubmit((v) => (submitting = v))}
 	class="mt-4 space-y-3"
 >
 	<label class="block text-sm">
@@ -88,8 +90,12 @@
 	{#if form?.error}
 		<p class="text-sm text-red-600">{form.error}</p>
 	{/if}
-	<button type="submit" class="w-full rounded bg-zinc-900 px-4 py-2 text-white">
-		Create account
+	<button
+		type="submit"
+		disabled={submitting}
+		class="w-full rounded bg-zinc-900 px-4 py-2 text-white disabled:opacity-60"
+	>
+		{submitting ? 'Creating account…' : 'Create account'}
 	</button>
 </form>
 <p class="mt-4 text-center text-sm text-zinc-600">

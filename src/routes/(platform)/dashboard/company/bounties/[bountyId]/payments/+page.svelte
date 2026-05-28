@@ -11,8 +11,10 @@
 		Label,
 		Checkbox
 	} from '$lib/components/ui';
+	import { trackSubmit } from '$lib/client/forms';
 
 	let { data, form } = $props();
+	let submitting = $state(false);
 
 	function formatMoney(minor: number | null | undefined, currency: string) {
 		if (minor == null) return '—';
@@ -241,7 +243,7 @@
 						<form
 							method="POST"
 							action="?/payTranche"
-							use:enhance
+							use:enhance={trackSubmit((v) => (submitting = v))}
 							class="grid gap-2 sm:grid-cols-[1fr_auto_auto] sm:items-end"
 						>
 							<input type="hidden" name="submissionId" value={winner.id} />
@@ -253,7 +255,9 @@
 								<Checkbox name="final" value="1" />
 								Final tranche
 							</label>
-							<Button type="submit">Pay tranche</Button>
+							<Button type="submit" disabled={submitting}>
+								{submitting ? 'Paying…' : 'Pay tranche'}
+							</Button>
 						</form>
 					{:else if winner.isPaid}
 						<p class="text-sm text-emerald-700">All tranches paid.</p>

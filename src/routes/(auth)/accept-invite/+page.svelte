@@ -1,7 +1,9 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { trackSubmit } from '$lib/client/forms';
 
 	let { data, form } = $props();
+	let submitting = $state(false);
 </script>
 
 <h1 class="text-xl font-semibold">Set your password</h1>
@@ -12,7 +14,11 @@
 {#if !data.token}
 	<p class="mt-4 text-sm text-red-600">Missing reset token. Use the link from your invite email.</p>
 {:else}
-	<form method="POST" use:enhance class="mt-4 space-y-3">
+	<form
+		method="POST"
+		use:enhance={trackSubmit((v) => (submitting = v))}
+		class="mt-4 space-y-3"
+	>
 		<input type="hidden" name="token" value={data.token} />
 		<label class="block text-sm">
 			Password
@@ -28,8 +34,12 @@
 		{#if form?.error}
 			<p class="text-sm text-red-600">{form.error}</p>
 		{/if}
-		<button type="submit" class="w-full rounded bg-zinc-900 px-4 py-2 text-white">
-			Finish setup
+		<button
+			type="submit"
+			disabled={submitting}
+			class="w-full rounded bg-zinc-900 px-4 py-2 text-white disabled:opacity-60"
+		>
+			{submitting ? 'Setting up…' : 'Finish setup'}
 		</button>
 	</form>
 {/if}
