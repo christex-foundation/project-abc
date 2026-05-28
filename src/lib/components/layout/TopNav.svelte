@@ -185,7 +185,7 @@
 				{/if}
 
 				<DropdownSeparator />
-				<form method="POST" action="/api/auth/sign-out">
+				<form method="POST" action="/logout">
 					<button
 						type="submit"
 						class="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm text-red-700 transition-colors hover:bg-red-50"

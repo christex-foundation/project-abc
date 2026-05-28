@@ -29,7 +29,7 @@
 						Admin portal
 					</a>
 				{/if}
-				<form method="POST" action="/api/auth/sign-out">
+				<form method="POST" action="/logout">
 					<button type="submit" class="text-ink-soft hover:text-ink transition-colors">
 						Sign out
 					</button>

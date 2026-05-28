@@ -76,7 +76,7 @@
 						<p class="text-[10px] tracking-wide text-zinc-500 uppercase">Admin</p>
 					</div>
 				</div>
-				<form method="POST" action="/api/auth/sign-out">
+				<form method="POST" action="/logout">
 					<button
 						type="submit"
 						aria-label="Sign out"
