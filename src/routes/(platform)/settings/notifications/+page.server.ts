@@ -18,7 +18,8 @@ const EMAIL_EVENTS = [
 	'BOUNTY_FUNDED'
 ] as const;
 
-export const load: PageServerLoad = async ({ locals }) => {
+export const load: PageServerLoad = async ({ locals, parent }) => {
+	await parent();
 	const caller = requireAuth(locals);
 	const [prefs, subs] = await Promise.all([
 		notificationRepo.getPreference(caller.id),

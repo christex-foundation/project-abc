@@ -3,7 +3,8 @@ import * as submissionService from '$lib/server/services/submission.service';
 import { getAccountInfo } from '$lib/server/services/financial-account.service';
 import type { PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ locals }) => {
+export const load: PageServerLoad = async ({ locals, parent }) => {
+	await parent();
 	const caller = requireAuth(locals);
 	requireRole(caller, 'FREELANCER');
 

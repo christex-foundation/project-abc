@@ -6,7 +6,8 @@ import * as escrowService from '$lib/server/services/escrow.service';
 import { getAccountInfo } from '$lib/server/services/financial-account.service';
 import type { Actions, PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ params, locals, url }) => {
+export const load: PageServerLoad = async ({ params, locals, url, parent }) => {
+	await parent();
 	const caller = requireAuth(locals);
 	requireRole(caller, 'COMPANY', 'ADMIN');
 

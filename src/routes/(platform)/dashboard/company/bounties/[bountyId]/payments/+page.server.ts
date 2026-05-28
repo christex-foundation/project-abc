@@ -9,7 +9,8 @@ import * as paymentRepo from '$lib/server/repositories/payment.repo';
 import { PaymentType } from '@prisma/client';
 import type { Actions, PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ params, locals }) => {
+export const load: PageServerLoad = async ({ params, locals, parent }) => {
+	await parent();
 	const caller = requireAuth(locals);
 	requireRole(caller, 'COMPANY', 'ADMIN');
 

@@ -6,7 +6,8 @@ import * as creditService from '$lib/server/services/credit.service';
 import * as referralService from '$lib/server/services/referral.service';
 import type { PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ locals }) => {
+export const load: PageServerLoad = async ({ locals, parent }) => {
+	await parent();
 	const caller = requireAuth(locals);
 	requireRole(caller, 'FREELANCER');
 	const [

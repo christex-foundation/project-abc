@@ -4,7 +4,8 @@ import * as skillService from '$lib/server/services/skill.service';
 import * as proofOfWorkService from '$lib/server/services/proofOfWork.service';
 import type { PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ locals }) => {
+export const load: PageServerLoad = async ({ locals, parent }) => {
+	await parent();
 	const caller = requireAuth(locals);
 	requireRole(caller, 'FREELANCER');
 	const [profile, skillCategories, proofOfWork] = await Promise.all([

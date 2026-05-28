@@ -7,7 +7,8 @@ import * as winnerService from '$lib/server/services/winner.service';
 import { SubmissionLabel, SubmissionStatus } from '@prisma/client';
 import type { Actions, PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ params, locals }) => {
+export const load: PageServerLoad = async ({ params, locals, parent }) => {
+	await parent();
 	const caller = requireAuth(locals);
 	requireRole(caller, 'COMPANY', 'ADMIN');
 

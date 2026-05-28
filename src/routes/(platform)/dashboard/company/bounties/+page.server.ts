@@ -5,7 +5,8 @@ import * as bountyService from '$lib/server/services/bounty.service';
 import * as escrowService from '$lib/server/services/escrow.service';
 import type { Actions, PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ locals }) => {
+export const load: PageServerLoad = async ({ locals, parent }) => {
+	await parent();
 	const caller = requireAuth(locals);
 	requireRole(caller, 'COMPANY', 'ADMIN');
 	const bounties = await bountyService.listForCompany(caller);
