@@ -1,24 +1,15 @@
 <script lang="ts">
 	import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui';
+	import KenteRule from '$lib/components/marketing/KenteRule.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
+	import { formatMoneyCompact, formatRelative } from '$lib/utils';
+	import Plus from '@lucide/svelte/icons/plus';
 
 	let { data } = $props();
 
-	function formatMoney(minor: number | null | undefined, currency: string) {
+	function formatMoneyMajor(minor: number | null | undefined, currency: string) {
 		if (minor == null) return '—';
 		return `${currency} ${(minor / 100).toLocaleString()}`;
-	}
-
-	function fmtRelative(d: Date | string) {
-		const ms = Date.now() - new Date(d).getTime();
-		const mins = Math.floor(ms / 60000);
-		if (mins < 1) return 'just now';
-		if (mins < 60) return `${mins}m ago`;
-		const hrs = Math.floor(mins / 60);
-		if (hrs < 24) return `${hrs}h ago`;
-		const days = Math.floor(hrs / 24);
-		if (days < 30) return `${days}d ago`;
-		return new Date(d).toLocaleDateString();
 	}
 
 	const stats = $derived(data.stats);
@@ -34,66 +25,104 @@
 	}
 </script>
 
-<div class="space-y-6">
-	<header class="flex flex-wrap items-center justify-between gap-3">
-		<div>
-			<h1 class="text-2xl font-semibold">Overview</h1>
-			<p class="text-sm text-zinc-500">Your bounties, submissions, and escrow at a glance.</p>
+<div class="fow-reveal space-y-8">
+	<!-- Hero header -->
+	<header
+		class="border-bone bg-paper relative overflow-hidden rounded-3xl border px-6 py-8 sm:px-10"
+		data-reveal-step="1"
+	>
+		<div class="pointer-events-none absolute -top-16 -right-16">
+			<div class="bg-forest/10 h-56 w-56 rounded-full blur-3xl"></div>
 		</div>
-		<Button href="/bounties/create">+ Create</Button>
+		<div class="relative flex flex-wrap items-end justify-between gap-4">
+			<div>
+				<p class="text-ink-soft text-[11px] tracking-wide uppercase">Your desk</p>
+				<h1
+					class="font-display text-ink mt-2 text-4xl font-semibold tracking-tight sm:text-5xl"
+					style="font-variation-settings: 'opsz' 144, 'wght' 600;"
+				>
+					Bounties, escrow,
+					<span class="text-terracotta italic">and winners.</span>
+				</h1>
+			</div>
+			<Button
+				href="/bounties/create"
+				class="bg-ink text-cream hover:bg-terracotta inline-flex items-center gap-1.5"
+			>
+				{#snippet children()}
+					<Plus class="h-4 w-4" />
+					<span>Post work</span>
+				{/snippet}
+			</Button>
+		</div>
 	</header>
 
-	<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-		<Card>
-			<CardContent class="py-4">
-				<div class="text-xs text-zinc-500 uppercase">Active bounties</div>
-				<div class="text-2xl font-semibold">{stats.activeBountiesCount}</div>
-			</CardContent>
-		</Card>
-		<Card>
-			<CardContent class="py-4">
-				<div class="text-xs text-zinc-500 uppercase">Active projects</div>
-				<div class="text-2xl font-semibold">{stats.activeProjectsCount}</div>
-			</CardContent>
-		</Card>
-		<Card>
-			<CardContent class="py-4">
-				<div class="text-xs text-zinc-500 uppercase">Total submissions</div>
-				<div class="text-2xl font-semibold">{stats.totalSubmissions}</div>
-			</CardContent>
-		</Card>
-		<Card>
-			<CardContent class="py-4">
-				<div class="text-xs text-zinc-500 uppercase">Escrow funded</div>
-				<div class="text-2xl font-semibold">
-					{formatMoney(stats.totalEscrowFunded, stats.currency)}
-				</div>
-			</CardContent>
-		</Card>
+	<!-- Stat band -->
+	<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4" data-reveal-step="2">
+		<div class="border-bone bg-cream rounded-2xl border px-5 py-5">
+			<p class="text-ink-soft text-[11px] tracking-wide uppercase">Active bounties</p>
+			<p
+				class="font-display text-ink mt-2 text-3xl font-semibold tabular-nums"
+				style="font-variation-settings: 'opsz' 144, 'wght' 600;"
+			>
+				{stats.activeBountiesCount}
+			</p>
+		</div>
+		<div class="border-bone bg-cream rounded-2xl border px-5 py-5">
+			<p class="text-ink-soft text-[11px] tracking-wide uppercase">Active projects</p>
+			<p
+				class="font-display text-ink mt-2 text-3xl font-semibold tabular-nums"
+				style="font-variation-settings: 'opsz' 144, 'wght' 600;"
+			>
+				{stats.activeProjectsCount}
+			</p>
+		</div>
+		<div class="border-bone bg-cream rounded-2xl border px-5 py-5">
+			<p class="text-ink-soft text-[11px] tracking-wide uppercase">Total submissions</p>
+			<p
+				class="font-display text-ink mt-2 text-3xl font-semibold tabular-nums"
+				style="font-variation-settings: 'opsz' 144, 'wght' 600;"
+			>
+				{stats.totalSubmissions}
+			</p>
+		</div>
+		<div class="border-bone bg-forest text-forest-soft rounded-2xl border px-5 py-5">
+			<p class="text-forest-soft/70 text-[11px] tracking-wide uppercase">Escrow funded</p>
+			<p
+				class="font-display text-cream mt-2 text-3xl font-semibold tabular-nums"
+				style="font-variation-settings: 'opsz' 144, 'wght' 600;"
+			>
+				{formatMoneyCompact(stats.totalEscrowFunded, 'Le')}
+			</p>
+		</div>
 	</div>
 
 	{#if hasBounties}
-		<div class="grid gap-3 sm:grid-cols-3">
-			<Card>
-				<CardContent class="py-4">
-					<div class="text-xs text-zinc-500 uppercase">Drafts</div>
-					<div class="text-xl font-semibold">{stats.draftCount}</div>
-				</CardContent>
-			</Card>
-			<Card>
-				<CardContent class="py-4">
-					<div class="text-xs text-zinc-500 uppercase">Funded</div>
-					<div class="text-xl font-semibold">{stats.fundedCount}</div>
-				</CardContent>
-			</Card>
-			<Card>
-				<CardContent class="py-4">
-					<div class="text-xs text-zinc-500 uppercase">Completed</div>
-					<div class="text-xl font-semibold">{stats.completedCount}</div>
-				</CardContent>
-			</Card>
+		<div class="grid gap-3 sm:grid-cols-3" data-reveal-step="3">
+			<div class="border-bone bg-paper rounded-xl border px-4 py-3">
+				<p class="text-ink-soft text-[11px] tracking-wide uppercase">Drafts</p>
+				<p class="font-display text-ink mt-1 text-xl font-semibold tabular-nums">
+					{stats.draftCount}
+				</p>
+			</div>
+			<div class="border-bone bg-paper rounded-xl border px-4 py-3">
+				<p class="text-ink-soft text-[11px] tracking-wide uppercase">Funded</p>
+				<p class="font-display text-ink mt-1 text-xl font-semibold tabular-nums">
+					{stats.fundedCount}
+				</p>
+			</div>
+			<div class="border-bone bg-paper rounded-xl border px-4 py-3">
+				<p class="text-ink-soft text-[11px] tracking-wide uppercase">Completed</p>
+				<p class="font-display text-ink mt-1 text-xl font-semibold tabular-nums">
+					{stats.completedCount}
+				</p>
+			</div>
 		</div>
 	{/if}
+
+	<div data-reveal-step="4">
+		<KenteRule />
+	</div>
 
 	{#if !hasBounties}
 		<EmptyState
@@ -105,11 +134,14 @@
 			{/snippet}
 		</EmptyState>
 	{:else}
-		<Card>
+		<Card data-reveal-step="5">
 			<CardHeader>
 				<div class="flex items-center justify-between">
 					<CardTitle class="text-base">Recent bounties</CardTitle>
-					<a href="/dashboard/company/bounties" class="text-sm text-zinc-500 hover:underline">
+					<a
+						href="/dashboard/company/bounties"
+						class="text-ink-soft hover:text-ink text-sm hover:underline"
+					>
 						View all →
 					</a>
 				</div>
@@ -117,15 +149,15 @@
 			<CardContent class="space-y-2">
 				{#each recentBounties as b (b.id)}
 					<div
-						class="flex flex-wrap items-center justify-between gap-2 border-b py-2 last:border-0"
+						class="border-bone flex flex-wrap items-center justify-between gap-2 border-b py-2 last:border-0"
 					>
 						<div class="min-w-0 flex-1">
-							<div class="truncate text-sm font-medium">{b.title}</div>
+							<div class="text-ink truncate text-sm font-medium">{b.title}</div>
 							<div class="mt-1 flex flex-wrap items-center gap-1.5">
 								<Badge variant={statusVariant(b.status)}>{b.status}</Badge>
 								<Badge variant="outline">{b.type}</Badge>
-								<span class="text-xs text-zinc-500">
-									{formatMoney(b.totalPrizePool, b.currency)}
+								<span class="text-ink-soft font-mono text-xs tabular-nums">
+									{formatMoneyMajor(b.totalPrizePool, b.currency)}
 								</span>
 							</div>
 						</div>
@@ -148,26 +180,28 @@
 		<CardHeader>
 			<div class="flex items-center justify-between">
 				<CardTitle class="text-base">Recent activity</CardTitle>
-				<a href="/notifications" class="text-sm text-zinc-500 hover:underline">See all →</a>
+				<a href="/notifications" class="text-ink-soft hover:text-ink text-sm hover:underline"
+					>See all →</a
+				>
 			</div>
 		</CardHeader>
 		<CardContent class="space-y-2">
 			{#if notifications.length === 0}
-				<div class="py-4 text-center text-sm text-zinc-500">No recent activity yet.</div>
+				<div class="text-ink-soft py-4 text-center text-sm">No recent activity yet.</div>
 			{:else}
 				{#each notifications as n (n.id)}
 					<a
 						href={n.link ?? '/notifications'}
-						class="block border-b py-2 last:border-0 hover:bg-zinc-50"
+						class="border-bone hover:bg-paper block border-b py-2 last:border-0"
 					>
 						<div class="flex items-start justify-between gap-2">
 							<div class="min-w-0 flex-1">
-								<div class="text-sm font-medium">{n.title}</div>
+								<div class="text-ink text-sm font-medium">{n.title}</div>
 								{#if n.message}
-									<div class="truncate text-xs text-zinc-500">{n.message}</div>
+									<div class="text-ink-soft truncate text-xs">{n.message}</div>
 								{/if}
 							</div>
-							<span class="shrink-0 text-xs text-zinc-400">{fmtRelative(n.createdAt)}</span>
+							<span class="text-ink-soft/60 shrink-0 text-xs">{formatRelative(n.createdAt)}</span>
 						</div>
 					</a>
 				{/each}
