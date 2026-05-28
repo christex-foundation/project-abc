@@ -15,7 +15,9 @@ const trustedOrigins = [
 	'https://fow.sl',
 	'https://admin.fow.sl',
 	'http://localhost:5173',
-	'http://admin.localhost:5173'
+	'http://admin.localhost:5173',
+	'https://project-abc-theta.vercel.app',
+	'https://admin.project-abc-theta.vercel.app'
 ];
 
 export const auth = betterAuth({
