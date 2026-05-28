@@ -1,4 +1,4 @@
-import { createHmac, timingSafeEqual } from 'node:crypto';
+import { createHmac, timingSafeEqual, randomUUID } from 'node:crypto';
 import { env } from '$env/dynamic/private';
 import { AppError } from '../http';
 
@@ -61,36 +61,71 @@ function baseUrl(): string {
 	return env.MONIME_BASE_URL?.trim() || 'https://api.monime.io';
 }
 
-function requireEnv(name: 'MONIME_ACCESS_TOKEN' | 'MONIME_SPACE_ID'): string {
+function requireEnv(
+	name: 'MONIME_ACCESS_TOKEN' | 'MONIME_SPACE_ID' | 'MONIME_VERSION'
+): string {
 	const value = env[name];
 	if (!value) throw new AppError('INTERNAL', `${name} is not configured.`);
 	return value;
 }
 
+function delay(ms: number): Promise<void> {
+	return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function request<T>(path: string, method: 'GET' | 'POST', body?: Json): Promise<T> {
 	const url = `${baseUrl()}${path}`;
-	const res = await fetch(url, {
-		method,
-		headers: {
-			authorization: `Bearer ${requireEnv('MONIME_ACCESS_TOKEN')}`,
-			'monime-space-id': requireEnv('MONIME_SPACE_ID'),
-			'content-type': 'application/json',
-			accept: 'application/json'
-		},
-		body: body ? JSON.stringify(body) : undefined
-	});
-	const text = await res.text();
-	const parsed = text ? safeParse(text) : null;
-	if (!res.ok) {
-		throw new AppError('INTERNAL', `Monime ${method} ${path} failed (${res.status}).`, parsed);
+	// Same key is reused across retries so Monime collapses them into one logical write.
+	const idempotencyKey = randomUUID();
+	const headers: Record<string, string> = {
+		authorization: `Bearer ${requireEnv('MONIME_ACCESS_TOKEN')}`,
+		'monime-space-id': requireEnv('MONIME_SPACE_ID'),
+		'monime-version': requireEnv('MONIME_VERSION'),
+		'idempotency-key': idempotencyKey,
+		'content-type': 'application/json',
+		accept: 'application/json'
+	};
+
+	const retries = 2;
+	for (let attempt = 0; attempt <= retries; attempt++) {
+		let res: Response;
+		try {
+			res = await fetch(url, {
+				method,
+				headers,
+				body: body ? JSON.stringify(body) : undefined
+			});
+		} catch (err) {
+			if (attempt < retries) {
+				await delay(1000 * (attempt + 1));
+				continue;
+			}
+			throw new AppError('INTERNAL', `Monime ${method} ${path} network error.`, {
+				cause: err instanceof Error ? err.message : String(err)
+			});
+		}
+
+		const text = await res.text();
+		const parsed = text ? safeParse(text) : null;
+
+		if (!res.ok) {
+			if (res.status >= 500 && attempt < retries) {
+				await delay(1000 * (attempt + 1));
+				continue;
+			}
+			throw new AppError('INTERNAL', `Monime ${method} ${path} failed (${res.status}).`, parsed);
+		}
+
+		// Unwrap Monime envelope: { success, data: {...} } or { success, result: {...} }
+		if (parsed !== null && typeof parsed === 'object') {
+			const obj = parsed as Record<string, unknown>;
+			if ('data' in obj) return obj.data as T;
+			if ('result' in obj) return obj.result as T;
+		}
+		return (parsed ?? {}) as T;
 	}
-	// Unwrap Monime envelope: { success, data: {...} } or { success, result: {...} }
-	if (parsed !== null && typeof parsed === 'object') {
-		const obj = parsed as Record<string, unknown>;
-		if ('data' in obj) return obj.data as T;
-		if ('result' in obj) return obj.result as T;
-	}
-	return (parsed ?? {}) as T;
+
+	throw new AppError('INTERNAL', `Monime ${method} ${path} failed after retries.`);
 }
 
 function safeParse(text: string): unknown {
