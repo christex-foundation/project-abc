@@ -3,16 +3,12 @@
 	import { page } from '$app/state';
 	import { untrack } from 'svelte';
 	import { MetaTags } from 'svelte-meta-tags';
-	import { Button, Input, Label, Select } from '$lib/components/ui';
+	import { Input, Label, Select, Button } from '$lib/components/ui';
 	import BountyCard from '$lib/components/feed/BountyCard.svelte';
-	import FeedSwitch from '$lib/components/feed/FeedSwitch.svelte';
 
 	let { data } = $props();
 
-	// Filter state seeds once from server-rendered query params; user edits
-	// drive subsequent updates via `goto`.
 	let search = $state(untrack(() => data.filters.search));
-	let type = $state(untrack(() => data.filters.type));
 	let compensationType = $state(untrack(() => data.filters.compensationType));
 	let minPrize = $state(untrack(() => data.filters.minPrize));
 	let maxPrize = $state(untrack(() => data.filters.maxPrize));
@@ -22,24 +18,22 @@
 	function applyFilters() {
 		const params = new URLSearchParams();
 		if (search) params.set('search', search);
-		if (type) params.set('type', type);
 		if (compensationType) params.set('compensationType', compensationType);
 		if (minPrize) params.set('minPrize', String(minPrize));
 		if (maxPrize) params.set('maxPrize', String(maxPrize));
 		if (beforeDeadline) params.set('beforeDeadline', beforeDeadline);
 		selectedSkillIds.forEach((id) => params.append('skillIds', id));
-		goto(`/bounties?${params.toString()}`, { replaceState: false, keepFocus: true });
+		goto(`/projects?${params.toString()}`, { replaceState: false, keepFocus: true });
 	}
 
 	function clearFilters() {
 		search = '';
-		type = '';
 		compensationType = '';
 		minPrize = '';
 		maxPrize = '';
 		beforeDeadline = '';
 		selectedSkillIds = [];
-		goto('/bounties');
+		goto('/projects');
 	}
 
 	let searchTimer: ReturnType<typeof setTimeout> | null = null;
@@ -53,49 +47,39 @@
 			? selectedSkillIds.filter((x) => x !== id)
 			: [...selectedSkillIds, id];
 	}
-
-	function setMode(v: 'BOUNTY' | 'PROJECT') {
-		if (v === 'PROJECT') {
-			// Switching to projects takes the user to /projects (carrying search
-			// & deadline only — type-specific filters live per-page).
-			const params = new URLSearchParams();
-			if (search) params.set('search', search);
-			if (beforeDeadline) params.set('beforeDeadline', beforeDeadline);
-			goto(`/projects${params.toString() ? `?${params.toString()}` : ''}`);
-			return;
-		}
-		// Already on the bounties page — clear the project filter if set.
-		type = '';
-		applyFilters();
-	}
 </script>
 
 <MetaTags
-	title="Browse bounties"
-	description="Paid bounties open to Sierra Leonean freelancers."
-	canonical={`${page.url.origin}/bounties`}
+	title="Browse projects"
+	description="Longer-form projects open to Sierra Leonean freelancers."
+	canonical={`${page.url.origin}/projects`}
 	robots={data.pageMetaTags?.robots}
 />
 
 <header class="mb-6 flex flex-wrap items-end justify-between gap-3">
 	<div>
 		<p
-			class="bg-terracotta-soft text-clay inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold tracking-wide uppercase"
+			class="bg-forest-soft text-forest inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold tracking-wide uppercase"
 		>
-			<span class="bg-terracotta h-1.5 w-1.5 rounded-full"></span>
-			Win-only
+			<span class="bg-forest h-1.5 w-1.5 rounded-full"></span>
+			Hire & deliver
 		</p>
 		<h1
 			class="font-display text-ink mt-3 text-4xl font-semibold tracking-tight"
 			style="font-variation-settings: 'opsz' 144, 'wght' 600;"
 		>
-			Bounties
+			Projects
 		</h1>
 		<p class="text-ink-soft mt-1 text-sm">
-			Submit a link, compete for the prize. Winners get paid via mobile money.
+			Longer engagements with deliverables, timelines, and milestone payouts.
 		</p>
 	</div>
-	<FeedSwitch value="BOUNTY" onChange={setMode} bountyCount={data.total} />
+	<a
+		href="/bounties"
+		class="border-bone bg-cream text-ink-soft hover:border-ink hover:text-ink rounded-full border px-4 py-2 text-sm font-medium transition-colors"
+	>
+		Switch to bounties →
+	</a>
 </header>
 
 <section class="grid gap-5 md:grid-cols-[280px_1fr]">
@@ -103,15 +87,6 @@
 		<div class="space-y-1">
 			<Label for="search">Search</Label>
 			<Input id="search" bind:value={search} oninput={onSearchInput} placeholder="Keyword…" />
-		</div>
-
-		<div class="space-y-1">
-			<Label for="type">Type</Label>
-			<Select id="type" bind:value={type} onchange={applyFilters}>
-				<option value="">All</option>
-				<option value="BOUNTY">Bounty</option>
-				<option value="PROJECT">Project</option>
-			</Select>
 		</div>
 
 		<div class="space-y-1">
@@ -177,7 +152,7 @@
 					class="font-display text-ink-soft text-2xl"
 					style="font-variation-settings: 'opsz' 144, 'wght' 500;"
 				>
-					No bounties match these filters
+					No projects match these filters
 				</p>
 				<p class="text-ink-soft mt-2 text-sm">Try clearing some filters or check back soon.</p>
 			</div>
