@@ -139,10 +139,13 @@ export async function createFundingCheckoutSession(
 	);
 
 	const session = await monime.checkoutSessions.create({
+		name: `Bounty escrow funding – ${bounty.title}`.slice(0, 80),
+		description: `Escrow funding for "${bounty.title}"`,
 		financialAccountId: escrowId,
 		amount: bounty.totalPrizePool,
 		currency: bounty.currency,
 		reference: `bounty:${bounty.id}`,
+		metadata: { bountyId: bounty.id },
 		successUrl: `${appUrl()}/dashboard/company/bounties?funded=${bounty.id}`,
 		cancelUrl: `${appUrl()}/dashboard/company/bounties/${bounty.id}/fund?cancelled=1`
 	});

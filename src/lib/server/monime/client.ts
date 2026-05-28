@@ -11,12 +11,15 @@ type CreateFinancialAccountInput = {
 	reference?: string;
 };
 type CreateCheckoutInput = {
+	name: string;
 	financialAccountId: string;
 	amount: number; // minor units
 	currency?: string;
 	reference: string;
 	successUrl: string;
 	cancelUrl: string;
+	description?: string;
+	metadata?: Json;
 };
 type CreatePayoutInput = {
 	sourceAccountId: string;
@@ -187,16 +190,28 @@ export const monime = {
 
 	checkoutSessions: {
 		async create(input: CreateCheckoutInput) {
+			const body: Json = {
+				name: input.name,
+				financialAccountId: input.financialAccountId,
+				reference: input.reference,
+				successUrl: input.successUrl,
+				cancelUrl: input.cancelUrl,
+				lineItems: [
+					{
+						type: 'custom',
+						name: input.name,
+						price: money(input.amount, input.currency),
+						quantity: 1,
+						description: input.description ?? input.name,
+						reference: input.reference
+					}
+				]
+			};
+			if (input.metadata) body['metadata'] = input.metadata;
 			const res = await request<{ id: string; redirectUrl: string }>(
 				'/v1/checkout-sessions',
 				'POST',
-				{
-					financialAccountId: input.financialAccountId,
-					amount: money(input.amount, input.currency),
-					reference: input.reference,
-					successUrl: input.successUrl,
-					cancelUrl: input.cancelUrl
-				}
+				body
 			);
 			return { id: res.id, url: res.redirectUrl };
 		}
