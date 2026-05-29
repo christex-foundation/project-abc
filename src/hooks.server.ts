@@ -8,6 +8,19 @@ import type { UserRole } from '@prisma/client';
 
 export const handle: Handle = async ({ event, resolve }) => {
 	const { url } = event;
+
+	// During prerendering (e.g. the static /offline shell) there is no request
+	// session and no database available, so short-circuit the auth + settings
+	// lookups. Without this, prerendered pages would force a DB connection at
+	// build time.
+	if (building) {
+		event.locals.isAdminHost = false;
+		event.locals.user = null;
+		event.locals.session = null;
+		event.locals.settings = {};
+		return resolve(event);
+	}
+
 	const onAdminHost = isAdminHost(url);
 	event.locals.isAdminHost = onAdminHost;
 

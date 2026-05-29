@@ -1,14 +1,19 @@
 /// <reference types="@sveltejs/kit" />
 /// <reference lib="webworker" />
 
-import { precacheAndRoute } from 'workbox-precaching';
-import { NavigationRoute, registerRoute } from 'workbox-routing';
+import { matchPrecache, precacheAndRoute } from 'workbox-precaching';
+import { NavigationRoute, registerRoute, setCatchHandler } from 'workbox-routing';
 import { CacheFirst, NetworkFirst } from 'workbox-strategies';
 import { ExpirationPlugin } from 'workbox-expiration';
 
 declare const self: ServiceWorkerGlobalScope & {
 	__WB_MANIFEST: Array<{ url: string; revision: string | null }>;
 };
+
+// Prerendered static shell shown when a navigation can reach neither the
+// network nor the cache. Precached via the plugin's `prerendered/**` glob
+// (see src/routes/offline).
+const OFFLINE_URL = '/offline';
 
 precacheAndRoute(self.__WB_MANIFEST);
 
@@ -42,6 +47,17 @@ registerRoute(
 
 // /api/* deliberately has no route registered → Workbox falls through to
 // NetworkOnly. Auth and freshness make caching unsafe (plan §9).
+
+// Last resort for navigations that fail both network and cache (e.g. a page
+// the user has never opened while fully offline): serve the precached offline
+// shell instead of the browser's default error page.
+setCatchHandler(async ({ request }) => {
+	if (request.mode === 'navigate') {
+		const cached = await matchPrecache(OFFLINE_URL);
+		if (cached) return cached;
+	}
+	return Response.error();
+});
 
 self.addEventListener('message', (event) => {
 	if (event.data && event.data.type === 'SKIP_WAITING') self.skipWaiting();
