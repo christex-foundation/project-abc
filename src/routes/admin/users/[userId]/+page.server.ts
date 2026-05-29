@@ -2,6 +2,7 @@ import type { PageServerLoad } from './$types';
 import { error } from '@sveltejs/kit';
 import * as admin from '$lib/server/services/admin.service';
 import * as account from '$lib/server/services/account.service';
+import { avatarDataUri } from '$lib/server/avatar';
 
 export const load: PageServerLoad = async ({ locals, params }) => {
 	if (!locals.user) throw error(401, 'Unauthorized');
@@ -10,7 +11,8 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 			admin.getUserDetail(locals.user, params.userId),
 			account.adminGetDeletionBlockers(locals.user, params.userId)
 		]);
-		return { detail, deletionBlockers, currentUserId: locals.user.id };
+		const avatar = avatarDataUri(detail.user.name ?? detail.user.email);
+		return { detail, deletionBlockers, currentUserId: locals.user.id, avatar };
 	} catch (e) {
 		throw error(404, 'User not found');
 	}

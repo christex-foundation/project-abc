@@ -2,6 +2,7 @@ import { requireAuth, requireRole } from '$lib/server/auth-helpers';
 import * as freelancerService from '$lib/server/services/freelancer.service';
 import * as skillService from '$lib/server/services/skill.service';
 import * as proofOfWorkService from '$lib/server/services/proofOfWork.service';
+import { avatarDataUri } from '$lib/server/avatar';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals, parent }) => {
@@ -13,5 +14,5 @@ export const load: PageServerLoad = async ({ locals, parent }) => {
 		skillService.listSkills(),
 		proofOfWorkService.list(caller)
 	]);
-	return { profile, skillCategories, proofOfWork };
+	return { profile, skillCategories, proofOfWork, avatar: avatarDataUri(profile.displayName) };
 };
