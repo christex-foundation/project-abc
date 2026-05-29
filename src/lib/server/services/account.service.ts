@@ -25,6 +25,8 @@ import type { Prisma, UserRole } from '@prisma/client';
 
 export type BlockerCode =
 	| 'ACTIVE_BOUNTY'
+	| 'ACTIVE_PROJECT'
+	| 'ACTIVE_PROJECT_CONTRACT'
 	| 'PENDING_PAYMENT'
 	| 'OPEN_DISPUTE'
 	| 'UNPAID_WINNER'
@@ -38,6 +40,10 @@ export type Blocker = {
 };
 
 const ACTIVE_BOUNTY_STATUSES = ['DRAFT', 'FUNDED', 'ACTIVE', 'JUDGING'] as const;
+// A project in any of these states is mid-engagement: it has milestones still to
+// be funded, delivered, or paid, so the owning company / awarded contractor
+// cannot delete their account until it is COMPLETED or CANCELLED.
+const ACTIVE_PROJECT_STATUSES = ['DRAFT', 'OPEN', 'AWARDED', 'ACTIVE'] as const;
 const PENDING_PAYMENT_STATUSES = ['PENDING', 'PROCESSING'] as const;
 
 async function collectBlockers(userId: string, role: UserRole): Promise<Blocker[]> {
@@ -62,27 +68,34 @@ async function collectBlockers(userId: string, role: UserRole): Promise<Blocker[
 		});
 		if (!profile) return blockers;
 
-		const [activeBounty, pendingPayment, openDispute, unpaidWinner] = await Promise.all([
-			prisma.bounty.count({
-				where: { companyProfileId: profile.id, status: { in: [...ACTIVE_BOUNTY_STATUSES] } }
-			}),
-			prisma.payment.count({
-				where: {
-					bounty: { companyProfileId: profile.id },
-					status: { in: [...PENDING_PAYMENT_STATUSES] }
-				}
-			}),
-			prisma.dispute.count({
-				where: { bounty: { companyProfileId: profile.id }, status: 'OPEN' }
-			}),
-			prisma.submission.count({
-				where: {
-					bounty: { companyProfileId: profile.id },
-					isWinner: true,
-					isPaid: false
-				}
-			})
-		]);
+		const [activeBounty, pendingPayment, openDispute, unpaidWinner, activeProject] =
+			await Promise.all([
+				prisma.bounty.count({
+					where: { companyProfileId: profile.id, status: { in: [...ACTIVE_BOUNTY_STATUSES] } }
+				}),
+				prisma.payment.count({
+					where: {
+						OR: [
+							{ bounty: { companyProfileId: profile.id } },
+							{ project: { companyProfileId: profile.id } }
+						],
+						status: { in: [...PENDING_PAYMENT_STATUSES] }
+					}
+				}),
+				prisma.dispute.count({
+					where: { bounty: { companyProfileId: profile.id }, status: 'OPEN' }
+				}),
+				prisma.submission.count({
+					where: {
+						bounty: { companyProfileId: profile.id },
+						isWinner: true,
+						isPaid: false
+					}
+				}),
+				prisma.project.count({
+					where: { companyProfileId: profile.id, status: { in: [...ACTIVE_PROJECT_STATUSES] } }
+				})
+			]);
 
 		if (activeBounty > 0) {
 			blockers.push({
@@ -113,6 +126,14 @@ async function collectBlockers(userId: string, role: UserRole): Promise<Blocker[
 				message: `${unpaidWinner} winning submission${unpaidWinner === 1 ? '' : 's'} on your bounties ${unpaidWinner === 1 ? 'has' : 'have'} not been paid yet.`
 			});
 		}
+		if (activeProject > 0) {
+			blockers.push({
+				code: 'ACTIVE_PROJECT',
+				count: activeProject,
+				message: `${activeProject} project${activeProject === 1 ? ' is' : 's are'} still draft, open, awarded, or in progress — cancel or complete first.`,
+				link: '/dashboard/company/projects'
+			});
+		}
 	}
 
 	if (role === 'FREELANCER') {
@@ -122,18 +143,24 @@ async function collectBlockers(userId: string, role: UserRole): Promise<Blocker[
 		});
 		if (!profile) return blockers;
 
-		const [unpaidWinner, pendingPayment, openDispute] = await Promise.all([
+		const [unpaidWinner, pendingPayment, openDispute, activeContract] = await Promise.all([
 			prisma.submission.count({
 				where: { freelancerProfileId: profile.id, isWinner: true, isPaid: false }
 			}),
 			prisma.payment.count({
 				where: {
-					submission: { freelancerProfileId: profile.id },
+					OR: [
+						{ submission: { freelancerProfileId: profile.id } },
+						{ project: { contractorProfileId: profile.id } }
+					],
 					status: { in: [...PENDING_PAYMENT_STATUSES] }
 				}
 			}),
 			prisma.dispute.count({
 				where: { raisedById: userId, status: 'OPEN' }
+			}),
+			prisma.project.count({
+				where: { contractorProfileId: profile.id, status: 'ACTIVE' }
 			})
 		]);
 
@@ -143,6 +170,14 @@ async function collectBlockers(userId: string, role: UserRole): Promise<Blocker[
 				count: unpaidWinner,
 				message: `You have ${unpaidWinner} winning submission${unpaidWinner === 1 ? '' : 's'} awaiting payout.`,
 				link: '/dashboard/freelancer/earnings'
+			});
+		}
+		if (activeContract > 0) {
+			blockers.push({
+				code: 'ACTIVE_PROJECT_CONTRACT',
+				count: activeContract,
+				message: `You are the contractor on ${activeContract} active project${activeContract === 1 ? '' : 's'} with milestones still in progress.`,
+				link: '/dashboard/freelancer/proposals'
 			});
 		}
 		if (pendingPayment > 0) {

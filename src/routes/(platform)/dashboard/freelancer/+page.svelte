@@ -90,8 +90,19 @@
 					<span class="text-terracotta italic">and matches.</span>
 				</h1>
 			</div>
-			<Button href="/bounties" class="bg-ink text-cream hover:bg-terracotta">Browse bounties</Button
-			>
+			<div class="flex flex-col items-end gap-2">
+				{#if data.rating?.count}
+					<span class="text-sm font-medium text-amber-600">
+						★ {data.rating.avg} · {data.rating.count} review{data.rating.count === 1 ? '' : 's'}
+					</span>
+				{/if}
+				<div class="flex flex-wrap gap-2">
+					<Button href="/dashboard/freelancer/proposals" variant="outline">My proposals</Button>
+					<Button href="/bounties" class="bg-ink text-cream hover:bg-terracotta"
+						>Browse bounties</Button
+					>
+				</div>
+			</div>
 		</div>
 	</header>
 

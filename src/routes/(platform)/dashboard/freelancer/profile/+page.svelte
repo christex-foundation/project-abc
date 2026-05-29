@@ -193,7 +193,7 @@
 
 <div class="space-y-6">
 	<header class="flex items-center gap-4">
-		<UserAvatar seed={displayName} size={96} class="border border-zinc-200" />
+		<UserAvatar src={data.avatar} alt={displayName} size={96} class="border border-zinc-200" />
 		<div class="space-y-1">
 			<h1 class="text-2xl font-semibold">Your profile</h1>
 			<p class="text-sm text-zinc-500">
@@ -271,15 +271,11 @@
 	<Card>
 		<CardHeader>
 			<CardTitle>Wallet</CardTitle>
-			<CardDescription>
-				Receive your bounty earnings and withdraw to mobile money.
-			</CardDescription>
+			<CardDescription>Receive your bounty earnings and withdraw to mobile money.</CardDescription>
 		</CardHeader>
 		<CardContent class="space-y-4">
 			{#if !accountId}
-				<p class="text-sm text-zinc-500">
-					Activate your wallet to receive prize payouts.
-				</p>
+				<p class="text-sm text-zinc-500">Activate your wallet to receive prize payouts.</p>
 				<Button onclick={activateWallet} disabled={activating} variant="outline">
 					{activating ? 'Activating…' : 'Activate wallet'}
 				</Button>

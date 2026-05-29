@@ -1,4 +1,5 @@
 import { json } from '@sveltejs/kit';
+import { ZodError } from 'zod';
 
 export type AppErrorCode =
 	| 'UNAUTHENTICATED'
@@ -37,6 +38,17 @@ export function respondError(e: unknown): Response {
 		return json(
 			{ error: { code: e.code, message: e.message, details: e.details } },
 			{ status: e.httpStatus }
+		);
+	}
+	if (e instanceof ZodError) {
+		const first = e.issues[0];
+		const path = first?.path.join('.');
+		const message = first
+			? `${path ? path + ': ' : ''}${first.message}`
+			: 'Validation failed';
+		return json(
+			{ error: { code: 'BAD_REQUEST', message, details: e.issues } },
+			{ status: 400 }
 		);
 	}
 	console.error('[respondError] unexpected error:', e);

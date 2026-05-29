@@ -64,9 +64,7 @@ function baseUrl(): string {
 	return env.MONIME_BASE_URL?.trim() || 'https://api.monime.io';
 }
 
-function requireEnv(
-	name: 'MONIME_ACCESS_TOKEN' | 'MONIME_SPACE_ID' | 'MONIME_VERSION'
-): string {
+function requireEnv(name: 'MONIME_ACCESS_TOKEN' | 'MONIME_SPACE_ID' | 'MONIME_VERSION'): string {
 	const value = env[name];
 	if (!value) throw new AppError('INTERNAL', `${name} is not configured.`);
 	return value;

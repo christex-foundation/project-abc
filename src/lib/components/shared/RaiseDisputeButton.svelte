@@ -1,17 +1,23 @@
 <script lang="ts">
 	let {
 		bountyId,
+		projectId,
 		bountyTitle,
+		title,
 		submissionId,
 		label = 'Raise dispute',
 		variant = 'outline'
 	}: {
-		bountyId: string;
+		bountyId?: string;
+		projectId?: string;
 		bountyTitle?: string;
+		title?: string;
 		submissionId?: string;
 		label?: string;
 		variant?: 'outline' | 'ghost';
 	} = $props();
+
+	const subjectTitle = $derived(bountyTitle ?? title);
 
 	let open = $state(false);
 	let reason = $state('');
@@ -36,7 +42,7 @@
 			const res = await fetch('/api/disputes', {
 				method: 'POST',
 				headers: { 'content-type': 'application/json' },
-				body: JSON.stringify({ bountyId, submissionId, reason: trimmed })
+				body: JSON.stringify({ bountyId, projectId, submissionId, reason: trimmed })
 			});
 			if (!res.ok) {
 				const j = await res.json().catch(() => ({}));
@@ -76,8 +82,8 @@
 		></button>
 		<div class="relative w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
 			<h2 id="raise-dispute-title" class="text-base font-semibold">Raise a dispute</h2>
-			{#if bountyTitle}
-				<p class="mt-1 text-sm text-zinc-500">On "{bountyTitle}"</p>
+			{#if subjectTitle}
+				<p class="mt-1 text-sm text-zinc-500">On "{subjectTitle}"</p>
 			{/if}
 			<p class="mt-3 text-xs text-zinc-500">
 				Tell us what went wrong. An admin will reach out after reviewing.

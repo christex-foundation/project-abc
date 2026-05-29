@@ -7,7 +7,6 @@
 		Button,
 		Input,
 		Label,
-		Select,
 		Textarea,
 		Card,
 		CardHeader,
@@ -24,9 +23,9 @@
 	type SkillSel = { skillId: string; isRequired: boolean };
 	type Question = { question: string; optional: boolean };
 
+	// Bounties only — Projects have their own flow at /projects/create.
 	type Draft = {
 		step: number;
-		type: 'BOUNTY' | 'PROJECT' | '';
 		title: string;
 		description: string;
 		requirements: string;
@@ -48,7 +47,6 @@
 
 	const initial: Draft = {
 		step: 1,
-		type: '',
 		title: '',
 		description: '',
 		requirements: '',
@@ -68,9 +66,19 @@
 		judgingDeadline: ''
 	};
 
-	const draftStore = useLocalDraft<Draft>('bounty-create-wizard');
+	const steps = ['Info', 'Skills', 'Compensation', 'Prizes', 'Eligibility', 'Timeline', 'Review'];
+
+	// v2: the wizard is bounty-only now; old drafts carried a Type step + project
+	// fields, so use a fresh key to avoid restoring an incompatible shape.
+	const draftStore = useLocalDraft<Draft>('bounty-create-wizard-v2');
 	let d = $state<Draft>(initial);
 	let restorePrompt = $state(false);
+	// Bumped on restore to force the (uncontrolled, read-once) editors to remount
+	// and re-read their `initialHTML` from the restored draft.
+	let editorNonce = $state(0);
+	// Serialised pristine state; autosave is suppressed while `d` matches it so the
+	// effect can't clobber a stored draft before the user has edited (or resumed) it.
+	const pristine = JSON.stringify(initial);
 
 	onMount(() => {
 		const saved = draftStore.load();
@@ -79,82 +87,67 @@
 
 	function restore() {
 		const saved = draftStore.load();
-		if (saved) d = saved;
+		if (saved) {
+			// Clamp step into the current range in case of an older saved draft.
+			saved.step = Math.min(Math.max(1, saved.step ?? 1), steps.length);
+			d = saved;
+		}
 		restorePrompt = false;
+		editorNonce++;
 	}
 	function discard() {
 		draftStore.clear();
 		restorePrompt = false;
 	}
 
-	// Auto-save on every change.
+	// Auto-save on every change, but never while still pristine (would clobber a
+	// stored draft before the user resumes it).
 	$effect(() => {
-		// access reactively
-		void JSON.stringify(d);
-		draftStore.save(d);
+		const cur = JSON.stringify(d);
+		if (cur !== pristine) draftStore.save(d);
 	});
-
-	function setStep(n: number) {
-		d.step = n;
-	}
 
 	let stepError = $state<string | null>(null);
 
 	function canAdvance(): string | null {
-		if (d.step === 1 && !d.type) return 'Pick a type.';
-		if (d.step === 2) {
+		if (d.step === 1) {
 			if (d.title.trim().length < 5) return 'Title must be at least 5 characters.';
 			if (!d.description || d.description.replace(/<[^>]*>/g, '').trim().length === 0)
 				return 'Description is required.';
 		}
-		if (d.step === 4 && !d.compensationType) return 'Pick a compensation type.';
-		if (d.step === 5 && d.compensationType === 'FIXED') {
-			if (d.type === 'PROJECT') {
-				if (d.prizeTiers.length !== 1 || d.prizeTiers[0].position !== 1)
-					return 'Projects need exactly one prize tier at position 1.';
-			} else {
-				const regular = d.prizeTiers.filter((t) => t.position !== 99);
-				const wanted = Array.from({ length: d.numberOfWinners }, (_, i) => i + 1);
-				const positions = regular.map((t) => t.position).sort((a, b) => a - b);
-				if (positions.length !== wanted.length || !wanted.every((p, i) => positions[i] === p))
-					return `Define tiers for positions 1..${d.numberOfWinners}.`;
-			}
+		if (d.step === 3 && !d.compensationType) return 'Pick a compensation type.';
+		if (d.step === 4 && d.compensationType === 'FIXED') {
+			const regular = d.prizeTiers.filter((t) => t.position !== 99);
+			const wanted = Array.from({ length: d.numberOfWinners }, (_, i) => i + 1);
+			const positions = regular.map((t) => t.position).sort((a, b) => a - b);
+			if (positions.length !== wanted.length || !wanted.every((p, i) => positions[i] === p))
+				return `Define tiers for positions 1..${d.numberOfWinners}.`;
 		}
-		if (d.step === 7) {
+		if (d.step === 6) {
 			if (!d.submissionDeadline) return 'Submission deadline is required.';
 			if (new Date(d.submissionDeadline).getTime() <= Date.now())
 				return 'Deadline must be in the future.';
-			if (d.type === 'PROJECT' && !d.timeToComplete.trim())
-				return 'Projects require a time-to-complete estimate.';
 		}
 		return null;
 	}
 
-	function syncTiersWithType() {
-		// Keep prizeTiers consistent with type + numberOfWinners + maxBonusSpots
-		// so the user never sees stale rows from a previous selection.
-		if (d.type === 'PROJECT') {
-			d.numberOfWinners = 1;
-			d.maxBonusSpots = 0;
-			const first = d.prizeTiers.find((t) => t.position === 1);
-			d.prizeTiers = first ? [{ ...first, position: 1 }] : [{ position: 1, amount: 0 }];
-			return;
+	function syncTiers() {
+		// Keep prizeTiers consistent with numberOfWinners + maxBonusSpots so the
+		// user never sees stale rows from a previous selection.
+		if (d.compensationType !== 'FIXED') return;
+		const bonus = d.prizeTiers.find((t) => t.position === 99);
+		const regular: typeof d.prizeTiers = [];
+		for (let i = 1; i <= d.numberOfWinners; i++) {
+			const existing = d.prizeTiers.find((t) => t.position === i);
+			regular.push(existing ? { ...existing, position: i } : { position: i, amount: 0 });
 		}
-		if (d.type === 'BOUNTY' && d.compensationType === 'FIXED') {
-			const bonus = d.prizeTiers.find((t) => t.position === 99);
-			const regular: typeof d.prizeTiers = [];
-			for (let i = 1; i <= d.numberOfWinners; i++) {
-				const existing = d.prizeTiers.find((t) => t.position === i);
-				regular.push(existing ? { ...existing, position: i } : { position: i, amount: 0 });
-			}
-			d.prizeTiers = bonus && d.maxBonusSpots > 0 ? [...regular, bonus] : regular;
-		}
+		d.prizeTiers = bonus && d.maxBonusSpots > 0 ? [...regular, bonus] : regular;
 	}
 
 	function next() {
 		stepError = canAdvance();
 		if (stepError) return;
-		if (d.step === 4) syncTiersWithType();
+		if (d.step === 3) syncTiers();
 		d.step += 1;
 	}
 	function back() {
@@ -198,8 +191,6 @@
 	}
 
 	function alignTotal() {
-		// Keep totalPrizePool in sync with FIXED tiers so the server validator
-		// doesn't reject on a typo here.
 		if (d.compensationType === 'FIXED') d.totalPrizePool = totalMinorFromTiers();
 	}
 
@@ -217,7 +208,7 @@
 				description: d.description,
 				requirements: d.requirements || null,
 				deliverables: d.deliverables || null,
-				type: d.type,
+				type: 'BOUNTY' as const,
 				compensationType: d.compensationType,
 				currency: d.currency,
 				totalPrizePool: Number(d.totalPrizePool || 0),
@@ -263,22 +254,12 @@
 	function formatMoney(minor: number) {
 		return `${d.currency} ${(minor / 100).toLocaleString()}`;
 	}
-
-	const steps = [
-		'Type',
-		'Info',
-		'Skills',
-		'Compensation',
-		'Prizes',
-		'Eligibility',
-		'Timeline',
-		'Review'
-	];
 </script>
 
 <div class="space-y-6 px-2 py-4 md:px-0">
 	<header class="flex flex-wrap items-center justify-between gap-3">
 		<div>
+			<a href="/create" class="text-sm text-zinc-500 hover:underline">&larr; Choose type</a>
 			<h1 class="text-2xl font-semibold">Create a bounty</h1>
 			<p class="text-sm text-zinc-500">Step {d.step} of {steps.length} — {steps[d.step - 1]}</p>
 		</div>
@@ -313,68 +294,43 @@
 
 	{#if d.step === 1}
 		<Card>
-			<CardHeader><CardTitle>Bounty type</CardTitle></CardHeader>
-			<CardContent class="space-y-3">
-				<label class="flex cursor-pointer items-start gap-3 rounded border p-3 hover:bg-zinc-50">
-					<input type="radio" name="type" value="BOUNTY" bind:group={d.type} class="mt-1" />
-					<div>
-						<div class="font-medium">Bounty</div>
-						<div class="text-sm text-zinc-500">
-							One-off competition. Multiple winners compete; positions 1, 2, 3… each get a payout.
-							Optional bonus pool.
-						</div>
-					</div>
-				</label>
-				<label class="flex cursor-pointer items-start gap-3 rounded border p-3 hover:bg-zinc-50">
-					<input type="radio" name="type" value="PROJECT" bind:group={d.type} class="mt-1" />
-					<div>
-						<div class="font-medium">Project</div>
-						<div class="text-sm text-zinc-500">
-							Longer engagement with a single winner. Pay in milestones / tranches.
-						</div>
-					</div>
-				</label>
-			</CardContent>
-		</Card>
-	{/if}
-
-	{#if d.step === 2}
-		<Card>
 			<CardHeader><CardTitle>Title and description</CardTitle></CardHeader>
 			<CardContent class="space-y-4">
 				<div class="space-y-1">
 					<Label for="title">Title</Label>
 					<Input id="title" bind:value={d.title} placeholder="Build a USSD-based airtime top-up" />
 				</div>
-				<div class="space-y-1">
-					<Label for="desc">Description</Label>
-					<RichTextEditor
-						initialHTML={d.description}
-						placeholder="What is this bounty? Who is it for?"
-						onChange={(html) => (d.description = html)}
-					/>
-				</div>
-				<div class="space-y-1">
-					<Label for="req">Requirements (optional)</Label>
-					<RichTextEditor
-						initialHTML={d.requirements}
-						placeholder="Acceptance criteria, must-haves…"
-						onChange={(html) => (d.requirements = html)}
-					/>
-				</div>
-				<div class="space-y-1">
-					<Label for="del">Deliverables (optional)</Label>
-					<RichTextEditor
-						initialHTML={d.deliverables}
-						placeholder="What artifacts do winners submit?"
-						onChange={(html) => (d.deliverables = html)}
-					/>
-				</div>
+				{#key editorNonce}
+					<div class="space-y-1">
+						<Label for="desc">Description</Label>
+						<RichTextEditor
+							initialHTML={d.description}
+							placeholder="What is this bounty? Who is it for?"
+							onChange={(html) => (d.description = html)}
+						/>
+					</div>
+					<div class="space-y-1">
+						<Label for="req">Requirements (optional)</Label>
+						<RichTextEditor
+							initialHTML={d.requirements}
+							placeholder="Acceptance criteria, must-haves…"
+							onChange={(html) => (d.requirements = html)}
+						/>
+					</div>
+					<div class="space-y-1">
+						<Label for="del">Deliverables (optional)</Label>
+						<RichTextEditor
+							initialHTML={d.deliverables}
+							placeholder="What artifacts do winners submit?"
+							onChange={(html) => (d.deliverables = html)}
+						/>
+					</div>
+				{/key}
 			</CardContent>
 		</Card>
 	{/if}
 
-	{#if d.step === 3}
+	{#if d.step === 2}
 		<Card>
 			<CardHeader><CardTitle>Skills</CardTitle></CardHeader>
 			<CardContent class="space-y-4">
@@ -420,7 +376,7 @@
 		</Card>
 	{/if}
 
-	{#if d.step === 4}
+	{#if d.step === 3}
 		<Card>
 			<CardHeader><CardTitle>Compensation</CardTitle></CardHeader>
 			<CardContent class="space-y-4">
@@ -470,19 +426,17 @@
 					</label>
 				</div>
 
-				{#if d.type === 'BOUNTY'}
-					<Separator />
-					<div class="grid grid-cols-2 gap-3">
-						<div class="space-y-1">
-							<Label for="winners">Number of winners</Label>
-							<Input id="winners" type="number" min="1" bind:value={d.numberOfWinners} />
-						</div>
-						<div class="space-y-1">
-							<Label for="bonus">Max bonus spots</Label>
-							<Input id="bonus" type="number" min="0" bind:value={d.maxBonusSpots} />
-						</div>
+				<Separator />
+				<div class="grid grid-cols-2 gap-3">
+					<div class="space-y-1">
+						<Label for="winners">Number of winners</Label>
+						<Input id="winners" type="number" min="1" bind:value={d.numberOfWinners} />
 					</div>
-				{/if}
+					<div class="space-y-1">
+						<Label for="bonus">Max bonus spots</Label>
+						<Input id="bonus" type="number" min="0" bind:value={d.maxBonusSpots} />
+					</div>
+				</div>
 
 				{#if d.compensationType === 'RANGE'}
 					<div class="grid grid-cols-2 gap-3">
@@ -500,7 +454,7 @@
 		</Card>
 	{/if}
 
-	{#if d.step === 5}
+	{#if d.step === 4}
 		<Card>
 			<CardHeader><CardTitle>Prize tiers</CardTitle></CardHeader>
 			<CardContent class="space-y-3">
@@ -525,24 +479,22 @@
 						</div>
 					{/each}
 
-					{#if d.type === 'BOUNTY'}
-						<Separator />
-						{#if d.prizeTiers.some((t) => t.position === 99)}
-							{@const bt = d.prizeTiers.find((t) => t.position === 99)!}
-							<div class="space-y-2">
-								<div class="flex items-center gap-2">
-									<Badge variant="secondary">Bonus (×{d.maxBonusSpots})</Badge>
-									<Input
-										type="number"
-										bind:value={d.prizeTiers[d.prizeTiers.indexOf(bt)].amount}
-										oninput={alignTotal}
-									/>
-									<Button size="sm" variant="ghost" onclick={removeBonusTier}>Remove bonus</Button>
-								</div>
+					<Separator />
+					{#if d.prizeTiers.some((t) => t.position === 99)}
+						{@const bt = d.prizeTiers.find((t) => t.position === 99)!}
+						<div class="space-y-2">
+							<div class="flex items-center gap-2">
+								<Badge variant="secondary">Bonus (×{d.maxBonusSpots})</Badge>
+								<Input
+									type="number"
+									bind:value={d.prizeTiers[d.prizeTiers.indexOf(bt)].amount}
+									oninput={alignTotal}
+								/>
+								<Button size="sm" variant="ghost" onclick={removeBonusTier}>Remove bonus</Button>
 							</div>
-						{:else if d.maxBonusSpots > 0}
-							<Button size="sm" variant="secondary" onclick={addBonusTier}>+ Add bonus tier</Button>
-						{/if}
+						</div>
+					{:else if d.maxBonusSpots > 0}
+						<Button size="sm" variant="secondary" onclick={addBonusTier}>+ Add bonus tier</Button>
 					{/if}
 
 					<Separator />
@@ -555,7 +507,7 @@
 		</Card>
 	{/if}
 
-	{#if d.step === 6}
+	{#if d.step === 5}
 		<Card>
 			<CardHeader><CardTitle>Eligibility questions</CardTitle></CardHeader>
 			<CardContent class="space-y-3">
@@ -581,7 +533,7 @@
 		</Card>
 	{/if}
 
-	{#if d.step === 7}
+	{#if d.step === 6}
 		<Card>
 			<CardHeader><CardTitle>Timeline</CardTitle></CardHeader>
 			<CardContent class="space-y-3">
@@ -593,21 +545,14 @@
 					<Label for="jd">Judging deadline (optional)</Label>
 					<Input id="jd" type="datetime-local" bind:value={d.judgingDeadline} />
 				</div>
-				{#if d.type === 'PROJECT'}
-					<div class="space-y-1">
-						<Label for="ttc">Time to complete</Label>
-						<Input id="ttc" placeholder="e.g., 2 weeks" bind:value={d.timeToComplete} />
-					</div>
-				{/if}
 			</CardContent>
 		</Card>
 	{/if}
 
-	{#if d.step === 8}
+	{#if d.step === 7}
 		<Card>
 			<CardHeader><CardTitle>Review</CardTitle></CardHeader>
 			<CardContent class="space-y-4 text-sm">
-				<div><span class="font-medium">Type:</span> {d.type}</div>
 				<div><span class="font-medium">Title:</span> {d.title}</div>
 				<div>
 					<span class="font-medium">Compensation:</span>
@@ -622,17 +567,11 @@
 				<div><span class="font-medium">Skills:</span> {d.skills.length} selected</div>
 				<div><span class="font-medium">Eligibility questions:</span> {d.eligibility.length}</div>
 				<div><span class="font-medium">Submission deadline:</span> {d.submissionDeadline}</div>
-				{#if d.timeToComplete}<div>
-						<span class="font-medium">Time to complete:</span>
-						{d.timeToComplete}
-					</div>{/if}
 				{#if submitError}<p class="text-sm text-red-600">{submitError}</p>{/if}
 				<Button onclick={submit} disabled={submitting} class="w-full">
 					{submitting ? 'Saving…' : 'Create draft'}
 				</Button>
-				<p class="text-xs text-zinc-500">
-					Drafts are not yet visible publicly. Funding & publishing land in Phase 3.
-				</p>
+				<p class="text-xs text-zinc-500">Drafts are private until you fund and publish them.</p>
 			</CardContent>
 		</Card>
 	{/if}

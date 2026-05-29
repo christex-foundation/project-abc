@@ -14,11 +14,7 @@
 {#if !data.token}
 	<p class="mt-4 text-sm text-red-600">Missing reset token. Use the link from your invite email.</p>
 {:else}
-	<form
-		method="POST"
-		use:enhance={trackSubmit((v) => (submitting = v))}
-		class="mt-4 space-y-3"
-	>
+	<form method="POST" use:enhance={trackSubmit((v) => (submitting = v))} class="mt-4 space-y-3">
 		<input type="hidden" name="token" value={data.token} />
 		<label class="block text-sm">
 			Password

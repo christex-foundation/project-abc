@@ -119,7 +119,7 @@
 </PageHeader>
 
 <div class="mb-4 flex items-center gap-3">
-	<UserAvatar seed={u.name ?? u.email} size={48} />
+	<UserAvatar src={data.avatar} alt={u.name ?? u.email} size={48} />
 	<div class="text-xs text-zinc-500">
 		{#if u.phoneNumber}<div>📱 {u.phoneNumber}</div>{/if}
 		{#if u.referralCode}<div>

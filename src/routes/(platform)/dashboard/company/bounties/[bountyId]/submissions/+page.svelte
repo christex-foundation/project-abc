@@ -19,8 +19,7 @@
 	let { data, form } = $props();
 
 	const busy = new SvelteSet<string>();
-	const submitFor = (key: string) =>
-		trackSubmit((v) => (v ? busy.add(key) : busy.delete(key)));
+	const submitFor = (key: string) => trackSubmit((v) => (v ? busy.add(key) : busy.delete(key)));
 
 	const LABEL_VALUES = [
 		'UNREVIEWED',
@@ -100,11 +99,7 @@
 					</Button>
 				{/if}
 				{#if showJudgingButton}
-					<form
-						method="POST"
-						action="?/judging"
-						use:enhance={submitFor(`${bounty.id}:judging`)}
-					>
+					<form method="POST" action="?/judging" use:enhance={submitFor(`${bounty.id}:judging`)}>
 						<Button type="submit" disabled={busy.has(`${bounty.id}:judging`)}>
 							{busy.has(`${bounty.id}:judging`) ? 'Moving…' : 'Move to judging'}
 						</Button>
@@ -293,11 +288,7 @@
 												placeholder={bounty.type === 'PROJECT' ? '1' : '1–99'}
 												class="flex-1"
 											/>
-											<Button
-												type="submit"
-												size="sm"
-												disabled={busy.has(`${s.id}:toggleWinner`)}
-											>
+											<Button type="submit" size="sm" disabled={busy.has(`${s.id}:toggleWinner`)}>
 												{busy.has(`${s.id}:toggleWinner`) ? 'Saving…' : 'Mark winner'}
 											</Button>
 										</div>
@@ -322,11 +313,7 @@
 												{busy.has(`${s.id}:shortlist`) ? 'Saving…' : 'Shortlist'}
 											</Button>
 										</form>
-										<form
-											method="POST"
-											action="?/reject"
-											use:enhance={submitFor(`${s.id}:reject`)}
-										>
+										<form method="POST" action="?/reject" use:enhance={submitFor(`${s.id}:reject`)}>
 											<input type="hidden" name="submissionId" value={s.id} />
 											<Button
 												type="submit"

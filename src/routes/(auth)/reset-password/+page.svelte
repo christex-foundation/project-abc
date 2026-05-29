@@ -14,11 +14,7 @@
 		Missing or expired reset token. Request a new reset link from the forgot-password page.
 	</p>
 {:else}
-	<form
-		method="POST"
-		use:enhance={trackSubmit((v) => (submitting = v))}
-		class="mt-4 space-y-3"
-	>
+	<form method="POST" use:enhance={trackSubmit((v) => (submitting = v))} class="mt-4 space-y-3">
 		<input type="hidden" name="token" value={data.token} />
 		<label class="block text-sm">
 			Password

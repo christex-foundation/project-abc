@@ -61,6 +61,7 @@ enum SubmissionLabel {
 enum PaymentType {
   ESCROW_DEPOSIT
   PRIZE_PAYOUT
+  MILESTONE_PAYOUT // project milestone tranche payout (escrow → contractor)
   REFUND
 }
 
@@ -92,6 +93,7 @@ enum InviteStatus {
 enum CreditTxnReason {
   MONTHLY_RESET
   SUBMISSION_SPEND
+  PROPOSAL_SPEND
   WIN_BONUS
   SPAM_PENALTY
   ADMIN_GRANT
@@ -99,6 +101,38 @@ enum CreditTxnReason {
   REFERRAL_FIRST_SUBMISSION
   REFERRAL_WIN_BONUS
   REFERRAL_REVERSAL
+}
+
+// =============================================================================
+// Project domain enums
+//   Projects are ongoing one-company-one-contractor engagements (distinct from
+//   the competitive Bounty flow). Contractors apply with a proposal + their own
+//   milestone breakdown; the company awards one; work proceeds milestone by
+//   milestone with per-milestone updates, comments, and tranche payouts.
+// =============================================================================
+
+enum ProjectStatus {
+  DRAFT // company drafting
+  OPEN // published, accepting proposals
+  AWARDED // proposal chosen, awaiting escrow funding
+  ACTIVE // escrow funded, milestone loop running
+  COMPLETED // all milestones approved & paid
+  CANCELLED
+}
+
+enum MilestoneStatus {
+  PENDING // locked behind a prior milestone
+  IN_PROGRESS // active, contractor working
+  IN_REVIEW // contractor posted an update = approval request
+  CHANGES_REQUESTED // company asked for changes; contractor resubmits
+  APPROVED // tranche paid, terminal
+}
+
+enum ProposalStatus {
+  SUBMITTED
+  WITHDRAWN
+  AWARDED
+  REJECTED
 }
 
 // =============================================================================
@@ -136,6 +170,10 @@ model User {
   raisedDisputes    Dispute[]
   withdrawals       AccountWithdrawal[]
   creditTxnsAsAdmin CreditTransaction[]     @relation("CreditTxnAdmin")
+  milestoneUpdates  MilestoneUpdate[]
+  milestoneComments MilestoneComment[]
+  reviewsAuthored   Review[]                @relation("ReviewsAuthored")
+  reviewsReceived   Review[]                @relation("ReviewsReceived")
 
   @@map("user")
 }
@@ -213,8 +251,9 @@ model CompanyProfile {
   createdAt                DateTime  @default(now())
   updatedAt                DateTime  @updatedAt
 
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   bounties Bounty[]
+  projects Project[]
 }
 
 model FreelancerProfile {
@@ -252,6 +291,9 @@ model FreelancerProfile {
   referredFreelancers FreelancerProfile[] @relation("FreelancerReferrals")
   referralCreditTxns  CreditTransaction[] @relation("CreditTxnReferred")
 
+  projectProposals   ProjectProposal[]
+  contractedProjects Project[]         @relation("ProjectContractor")
+
   @@index([referrerProfileId])
 }
 
@@ -278,6 +320,7 @@ model Skill {
   children          Skill[]            @relation("SkillHierarchy")
   freelancerSkills  FreelancerSkill[]
   bountySkills      BountySkill[]
+  projectSkills     ProjectSkill[]
   proofOfWorkSkills ProofOfWorkSkill[]
 
   @@index([categoryId])
@@ -494,13 +537,182 @@ model Submission {
 }
 
 // =============================================================================
+// Projects (ongoing one-company-one-contractor engagements)
+//   A separate domain from Bounty. Lifecycle:
+//     DRAFT → OPEN (proposals) → AWARDED (escrow funded) → ACTIVE (milestone
+//     loop) → COMPLETED. Escrow is funded AFTER award because the amount isn't
+//     known until a proposal wins.
+// =============================================================================
+
+model Project {
+  // Identity
+  id                  String  @id @default(cuid())
+  companyProfileId    String?
+  // Captured when the owning company deletes their account (GDPR).
+  companyNameSnapshot String?
+  title               String
+  slug                String  @unique
+  description         String // sanitised HTML
+  requirements        String? // sanitised HTML
+  deliverables        String? // sanitised HTML — overall scope
+
+  status   ProjectStatus @default(DRAFT)
+  currency String        @default("SLE")
+
+  // Budget ceiling shown publicly; a winning proposal's total must be <= this.
+  budgetCap Int // minor units
+
+  // Award / contractor (denormalised so workspace auth + payouts skip a 3-hop join)
+  awardedProposalId      String? @unique
+  contractorProfileId    String?
+  contractorNameSnapshot String? // GDPR snapshot of the awarded contractor
+
+  // Monime escrow (funded after award; mirrors Bounty escrow fields)
+  escrowFinancialAccountId String?
+  escrowFundedAmount       Int     @default(0)
+  checkoutSessionId        String?
+  checkoutSessionUrl       String?
+
+  // AI matching
+  aiEmbedding Float[]
+
+  // Credit system
+  creditsExempt Boolean @default(false)
+
+  // Timeline
+  timeToComplete String?
+  publishedAt    DateTime?
+  awardedAt      DateTime?
+  activatedAt    DateTime?
+  completedAt    DateTime?
+  cancelledAt    DateTime?
+
+  // Meta
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company    CompanyProfile?    @relation(fields: [companyProfileId], references: [id], onDelete: SetNull)
+  contractor FreelancerProfile? @relation("ProjectContractor", fields: [contractorProfileId], references: [id], onDelete: SetNull)
+
+  skills     ProjectSkill[]
+  proposals  ProjectProposal[]
+  milestones Milestone[]
+  payments   Payment[]
+  disputes   Dispute[]
+  reviews    Review[]
+  // awardedProposal is resolved by id in the repo (no declared relation) to
+  // avoid a relation cycle with `proposals`.
+
+  @@index([companyProfileId])
+  @@index([contractorProfileId])
+  @@index([status])
+  @@index([slug])
+}
+
+model ProjectSkill {
+  id         String  @id @default(cuid())
+  projectId  String
+  skillId    String
+  isRequired Boolean @default(false)
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  skill   Skill   @relation(fields: [skillId], references: [id])
+
+  @@unique([projectId, skillId])
+  @@index([projectId])
+  @@index([skillId])
+}
+
+model ProjectProposal {
+  id                     String         @id @default(cuid())
+  projectId              String
+  freelancerProfileId    String?
+  freelancerNameSnapshot String? // GDPR
+  coverLetter            String // sanitised HTML
+  proposedTimeline       String? // free text, e.g. "6 weeks"
+  status                 ProposalStatus @default(SUBMITTED)
+  createdAt              DateTime       @default(now())
+  updatedAt              DateTime       @updatedAt
+
+  project            Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  freelancer         FreelancerProfile?  @relation(fields: [freelancerProfileId], references: [id], onDelete: SetNull)
+  creditTransactions CreditTransaction[]
+
+  @@unique([projectId, freelancerProfileId]) // one proposal per freelancer per project
+  @@index([projectId])
+  @@index([freelancerProfileId])
+  @@index([status])
+}
+
+model Milestone {
+  id            String          @id @default(cuid())
+  projectId     String
+  position      Int
+  title         String
+  description   String? // sanitised HTML
+  amount        Int // minor units; locked at funding
+  dueInDays     Int?
+  status        MilestoneStatus @default(PENDING)
+  // Count of company-requested change rounds on this milestone (display only).
+  revisionCount Int             @default(0)
+  approvedAt    DateTime?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  project  Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  updates  MilestoneUpdate[]
+  comments MilestoneComment[]
+  payments Payment[]
+
+  @@unique([projectId, position])
+  @@index([projectId])
+  @@index([status])
+}
+
+model MilestoneUpdate {
+  id                 String   @id @default(cuid())
+  milestoneId        String
+  // Author is always the contractor; posting an update is the approval request.
+  authorUserId       String?
+  authorNameSnapshot String? // GDPR
+  note               String // sanitised HTML
+  deliverables       Json // [{ label, url }] — links only (validated in Zod)
+  createdAt          DateTime @default(now())
+
+  milestone Milestone @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
+  author    User?     @relation(fields: [authorUserId], references: [id], onDelete: SetNull)
+
+  @@index([milestoneId])
+}
+
+model MilestoneComment {
+  id                 String   @id @default(cuid())
+  milestoneId        String
+  authorUserId       String? // either party (company owner or contractor)
+  authorRole         UserRole // snapshot of who spoke; survives FK nulling
+  authorNameSnapshot String? // GDPR
+  body               String // sanitised HTML
+  createdAt          DateTime @default(now())
+
+  milestone Milestone @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
+  author    User?     @relation(fields: [authorUserId], references: [id], onDelete: SetNull)
+
+  @@index([milestoneId])
+}
+
+// =============================================================================
 // Payments
 // =============================================================================
 
 model Payment {
   id           String        @id @default(cuid())
-  bountyId     String
+  // Polymorphic owner: exactly one of bountyId / projectId is set (enforced by a
+  // CHECK constraint appended as raw SQL in the migration). submissionId is set
+  // for bounty prize payouts; milestoneId for project milestone tranche payouts.
+  bountyId     String?
   submissionId String?
+  projectId    String?
+  milestoneId  String?
   type         PaymentType
   status       PaymentStatus @default(PENDING)
   currency     String        @default("SLE")
@@ -522,11 +734,15 @@ model Payment {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  bounty     Bounty      @relation(fields: [bountyId], references: [id])
+  bounty     Bounty?     @relation(fields: [bountyId], references: [id])
   submission Submission? @relation(fields: [submissionId], references: [id])
+  project    Project?    @relation(fields: [projectId], references: [id])
+  milestone  Milestone?  @relation(fields: [milestoneId], references: [id])
 
   @@index([bountyId])
   @@index([submissionId])
+  @@index([projectId])
+  @@index([milestoneId])
   @@index([status])
   @@index([monimePaymentId])
   @@index([monimePayoutId])
@@ -567,7 +783,9 @@ model AccountWithdrawal {
 
 model Dispute {
   id                    String   @id @default(cuid())
-  bountyId              String
+  // Polymorphic: exactly one of bountyId / projectId is set (CHECK in migration).
+  bountyId              String?
+  projectId             String?
   // Nullable so the User row can be deleted under GDPR — the dispute survives
   // with `raisedById = NULL` (and `raisedByEmailSnapshot` for ops).
   raisedById            String?
@@ -578,11 +796,38 @@ model Dispute {
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 
-  bounty   Bounty @relation(fields: [bountyId], references: [id])
-  raisedBy User?  @relation(fields: [raisedById], references: [id], onDelete: SetNull)
+  bounty   Bounty?  @relation(fields: [bountyId], references: [id])
+  project  Project? @relation(fields: [projectId], references: [id])
+  raisedBy User?    @relation(fields: [raisedById], references: [id], onDelete: SetNull)
 
   @@index([bountyId])
+  @@index([projectId])
   @@index([raisedById])
+}
+
+// =============================================================================
+// Reviews (two-way ratings left at project completion)
+// =============================================================================
+
+model Review {
+  id                String   @id @default(cuid())
+  projectId         String
+  raterUserId       String? // GDPR nullable
+  rateeUserId       String?
+  raterRole         UserRole // snapshot of who wrote it (COMPANY | FREELANCER)
+  rating            Int // 1..5 (validated in Zod)
+  comment           String? // sanitised HTML
+  raterNameSnapshot String?
+  rateeNameSnapshot String?
+  createdAt         DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  rater   User?   @relation("ReviewsAuthored", fields: [raterUserId], references: [id], onDelete: SetNull)
+  ratee   User?   @relation("ReviewsReceived", fields: [rateeUserId], references: [id], onDelete: SetNull)
+
+  @@unique([projectId, raterUserId]) // one review per rater per project
+  @@index([projectId])
+  @@index([rateeUserId])
 }
 
 // =============================================================================
@@ -689,6 +934,7 @@ model CreditTransaction {
   reason              CreditTxnReason
   periodKey           String // "YYYY-MM" of the period this transaction belongs to
   submissionId        String?
+  proposalId          String? // idempotency key for PROPOSAL_SPEND
   bountyId            String?
   adminUserId         String?
   // Referral ledger rows: the referred freelancer whose activity triggered this row.
@@ -699,12 +945,14 @@ model CreditTransaction {
 
   freelancer FreelancerProfile  @relation(fields: [freelancerProfileId], references: [id], onDelete: Cascade)
   submission Submission?        @relation(fields: [submissionId], references: [id], onDelete: SetNull)
+  proposal   ProjectProposal?   @relation(fields: [proposalId], references: [id], onDelete: SetNull)
   bounty     Bounty?            @relation(fields: [bountyId], references: [id], onDelete: SetNull)
   adminUser  User?              @relation("CreditTxnAdmin", fields: [adminUserId], references: [id], onDelete: SetNull)
   referred   FreelancerProfile? @relation("CreditTxnReferred", fields: [referredProfileId], references: [id], onDelete: SetNull)
 
   @@index([freelancerProfileId, createdAt])
   @@index([submissionId])
+  @@index([proposalId])
   @@index([reason, periodKey])
   @@index([referredProfileId])
 }

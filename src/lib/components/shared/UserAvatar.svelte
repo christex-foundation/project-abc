@@ -1,14 +1,9 @@
 <script lang="ts">
-	import { createAvatar } from '@dicebear/core';
-	import { adventurer } from '@dicebear/collection';
-
-	type Props = { seed: string; size?: number; class?: string };
-	let { seed, size = 32, class: cls = '' }: Props = $props();
-
-	const src = $derived(
-		'data:image/svg+xml;utf8,' +
-			encodeURIComponent(createAvatar(adventurer, { seed, size }).toString())
-	);
+	// Dumb avatar: the SVG is generated server-side (see `$lib/server/avatar`)
+	// and passed in as a data-URI `src`, so the ~275 KB DiceBear library stays
+	// out of the client bundle (mobile-first initial-JS budget — see CLAUDE.md).
+	type Props = { src: string; size?: number; alt?: string; class?: string };
+	let { src, size = 32, alt = '', class: cls = '' }: Props = $props();
 </script>
 
-<img {src} alt={seed} width={size} height={size} class="rounded-full {cls}" />
+<img {src} {alt} width={size} height={size} class="rounded-full {cls}" />

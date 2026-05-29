@@ -51,6 +51,7 @@
 		{#if showTopNav && data.user}
 			<TopNav
 				user={data.user}
+				avatarSrc={data.userAvatar}
 				isAdminHost={data.isAdminHost}
 				adminUrl={env.PUBLIC_ADMIN_URL}
 				{wallet}

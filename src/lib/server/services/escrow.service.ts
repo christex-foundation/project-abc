@@ -4,11 +4,13 @@ import { AppError } from '../http';
 import { requireRole, type AuthedUser } from '../auth-helpers';
 import { monime, verifyWebhookSignature } from '../monime/client';
 import * as bountyRepo from '../repositories/bounty.repo';
+import * as projectRepo from '../repositories/project.repo';
 import * as paymentRepo from '../repositories/payment.repo';
 import * as companyRepo from '../repositories/company.repo';
 import * as userRepo from '../repositories/user.repo';
 import * as submissionRepo from '../repositories/submission.repo';
 import * as notification from './notification.service';
+import * as projectEscrowService from './project-escrow.service';
 import { ensureCompanyAccount } from './financial-account.service';
 
 function appUrl(): string {
@@ -201,13 +203,26 @@ export async function handleWebhook(rawBody: string, signatureHeader: string | n
 
 async function handleFundingCompleted(event: MonimeEvent) {
 	const ref = event.data?.reference ?? '';
+	const monimePaymentId = event.data?.paymentId ?? event.data?.id;
+
+	// Project escrow funding is namespaced `project:<id>` — delegate to the
+	// project-escrow service (separate domain, shared webhook + Payment table).
+	const projectMatch = /^project:(.+)$/.exec(ref);
+	if (projectMatch) {
+		if (!monimePaymentId) throw new AppError('BAD_REQUEST', 'Webhook missing payment id.');
+		await projectEscrowService.handleFundingCompleted({
+			projectId: projectMatch[1],
+			monimePaymentId
+		});
+		return;
+	}
+
 	const match = /^bounty:(.+)$/.exec(ref);
 	if (!match) {
-		console.warn('[escrow] checkout.completed without bounty reference', ref);
+		console.warn('[escrow] checkout.completed without bounty/project reference', ref);
 		return;
 	}
 	const bountyId = match[1];
-	const monimePaymentId = event.data?.paymentId ?? event.data?.id;
 	if (!monimePaymentId) {
 		throw new AppError('BAD_REQUEST', 'Webhook missing payment id.');
 	}
@@ -422,18 +437,72 @@ async function handlePayoutTerminal(event: MonimeEvent) {
 		if (payment.type === PaymentType.PRIZE_PAYOUT && payment.submissionId) {
 			await onPrizePayoutCompleted(payment.submissionId, payment.amount);
 		}
+		// Project milestone payouts settle synchronously (internal transfer) in
+		// milestone.service.approve, so this branch is defensive for any async path.
+		if (payment.type === PaymentType.MILESTONE_PAYOUT && payment.projectId) {
+			await onMilestonePayoutCompleted(payment.projectId, payment.milestoneId, payment.amount);
+		}
 	} else {
 		await paymentRepo.markStatus(payment.id, PaymentStatus.FAILED, {
 			failureCode: event.data?.failureCode,
 			failureMessage: event.data?.failureMessage
 		});
-		if (payment.type === PaymentType.PRIZE_PAYOUT) {
+		if (payment.type === PaymentType.PRIZE_PAYOUT && payment.bountyId) {
 			await onPrizePayoutFailed(payment.bountyId, payment.submissionId, {
 				failureCode: event.data?.failureCode ?? null,
 				failureMessage: event.data?.failureMessage ?? null
 			});
 		}
+		if (payment.type === PaymentType.MILESTONE_PAYOUT && payment.projectId) {
+			await onMilestonePayoutFailed(payment.projectId, {
+				failureCode: event.data?.failureCode ?? null,
+				failureMessage: event.data?.failureMessage ?? null
+			});
+		}
 	}
+}
+
+async function onMilestonePayoutCompleted(
+	projectId: string,
+	milestoneId: string | null,
+	amount: number
+) {
+	const project = await projectRepo.findProjectById(projectId);
+	if (!project || !project.contractorProfileId) return;
+	const contractor = await userRepo.findByFreelancerProfileId(project.contractorProfileId);
+	if (contractor) {
+		await notification.dispatch(contractor.id, 'MILESTONE_PAYOUT_COMPLETED', {
+			title: 'Milestone payout settled',
+			message: `A milestone payout of ${amount} ${project.currency} for "${project.title}" has been paid.`,
+			link: `${appUrl()}/projects/${project.slug}/workspace`
+		});
+	}
+	void milestoneId;
+}
+
+async function onMilestonePayoutFailed(
+	projectId: string,
+	failure: { failureCode: string | null; failureMessage: string | null }
+) {
+	const project = await projectRepo.findProjectById(projectId);
+	if (!project) return;
+	const admins = await userRepo.listActiveAdmins();
+	const recipients = new Set<string>();
+	if (project.companyProfileId) {
+		const owner = await userRepo.findByCompanyProfileId(project.companyProfileId);
+		if (owner) recipients.add(owner.id);
+	}
+	for (const a of admins) recipients.add(a.id);
+	const detail = failure.failureMessage ?? failure.failureCode ?? 'No detail provided.';
+	await Promise.all(
+		Array.from(recipients).map((userId) =>
+			notification.dispatch(userId, 'PAYOUT_FAILED', {
+				title: 'Milestone payout failed',
+				message: `A milestone payout for "${project.title}" failed: ${detail}`,
+				link: `${appUrl()}/projects/${project.slug}/workspace`
+			})
+		)
+	);
 }
 
 async function onPrizePayoutCompleted(submissionId: string, amount: number) {

@@ -83,7 +83,9 @@ async function main() {
 	}
 
 	if (force) {
-		console.log(`--force set, skipping Monime balance check for ${bounty.escrowFinancialAccountId}`);
+		console.log(
+			`--force set, skipping Monime balance check for ${bounty.escrowFinancialAccountId}`
+		);
 	} else {
 		const available = await fetchEscrowBalance(bounty.escrowFinancialAccountId);
 		console.log(

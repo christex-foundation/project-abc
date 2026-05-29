@@ -64,6 +64,7 @@ type InsertInput = {
 	reason: CreditTxnReason;
 	periodKey: string;
 	submissionId?: string | null;
+	proposalId?: string | null;
 	bountyId?: string | null;
 	adminUserId?: string | null;
 	notes?: string | null;
@@ -88,6 +89,7 @@ export async function insertTransaction(
 				reason: input.reason,
 				periodKey: input.periodKey,
 				submissionId: input.submissionId ?? null,
+				proposalId: input.proposalId ?? null,
 				bountyId: input.bountyId ?? null,
 				adminUserId: input.adminUserId ?? null,
 				notes: input.notes ?? null

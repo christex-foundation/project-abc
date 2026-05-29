@@ -190,7 +190,9 @@
 			{#if submitting}
 				{selectedMethod === 'internal_transfer' ? 'Funding…' : 'Redirecting…'}
 			{:else}
-				{selectedMethod === 'internal_transfer' ? 'Fund from account balance' : 'Proceed to payment'}
+				{selectedMethod === 'internal_transfer'
+					? 'Fund from account balance'
+					: 'Proceed to payment'}
 			{/if}
 		</Button>
 	</form>

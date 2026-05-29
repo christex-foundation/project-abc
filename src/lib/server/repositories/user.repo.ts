@@ -25,6 +25,14 @@ export async function findByCompanyProfileId(companyProfileId: string): Promise<
 	return profile?.user ?? null;
 }
 
+export async function findByFreelancerProfileId(freelancerProfileId: string): Promise<User | null> {
+	const profile = await prisma.freelancerProfile.findUnique({
+		where: { id: freelancerProfileId },
+		select: { user: true }
+	});
+	return profile?.user ?? null;
+}
+
 export async function findCompanyOwnerByBountyId(bountyId: string): Promise<User | null> {
 	const bounty = await prisma.bounty.findUnique({
 		where: { id: bountyId },

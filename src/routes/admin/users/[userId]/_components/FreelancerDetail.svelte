@@ -59,7 +59,8 @@
 			status: string;
 			reason: string;
 			createdAt: Date;
-			bounty: { id: string; slug: string; title: string };
+			// Nullable since Dispute is polymorphic (a project dispute has no bounty).
+			bounty: { id: string; slug: string; title: string } | null;
 		}[];
 	};
 
@@ -177,12 +178,16 @@
 								<div>
 									<div class="flex items-center gap-2">
 										<StatusBadge value={d.status} />
-										<a
-											class="text-sm font-medium text-zinc-900 hover:text-indigo-600"
-											href="/admin/bounties/{d.bounty.id}"
-										>
-											{d.bounty.title}
-										</a>
+										{#if d.bounty}
+											<a
+												class="text-sm font-medium text-zinc-900 hover:text-indigo-600"
+												href="/admin/bounties/{d.bounty.id}"
+											>
+												{d.bounty.title}
+											</a>
+										{:else}
+											<span class="text-sm font-medium text-zinc-500">—</span>
+										{/if}
 									</div>
 									<p class="mt-1 line-clamp-2 text-xs text-zinc-600">{d.reason}</p>
 								</div>

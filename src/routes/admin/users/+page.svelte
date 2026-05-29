@@ -157,15 +157,21 @@
 		}}
 	>
 		<div class="min-w-64 flex-1">
-			<label class="block text-xs font-medium text-zinc-600">Search</label>
+			<label for="filter-search" class="block text-xs font-medium text-zinc-600">Search</label>
 			<div class="relative mt-1">
 				<Search class="absolute top-2.5 left-2.5 h-4 w-4 text-zinc-400" />
-				<Input class="!pl-8" type="search" bind:value={search} placeholder="email or name" />
+				<Input
+					id="filter-search"
+					class="!pl-8"
+					type="search"
+					bind:value={search}
+					placeholder="email or name"
+				/>
 			</div>
 		</div>
 		<div>
-			<label class="block text-xs font-medium text-zinc-600">Role</label>
-			<Select class="mt-1 !w-40" bind:value={role}>
+			<label for="filter-role" class="block text-xs font-medium text-zinc-600">Role</label>
+			<Select id="filter-role" class="mt-1 !w-40" bind:value={role}>
 				<option value="">Any</option>
 				<option value="FREELANCER">Freelancer</option>
 				<option value="COMPANY">Company</option>
@@ -173,8 +179,8 @@
 			</Select>
 		</div>
 		<div>
-			<label class="block text-xs font-medium text-zinc-600">Status</label>
-			<Select class="mt-1 !w-36" bind:value={isActive}>
+			<label for="filter-status" class="block text-xs font-medium text-zinc-600">Status</label>
+			<Select id="filter-status" class="mt-1 !w-36" bind:value={isActive}>
 				<option value="">Any</option>
 				<option value="true">Active</option>
 				<option value="false">Deactivated</option>

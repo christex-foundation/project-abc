@@ -3,35 +3,29 @@
 	import { page } from '$app/state';
 	import { untrack } from 'svelte';
 	import { MetaTags } from 'svelte-meta-tags';
-	import { Input, Label, Select, Button } from '$lib/components/ui';
-	import BountyCard from '$lib/components/feed/BountyCard.svelte';
+	import { Input, Label, Button } from '$lib/components/ui';
+	import ProjectCard from '$lib/components/feed/ProjectCard.svelte';
 
 	let { data } = $props();
 
 	let search = $state(untrack(() => data.filters.search));
-	let compensationType = $state(untrack(() => data.filters.compensationType));
-	let minPrize = $state(untrack(() => data.filters.minPrize));
-	let maxPrize = $state(untrack(() => data.filters.maxPrize));
-	let beforeDeadline = $state(untrack(() => data.filters.beforeDeadline));
+	let minBudget = $state(untrack(() => data.filters.minBudget));
+	let maxBudget = $state(untrack(() => data.filters.maxBudget));
 	let selectedSkillIds = $state<string[]>(untrack(() => [...data.filters.skillIds]));
 
 	function applyFilters() {
 		const params = new URLSearchParams();
 		if (search) params.set('search', search);
-		if (compensationType) params.set('compensationType', compensationType);
-		if (minPrize) params.set('minPrize', String(minPrize));
-		if (maxPrize) params.set('maxPrize', String(maxPrize));
-		if (beforeDeadline) params.set('beforeDeadline', beforeDeadline);
+		if (minBudget) params.set('minBudget', String(minBudget));
+		if (maxBudget) params.set('maxBudget', String(maxBudget));
 		selectedSkillIds.forEach((id) => params.append('skillIds', id));
 		goto(`/projects?${params.toString()}`, { replaceState: false, keepFocus: true });
 	}
 
 	function clearFilters() {
 		search = '';
-		compensationType = '';
-		minPrize = '';
-		maxPrize = '';
-		beforeDeadline = '';
+		minBudget = '';
+		maxBudget = '';
 		selectedSkillIds = [];
 		goto('/projects');
 	}
@@ -89,30 +83,15 @@
 			<Input id="search" bind:value={search} oninput={onSearchInput} placeholder="Keyword…" />
 		</div>
 
-		<div class="space-y-1">
-			<Label for="compType">Compensation</Label>
-			<Select id="compType" bind:value={compensationType} onchange={applyFilters}>
-				<option value="">All</option>
-				<option value="FIXED">Fixed prize</option>
-				<option value="RANGE">Range</option>
-				<option value="VARIABLE">Freelancer-proposed</option>
-			</Select>
-		</div>
-
 		<div class="grid grid-cols-2 gap-2">
 			<div class="space-y-1">
-				<Label for="minP">Min (SLE)</Label>
-				<Input id="minP" type="number" bind:value={minPrize} onchange={applyFilters} />
+				<Label for="minP">Min budget (SLE)</Label>
+				<Input id="minP" type="number" bind:value={minBudget} onchange={applyFilters} />
 			</div>
 			<div class="space-y-1">
-				<Label for="maxP">Max (SLE)</Label>
-				<Input id="maxP" type="number" bind:value={maxPrize} onchange={applyFilters} />
+				<Label for="maxP">Max budget (SLE)</Label>
+				<Input id="maxP" type="number" bind:value={maxBudget} onchange={applyFilters} />
 			</div>
-		</div>
-
-		<div class="space-y-1">
-			<Label for="deadline">Closes before</Label>
-			<Input id="deadline" type="date" bind:value={beforeDeadline} onchange={applyFilters} />
 		</div>
 
 		<div class="space-y-2">
@@ -158,8 +137,8 @@
 			</div>
 		{:else}
 			<div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-				{#each data.items as b (b.id)}
-					<BountyCard bounty={b} />
+				{#each data.items as p (p.id)}
+					<ProjectCard project={p} />
 				{/each}
 			</div>
 		{/if}

@@ -40,7 +40,9 @@
 			amount: number;
 			currency: string;
 			createdAt: Date;
-			bounty: { id: string; title: string; slug: string };
+			// Nullable since Payment is polymorphic (a project payment has no bounty);
+			// this view only queries bounty payments, so it is non-null in practice.
+			bounty: { id: string; title: string; slug: string } | null;
 		}[];
 		disputes: {
 			id: string;
@@ -49,7 +51,8 @@
 			createdAt: Date;
 			// Nullable after the raiser has deleted their account (GDPR).
 			raisedBy: { id: string; name: string | null; email: string; role: string } | null;
-			bounty: { id: string; slug: string; title: string };
+			// Nullable since Dispute is polymorphic; this view queries bounty disputes.
+			bounty: { id: string; slug: string; title: string } | null;
 		}[];
 	};
 
@@ -158,12 +161,16 @@
 								<div>
 									<div class="flex items-center gap-2">
 										<StatusBadge value={d.status} />
-										<a
-											class="text-sm font-medium text-zinc-900 hover:text-indigo-600"
-											href="/admin/bounties/{d.bounty.id}"
-										>
-											{d.bounty.title}
-										</a>
+										{#if d.bounty}
+											<a
+												class="text-sm font-medium text-zinc-900 hover:text-indigo-600"
+												href="/admin/bounties/{d.bounty.id}"
+											>
+												{d.bounty.title}
+											</a>
+										{:else}
+											<span class="text-sm font-medium text-zinc-500">—</span>
+										{/if}
 									</div>
 									<p class="mt-1 line-clamp-2 text-xs text-zinc-600">{d.reason}</p>
 									<p class="text-[11px] text-zinc-400">
@@ -194,12 +201,16 @@
 					{#each payments as p (p.id)}
 						<li class="px-5 py-2.5">
 							<div class="flex items-center justify-between gap-2">
-								<a
-									class="text-xs font-medium text-zinc-900 hover:text-indigo-600"
-									href="/admin/bounties/{p.bounty.id}"
-								>
-									{p.bounty.title}
-								</a>
+								{#if p.bounty}
+									<a
+										class="text-xs font-medium text-zinc-900 hover:text-indigo-600"
+										href="/admin/bounties/{p.bounty.id}"
+									>
+										{p.bounty.title}
+									</a>
+								{:else}
+									<span class="text-xs font-medium text-zinc-500">—</span>
+								{/if}
 								<StatusBadge value={p.status} />
 							</div>
 							<div class="mt-0.5 flex items-center justify-between text-[11px] text-zinc-500">

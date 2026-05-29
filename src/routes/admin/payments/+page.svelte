@@ -60,8 +60,8 @@
 		}}
 	>
 		<div>
-			<label class="block text-xs font-medium text-zinc-600">Status</label>
-			<Select class="mt-1 !w-44" bind:value={status}>
+			<label for="filter-status" class="block text-xs font-medium text-zinc-600">Status</label>
+			<Select id="filter-status" class="mt-1 !w-44" bind:value={status}>
 				<option value="">Any</option>
 				<option value="PENDING">Pending</option>
 				<option value="PROCESSING">Processing</option>
@@ -70,8 +70,8 @@
 			</Select>
 		</div>
 		<div>
-			<label class="block text-xs font-medium text-zinc-600">Type</label>
-			<Select class="mt-1 !w-48" bind:value={type}>
+			<label for="filter-type" class="block text-xs font-medium text-zinc-600">Type</label>
+			<Select id="filter-type" class="mt-1 !w-48" bind:value={type}>
 				<option value="">Any</option>
 				<option value="ESCROW_DEPOSIT">Escrow deposit</option>
 				<option value="PRIZE_PAYOUT">Prize payout</option>
@@ -102,12 +102,23 @@
 			{#each data.payments as p (p.id)}
 				<TableRow>
 					<TableCell>
-						<a
-							href={`/admin/bounties/${p.bounty.id ?? ''}`}
-							class="font-medium text-zinc-900 hover:text-indigo-600"
-						>
-							{p.bounty.title}
-						</a>
+						{#if p.bounty}
+							<a
+								href={`/admin/bounties/${p.bounty.id}`}
+								class="font-medium text-zinc-900 hover:text-indigo-600"
+							>
+								{p.bounty.title}
+							</a>
+						{:else if p.project}
+							<a
+								href={`/projects/${p.project.slug}`}
+								class="font-medium text-zinc-900 hover:text-indigo-600"
+							>
+								{p.project.title}
+							</a>
+						{:else}
+							<span class="text-zinc-400">—</span>
+						{/if}
 					</TableCell>
 					<TableCell><StatusBadge value={p.type} /></TableCell>
 					<TableCell><StatusBadge value={p.status} /></TableCell>
