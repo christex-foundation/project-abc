@@ -236,6 +236,23 @@ export async function getProject(caller: AuthedUser | null, idOrSlug: string) {
 	return project;
 }
 
+/**
+ * Whether the caller is the owning company (or an admin) for a project. Used by
+ * the public project page to decide if it should surface the owner-only
+ * "View proposals" call-to-action. Mirrors the guards in `loadOwnedProject` and
+ * `proposal.service.ownsProject`.
+ */
+export async function isOwner(
+	caller: AuthedUser | null,
+	companyProfileId: string | null
+): Promise<boolean> {
+	if (!caller) return false;
+	if (caller.role === 'ADMIN') return true;
+	if (!companyProfileId) return false;
+	const profile = await companyRepo.findByUserId(caller.id);
+	return !!profile && profile.id === companyProfileId;
+}
+
 export async function listForCompany(caller: AuthedUser) {
 	requireRole(caller, 'COMPANY');
 	const profile = await companyRepo.findByUserId(caller.id);
