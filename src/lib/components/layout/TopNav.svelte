@@ -17,12 +17,13 @@
 
 	type Props = {
 		user: AuthedUser;
+		avatarSrc?: string | null;
 		isAdminHost: boolean;
 		adminUrl?: string;
 		wallet: WalletInfo;
 	};
 
-	let { user, isAdminHost, adminUrl = '', wallet }: Props = $props();
+	let { user, avatarSrc = null, isAdminHost, adminUrl = '', wallet }: Props = $props();
 
 	let menuOpen = $state(false);
 
@@ -37,7 +38,6 @@
 	const dashboardHref = $derived(
 		user.role === 'COMPANY' ? '/dashboard/company' : '/dashboard/freelancer'
 	);
-	const seed = $derived(user.name ?? user.email);
 	const initials = $derived(
 		(user.name ?? user.email)
 			.split(/[\s@]+/)
@@ -124,8 +124,8 @@
 							open ? 'border-ink' : 'hover:border-ink/40'
 						)}
 					>
-						{#if user.role !== 'COMPANY'}
-							<UserAvatar {seed} size={28} class="ring-bone ring-1" />
+						{#if user.role !== 'COMPANY' && avatarSrc}
+							<UserAvatar src={avatarSrc} alt={user.name ?? user.email} size={28} class="ring-bone ring-1" />
 						{:else}
 							<span
 								class="bg-terracotta text-cream inline-flex h-7 w-7 items-center justify-center rounded-full font-mono text-[11px] font-semibold"

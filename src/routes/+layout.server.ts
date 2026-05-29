@@ -1,4 +1,5 @@
 import * as walletService from '$lib/server/services/wallet.service';
+import { avatarDataUri } from '$lib/server/avatar';
 import type { LayoutServerLoad } from './$types';
 
 export const load: LayoutServerLoad = async ({ locals }) => {
@@ -18,8 +19,13 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 		}
 	}
 
+	// Avatar SVG is generated server-side so DiceBear stays out of the client
+	// bundle; the TopNav renders it for signed-in (non-company) users.
+	const userAvatar = locals.user ? avatarDataUri(locals.user.name ?? locals.user.email) : null;
+
 	return {
 		user: locals.user,
+		userAvatar,
 		settings: locals.settings,
 		isAdminHost: locals.isAdminHost,
 		wallet
