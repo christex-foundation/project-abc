@@ -4,6 +4,7 @@ import type { Dispute, Prisma } from '@prisma/client';
 const selectFull = {
 	id: true,
 	bountyId: true,
+	projectId: true,
 	raisedById: true,
 	reason: true,
 	status: true,
@@ -11,6 +12,9 @@ const selectFull = {
 	createdAt: true,
 	updatedAt: true,
 	bounty: {
+		select: { id: true, slug: true, title: true, status: true }
+	},
+	project: {
 		select: { id: true, slug: true, title: true, status: true }
 	},
 	raisedBy: {
@@ -21,13 +25,15 @@ const selectFull = {
 export type DisputeWithContext = Prisma.DisputeGetPayload<{ select: typeof selectFull }>;
 
 export async function create(input: {
-	bountyId: string;
+	bountyId?: string;
+	projectId?: string;
 	raisedById: string;
 	reason: string;
 }): Promise<Dispute> {
 	return prisma.dispute.create({
 		data: {
-			bountyId: input.bountyId,
+			bountyId: input.bountyId ?? null,
+			projectId: input.projectId ?? null,
 			raisedById: input.raisedById,
 			reason: input.reason
 		}

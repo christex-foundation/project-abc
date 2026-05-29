@@ -62,19 +62,28 @@ export type FreelancerEarningRow = Payment & {
 		// (Bounty stays alive but loses its company FK).
 		bounty: { id: string; slug: string; title: string; type: string; currency: string } | null;
 	} | null;
+	// Set for project MILESTONE_PAYOUT rows.
+	project: { id: string; slug: string; title: string; currency: string } | null;
+	milestone: { id: string; title: string; position: number } | null;
 };
 
 /**
- * Earnings rows for the freelancer dashboard. Joins through submission to
- * surface the bounty title; only `PRIZE_PAYOUT` rows count toward earnings.
+ * Earnings rows for the freelancer dashboard. Includes bounty prize payouts
+ * (joined through submission) and project milestone payouts (joined through the
+ * project's awarded contractor).
  */
 export async function listEarningsForFreelancer(
 	freelancerProfileId: string
 ): Promise<FreelancerEarningRow[]> {
 	return prisma.payment.findMany({
 		where: {
-			type: PaymentType.PRIZE_PAYOUT,
-			submission: { freelancerProfileId }
+			OR: [
+				{ type: PaymentType.PRIZE_PAYOUT, submission: { freelancerProfileId } },
+				{
+					type: PaymentType.MILESTONE_PAYOUT,
+					project: { contractorProfileId: freelancerProfileId }
+				}
+			]
 		},
 		include: {
 			submission: {
@@ -84,7 +93,9 @@ export async function listEarningsForFreelancer(
 						select: { id: true, slug: true, title: true, type: true, currency: true }
 					}
 				}
-			}
+			},
+			project: { select: { id: true, slug: true, title: true, currency: true } },
+			milestone: { select: { id: true, title: true, position: true } }
 		},
 		orderBy: { createdAt: 'desc' }
 	}) as Promise<FreelancerEarningRow[]>;
@@ -157,6 +168,105 @@ export async function createPayout(
 			currency: input.currency ?? 'SLE',
 			amount: input.amount,
 			monimePayoutId: input.monimePayoutId ?? null,
+			monimeTransferId: input.monimeTransferId ?? null,
+			toEntity: input.toEntity ?? null,
+			fromEntity: input.fromEntity ?? null
+		}
+	});
+}
+
+// ─── Project payments (polymorphic Payment keyed by projectId/milestoneId) ───
+
+type CreateProjectDepositInput = {
+	projectId: string;
+	amount: number;
+	currency?: string;
+	checkoutSessionId?: string;
+	monimePaymentId?: string;
+	monimeTransferId?: string;
+	method?: PaymentMethod;
+	fromEntity?: string;
+	toEntity?: string;
+	status?: PaymentStatus;
+};
+
+export async function createProjectDeposit(
+	input: CreateProjectDepositInput,
+	tx: Prisma.TransactionClient = prisma
+): Promise<Payment> {
+	return tx.payment.create({
+		data: {
+			projectId: input.projectId,
+			type: PaymentType.ESCROW_DEPOSIT,
+			method: input.method ?? PaymentMethod.CHECKOUT,
+			status: input.status ?? PaymentStatus.COMPLETED,
+			currency: input.currency ?? 'SLE',
+			amount: input.amount,
+			checkoutSessionId: input.checkoutSessionId ?? null,
+			monimePaymentId: input.monimePaymentId ?? null,
+			monimeTransferId: input.monimeTransferId ?? null,
+			fromEntity: input.fromEntity ?? null,
+			toEntity: input.toEntity ?? null
+		}
+	});
+}
+
+type CreateMilestonePayoutInput = {
+	projectId: string;
+	milestoneId: string;
+	type: typeof PaymentType.MILESTONE_PAYOUT | typeof PaymentType.REFUND;
+	amount: number;
+	currency?: string;
+	monimePayoutId?: string;
+	monimeTransferId?: string;
+	method?: PaymentMethod;
+	toEntity?: string;
+	fromEntity?: string;
+	status?: PaymentStatus;
+};
+
+export async function createMilestonePayout(
+	input: CreateMilestonePayoutInput,
+	tx: Prisma.TransactionClient = prisma
+): Promise<Payment> {
+	return tx.payment.create({
+		data: {
+			projectId: input.projectId,
+			milestoneId: input.milestoneId,
+			type: input.type,
+			method: input.method ?? PaymentMethod.INTERNAL_TRANSFER,
+			status: input.status ?? PaymentStatus.PROCESSING,
+			currency: input.currency ?? 'SLE',
+			amount: input.amount,
+			monimePayoutId: input.monimePayoutId ?? null,
+			monimeTransferId: input.monimeTransferId ?? null,
+			toEntity: input.toEntity ?? null,
+			fromEntity: input.fromEntity ?? null
+		}
+	});
+}
+
+/** Refund payout keyed to a project (cancellation), no milestone. */
+export async function createProjectRefund(
+	input: {
+		projectId: string;
+		amount: number;
+		currency?: string;
+		monimeTransferId?: string;
+		toEntity?: string;
+		fromEntity?: string;
+		status?: PaymentStatus;
+	},
+	tx: Prisma.TransactionClient = prisma
+): Promise<Payment> {
+	return tx.payment.create({
+		data: {
+			projectId: input.projectId,
+			type: PaymentType.REFUND,
+			method: PaymentMethod.INTERNAL_TRANSFER,
+			status: input.status ?? PaymentStatus.COMPLETED,
+			currency: input.currency ?? 'SLE',
+			amount: input.amount,
 			monimeTransferId: input.monimeTransferId ?? null,
 			toEntity: input.toEntity ?? null,
 			fromEntity: input.fromEntity ?? null
@@ -256,7 +366,9 @@ export async function incrementRetry(id: string): Promise<Payment> {
 }
 
 export type AdminPaymentRow = Payment & {
-	bounty: { id: string; slug: string; title: string };
+	// Polymorphic: a payment belongs to a bounty OR a project (never both).
+	bounty: { id: string; slug: string; title: string } | null;
+	project: { id: string; slug: string; title: string } | null;
 	// Freelancer is nullable when the submitter has deleted their account.
 	submission: { id: string; freelancer: { displayName: string } | null } | null;
 };
@@ -277,6 +389,7 @@ export async function listForAdmin(filter: {
 			where,
 			include: {
 				bounty: { select: { id: true, slug: true, title: true } },
+				project: { select: { id: true, slug: true, title: true } },
 				submission: {
 					select: { id: true, freelancer: { select: { displayName: true } } }
 				}
