@@ -20,6 +20,9 @@ export async function retryPayout(caller: AuthedUser, paymentId: string) {
 	if (payment.type !== PaymentType.PRIZE_PAYOUT && payment.type !== PaymentType.REFUND) {
 		throw new AppError('CONFLICT', 'Only payouts and refunds can be retried.');
 	}
+	if (!payment.bountyId) {
+		throw new AppError('CONFLICT', 'Only bounty payouts can be retried here.');
+	}
 
 	const bounty = await bountyRepo.findBountyById(payment.bountyId);
 	if (!bounty?.escrowFinancialAccountId) {

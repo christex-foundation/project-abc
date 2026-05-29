@@ -7,6 +7,7 @@ import { requireRole, type AuthedUser } from '../auth-helpers';
 import { embedText, cosineSimilarity } from '../ai/embeddings';
 import * as freelancerRepo from '../repositories/freelancer.repo';
 import * as bountyRepo from '../repositories/bounty.repo';
+import * as projectRepo from '../repositories/project.repo';
 import type { BountyForMatching } from '../repositories/bounty.repo';
 
 function stripHtml(input: string | null | undefined): string {
@@ -56,12 +57,54 @@ export async function recomputeBountyEmbedding(bountyId: string): Promise<void> 
 	await bountyRepo.setAiEmbedding(bountyId, vec);
 }
 
+export async function recomputeProjectEmbedding(projectId: string): Promise<void> {
+	const project = await projectRepo.findForEmbedding(projectId);
+	if (!project) return;
+	const skillNames = project.skills.map((s) => s.skill.name).join(', ');
+	const parts = [
+		project.title,
+		stripHtml(project.description),
+		stripHtml(project.requirements),
+		stripHtml(project.deliverables),
+		skillNames ? `Skills: ${skillNames}` : ''
+	].filter((p) => p.trim().length > 0);
+	const prompt = parts.join('\n');
+	const vec = await embedText(prompt);
+	if (!vec) return;
+	await projectRepo.setAiEmbedding(projectId, vec);
+}
+
 export type FreelancerMatch = {
 	freelancerProfileId: string;
 	userId: string;
 	displayName: string;
 	matchScore: number;
 };
+
+/**
+ * Top-N freelancers for a project's embedding. Used by `project.service.publish`
+ * to fan out PROJECT_PUBLISHED notifications. Empty when no embedding yet.
+ */
+export async function findMatchesForProject(
+	projectId: string,
+	limit = 30
+): Promise<FreelancerMatch[]> {
+	const project = await projectRepo.findForMatchingWithEmbedding(projectId);
+	if (!project?.aiEmbedding?.length) return [];
+	const freelancers = await freelancerRepo.listAllWithEmbeddings();
+	const scored: FreelancerMatch[] = [];
+	for (const f of freelancers) {
+		if (!f.aiEmbedding || f.aiEmbedding.length === 0) continue;
+		scored.push({
+			freelancerProfileId: f.id,
+			userId: f.userId,
+			displayName: f.displayName,
+			matchScore: cosineSimilarity(project.aiEmbedding, f.aiEmbedding)
+		});
+	}
+	scored.sort((a, b) => b.matchScore - a.matchScore);
+	return scored.slice(0, limit);
+}
 
 /**
  * Top-N freelancers (by cosine similarity) for a bounty's embedding. Used by

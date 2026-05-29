@@ -211,6 +211,55 @@ export async function spendForSubmission(
 }
 
 /**
+ * SPEND — called from proposal.service.submit inside its transaction.
+ * Mirrors `spendForSubmission`: shares the same monthly credit pool, throws
+ * CONFLICT when the freelancer is out of credits, idempotent on proposalId.
+ */
+export async function spendForProposal(
+	freelancerProfileId: string,
+	proposalId: string,
+	tx: Prisma.TransactionClient
+): Promise<number> {
+	const config = await getConfig();
+	if (!config.enabled) return 0;
+
+	const { balance, periodKey } = await ensureCurrentPeriod(
+		freelancerProfileId,
+		config.monthlyAllocation,
+		tx
+	);
+
+	if (balance < 1) {
+		throw new AppError(
+			'CONFLICT',
+			'You have no credits remaining this month. Credits reset on the 1st.'
+		);
+	}
+
+	const newBalance = balance - 1;
+	const inserted = await creditRepo.insertTransaction(
+		{
+			freelancerProfileId,
+			delta: -1,
+			balanceAfter: newBalance,
+			reason: CreditTxnReason.PROPOSAL_SPEND,
+			periodKey,
+			proposalId
+		},
+		tx
+	);
+
+	if (inserted === null) {
+		// Already charged for this proposal (idempotent retry). Don't double-spend.
+		const fresh = await creditRepo.getProfileBalance(freelancerProfileId, tx);
+		return fresh?.creditsBalance ?? balance;
+	}
+
+	await creditRepo.updateProfileBalance(freelancerProfileId, newBalance, periodKey, tx);
+	return newBalance;
+}
+
+/**
  * WIN BONUS — called from winner.service.announceWinners inside its transaction.
  * Idempotent via the partial-unique index on (submissionId WHERE reason=WIN_BONUS).
  */

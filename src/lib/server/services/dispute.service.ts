@@ -2,6 +2,7 @@ import { AppError } from '../http';
 import { requireRole, type AuthedUser } from '../auth-helpers';
 import * as disputeRepo from '../repositories/dispute.repo';
 import * as bountyRepo from '../repositories/bounty.repo';
+import * as projectRepo from '../repositories/project.repo';
 import * as submissionRepo from '../repositories/submission.repo';
 import * as userRepo from '../repositories/user.repo';
 import * as companyRepo from '../repositories/company.repo';
@@ -36,6 +37,12 @@ export async function raiseDispute(caller: AuthedUser, raw: unknown) {
 		throw new AppError('BAD_REQUEST', 'Reason is too short.');
 	}
 
+	// Project dispute path — authorize the owning company, awarded contractor, or admin.
+	if (parsed.projectId) {
+		return raiseProjectDispute(caller, parsed.projectId, reason);
+	}
+
+	if (!parsed.bountyId) throw new AppError('BAD_REQUEST', 'A bounty or project is required.');
 	const bounty = await bountyRepo.findBountyById(parsed.bountyId);
 	if (!bounty) throw new AppError('NOT_FOUND', 'Bounty not found.');
 
@@ -69,7 +76,42 @@ export async function raiseDispute(caller: AuthedUser, raw: unknown) {
 		reason
 	});
 
-	// Fan out to active admins via the in-app + email channels.
+	await notifyAdminsOfDispute(caller, bounty.title, reason);
+	return dispute;
+}
+
+/**
+ * Raise a dispute on a project. Authorized for the owning company, the awarded
+ * contractor, or an admin.
+ */
+async function raiseProjectDispute(caller: AuthedUser, projectId: string, reason: string) {
+	const project = await projectRepo.findProjectById(projectId);
+	if (!project) throw new AppError('NOT_FOUND', 'Project not found.');
+
+	if (caller.role !== 'ADMIN') {
+		let allowed = false;
+		if (caller.role === 'COMPANY') {
+			const company = await companyRepo.findByUserId(caller.id);
+			allowed = !!company && company.id === project.companyProfileId;
+		} else if (caller.role === 'FREELANCER') {
+			const freelancer = await freelancerRepo.findByUserId(caller.id);
+			allowed = !!freelancer && freelancer.id === project.contractorProfileId;
+		}
+		if (!allowed) {
+			throw new AppError('FORBIDDEN', 'You cannot raise a dispute on this project.');
+		}
+	}
+
+	const dispute = await disputeRepo.create({
+		projectId: project.id,
+		raisedById: caller.id,
+		reason
+	});
+	await notifyAdminsOfDispute(caller, project.title, reason);
+	return dispute;
+}
+
+async function notifyAdminsOfDispute(caller: AuthedUser, subjectTitle: string, reason: string) {
 	const admins = await userRepo.listActiveAdmins();
 	const disputeUrl = `${appUrl()}/admin/disputes`;
 	const reasonExcerpt = excerpt(reason);
@@ -77,10 +119,10 @@ export async function raiseDispute(caller: AuthedUser, raw: unknown) {
 		admins.map((a) =>
 			notification.dispatch(a.id, 'DISPUTE_RAISED', {
 				title: 'Dispute raised',
-				message: `${caller.name ?? caller.email} raised a dispute on "${bounty.title}".`,
+				message: `${caller.name ?? caller.email} raised a dispute on "${subjectTitle}".`,
 				link: '/admin/disputes',
 				email: {
-					bountyTitle: bounty.title,
+					bountyTitle: subjectTitle,
 					raisedByName: caller.name ?? caller.email,
 					raisedByEmail: caller.email,
 					reasonExcerpt,
@@ -89,8 +131,6 @@ export async function raiseDispute(caller: AuthedUser, raw: unknown) {
 			})
 		)
 	);
-
-	return dispute;
 }
 
 export async function getById(caller: AuthedUser, id: string) {
@@ -124,12 +164,18 @@ export async function update(caller: AuthedUser, id: string, raw: unknown) {
 		// Notify the raiser when transitioning to RESOLVED. Skip silently if the
 		// raiser has since deleted their account (raisedById is now nullable).
 		if (nextStatus === 'RESOLVED' && dispute.raisedById) {
+			const subjectTitle = dispute.bounty?.title ?? dispute.project?.title ?? 'your engagement';
+			const link = dispute.bounty
+				? `/bounties/${dispute.bounty.slug}`
+				: dispute.project
+					? `/projects/${dispute.project.slug}`
+					: '/dashboard';
 			await notification.dispatch(dispute.raisedById, 'DISPUTE_RESOLVED', {
 				title: 'Dispute resolved',
-				message: `Your dispute on "${dispute.bounty.title}" has been resolved.`,
-				link: `/bounties/${dispute.bounty.slug}`,
+				message: `Your dispute on "${subjectTitle}" has been resolved.`,
+				link,
 				email: {
-					bountyTitle: dispute.bounty.title,
+					bountyTitle: subjectTitle,
 					resolution: parsed.resolution.trim()
 				}
 			});

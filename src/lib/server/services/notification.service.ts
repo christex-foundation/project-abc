@@ -28,7 +28,11 @@ export const URGENT_PUSH_SET: ReadonlySet<EventType> = new Set([
 	'SUBMISSION_SHORTLISTED',
 	'WINNERS_ANNOUNCED',
 	'PAYOUT_COMPLETED',
-	'PAYOUT_FAILED'
+	'PAYOUT_FAILED',
+	// Project domain — time-sensitive events the recipient should act on.
+	'PROPOSAL_AWARDED',
+	'MILESTONE_PAYOUT_COMPLETED',
+	'MILESTONE_CHANGES_REQUESTED'
 ]);
 
 /**

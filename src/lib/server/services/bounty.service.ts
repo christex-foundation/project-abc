@@ -4,6 +4,7 @@ import { AppError } from '../http';
 import { requireRole, type AuthedUser } from '../auth-helpers';
 import { sanitizeRichText } from '../sanitize';
 import * as bountyRepo from '../repositories/bounty.repo';
+import * as projectRepo from '../repositories/project.repo';
 import * as prizeTierRepo from '../repositories/prizeTier.repo';
 import * as bountySkillRepo from '../repositories/bountySkill.repo';
 import * as companyRepo from '../repositories/company.repo';
@@ -85,6 +86,15 @@ async function ensureSkillsExist(skillIds: string[]): Promise<void> {
 export async function createBounty(caller: AuthedUser, raw: unknown) {
 	requireRole(caller, 'COMPANY');
 	const parsed = createBountyInput.parse(raw);
+	// Projects are a separate domain now (see project.service). The legacy
+	// BountyType.PROJECT value is retained for existing rows but can no longer be
+	// created through the bounty flow.
+	if (parsed.type === 'PROJECT') {
+		throw new AppError(
+			'BAD_REQUEST',
+			'Projects are created from the Projects flow, not as bounties.'
+		);
+	}
 	const companyProfileId = await resolveCompanyProfileId(caller);
 	const skillIds = parsed.skills.map((s) => s.skillId);
 	await ensureSkillsExist(skillIds);
@@ -281,20 +291,25 @@ export async function companyOverviewStats(caller: AuthedUser): Promise<CompanyO
 	};
 	const profile = await companyRepo.findByUserId(caller.id);
 	if (!profile) return zeros;
-	const [bounties, totalSubmissions] = await Promise.all([
+	const [bounties, projects, totalSubmissions] = await Promise.all([
 		bountyRepo.listForCompany(profile.id),
+		projectRepo.listForCompany(profile.id),
 		submissionRepo.countSubmissionsForCompany(profile.id)
 	]);
 	const isOpen = (s: BountyStatus) => s === BountyStatus.ACTIVE || s === BountyStatus.JUDGING;
+	const activeProjects = projects.filter((p) => p.status === 'OPEN' || p.status === 'ACTIVE');
 	return {
+		// Bounties no longer carry type=PROJECT for new work; count only BOUNTY here.
 		activeBountiesCount: bounties.filter((b) => isOpen(b.status) && b.type === 'BOUNTY').length,
-		activeProjectsCount: bounties.filter((b) => isOpen(b.status) && b.type === 'PROJECT').length,
+		activeProjectsCount: activeProjects.length,
 		draftCount: bounties.filter((b) => b.status === BountyStatus.DRAFT).length,
 		fundedCount: bounties.filter((b) => b.status === BountyStatus.FUNDED).length,
 		completedCount: bounties.filter((b) => b.status === BountyStatus.COMPLETED).length,
 		totalSubmissions,
-		totalEscrowFunded: bounties.reduce((s, b) => s + b.escrowFundedAmount, 0),
-		currency: bounties[0]?.currency ?? 'SLE'
+		totalEscrowFunded:
+			bounties.reduce((s, b) => s + b.escrowFundedAmount, 0) +
+			projects.reduce((s, p) => s + p.escrowFundedAmount, 0),
+		currency: bounties[0]?.currency ?? projects[0]?.currency ?? 'SLE'
 	};
 }
 
