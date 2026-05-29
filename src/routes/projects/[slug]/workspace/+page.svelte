@@ -93,6 +93,10 @@
 
 	async function postUpdate(mid: string) {
 		const links = (updateLinks[mid] ?? []).filter((l) => l.url.trim());
+		if (!(updateNote[mid] ?? '').trim() || links.length === 0) {
+			errorMsg = 'Add a note and at least one deliverable link before submitting.';
+			return;
+		}
 		const ok = await call(`/api/projects/${project.id}/milestones/${mid}/update`, `${mid}:update`, {
 			note: updateNote[mid] ?? '',
 			deliverables: links
