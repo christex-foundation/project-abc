@@ -1,27 +1,28 @@
 import { error } from '@sveltejs/kit';
 import { AppError } from '$lib/server/http';
 import * as projectService from '$lib/server/services/project.service';
+import * as proposalService from '$lib/server/services/proposal.service';
 import { stripHtml } from '$lib/server/seo';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ params, locals }) => {
 	try {
-		const project = await projectService.getProject(locals.user ?? null, params.slug);
+		const caller = locals.user ?? null;
+		const project = await projectService.getProject(caller, params.slug);
 
-		// Surface whether the viewer is the owning company or the awarded contractor
-		// so the page can show the right call-to-action (apply / open workspace).
-		let viewerRole: 'OWNER' | 'CONTRACTOR' | 'FREELANCER' | 'GUEST' = 'GUEST';
-		if (locals.user) {
-			if (locals.user.role === 'FREELANCER') viewerRole = 'FREELANCER';
-			if (project.contractorProfileId && locals.user.role === 'FREELANCER') {
-				// Contractor identity is resolved on the apply/workspace pages; the
-				// public detail only needs to know "is a freelancer" for the CTA.
-			}
+		// Surface whether the viewer is the owning company (or admin) so the page can
+		// show the owner-only "View proposals" call-to-action. Proposals only exist
+		// once the project is past DRAFT, so we only fetch the count when relevant.
+		const isOwner = await projectService.isOwner(caller, project.companyProfileId);
+		let proposalCount = 0;
+		if (isOwner && caller && project.status !== 'DRAFT') {
+			proposalCount = await proposalService.countForProject(caller, project.id);
 		}
 
 		return {
 			project,
-			viewerRole,
+			isOwner,
+			proposalCount,
 			pageMetaTags: {
 				title: project.title,
 				description: stripHtml(project.description) || `Apply to ${project.title} on FOW.`

@@ -21,6 +21,8 @@
 	};
 
 	const isFreelancer = $derived(page.data.user?.role === 'FREELANCER');
+	const isOwner = $derived(data.isOwner);
+	const proposalCount = $derived(data.proposalCount);
 </script>
 
 <MetaTags
@@ -135,7 +137,13 @@
 				</Card>
 			{/if}
 
-			{#if p.status === 'OPEN' && isFreelancer}
+			{#if isOwner && (p.status === 'OPEN' || p.status === 'AWARDED')}
+				<Button class="w-full" href={`/dashboard/company/projects/${p.id}/proposals`}>
+					View proposals ({proposalCount})
+				</Button>
+			{:else if isOwner && (p.status === 'ACTIVE' || p.status === 'COMPLETED')}
+				<Button class="w-full" href={`/projects/${p.slug}/workspace`}>Open workspace</Button>
+			{:else if p.status === 'OPEN' && isFreelancer}
 				<Button class="w-full" href={`/projects/${p.slug}/apply`}>Apply with a proposal</Button>
 			{:else if p.status === 'OPEN' && !page.data.user}
 				<Button
