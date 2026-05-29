@@ -239,6 +239,178 @@ async function seedBounties(companyProfileId: string, freelancerProfileId: strin
 	});
 	console.log(`✓ Bounty: ${b5.title}`);
 
+	// --- Bounty 6: Pharmacy Stock-Out Open Dataset (BOUNTY, ACTIVE, FIXED, 2 winners) ---
+	const b6Skills = await resolveSkills(['field-research', 'data-analysis', 'data-entry']);
+	const b6 = await prisma.bounty.upsert({
+		where: { slug: 'pharmacy-stockout-open-dataset-freetown-2026' },
+		update: {},
+		create: {
+			companyProfileId,
+			title: 'Pharmacy Stock-Out Open Dataset — Freetown',
+			slug: 'pharmacy-stockout-open-dataset-freetown-2026',
+			type: BountyType.BOUNTY,
+			status: BountyStatus.ACTIVE,
+			compensationType: CompensationType.FIXED,
+			currency: 'SLE',
+			totalPrizePool: 2_500_000 * SLE,
+			numberOfWinners: 2,
+			maxBonusSpots: 0,
+			submissionDeadline: future(28),
+			judgingDeadline: future(42),
+			publishedAt: past(2),
+			description:
+				'<p>We are crowdsourcing a four-week stock-out tracker for essential medicines across pharmacies in Freetown. The resulting open dataset will be shared with the Ministry of Health, civil-society advocates, and journalists working on health access in Sierra Leone.</p>',
+			requirements:
+				'<ul><li>Cover at least 30 pharmacies across Western Area Urban (Central, East, West) and Western Area Rural</li><li>Track availability of: paracetamol, ORS sachets, malaria RDTs, ACT (artemisinin combination therapy), amoxicillin, hypertension meds (amlodipine/losartan), and metformin</li><li>Visit each pharmacy at least twice during the four-week window and record date + time of each visit</li><li>Open license (CC-BY 4.0) so the data can be reused</li></ul>',
+			deliverables:
+				'<ul><li>Cleaned CSV with one row per pharmacy-visit-medicine</li><li>Short methodology PDF (3–6 pages) explaining sampling, definitions, and limitations</li><li>Pharmacy locations as a GeoJSON or KML file (no personally identifying info)</li></ul>',
+			prizeTiers: {
+				create: [
+					{ position: 1, amount: 1_500_000 * SLE, label: '1st Place' },
+					{ position: 2, amount: 1_000_000 * SLE, label: '2nd Place' }
+				]
+			},
+			skills: {
+				create: b6Skills.map((id) => ({ skillId: id, isRequired: false }))
+			}
+		}
+	});
+	console.log(`✓ Bounty: ${b6.title}`);
+
+	// --- Bounty 7: Diaspora Remittance Fee Comparator (BOUNTY, ACTIVE, FIXED, 1 winner + 1 bonus) ---
+	const b7RequiredSlugs = new Set(['sveltekit', 'api-integration']);
+	const b7SkillRows = await prisma.skill.findMany({
+		where: { slug: { in: ['sveltekit', 'typescript', 'api-integration', 'ui-design'] } }
+	});
+	const b7 = await prisma.bounty.upsert({
+		where: { slug: 'diaspora-remittance-fee-comparator-2026' },
+		update: {},
+		create: {
+			companyProfileId,
+			title: 'Diaspora Remittance Fee Comparator — SL Corridors',
+			slug: 'diaspora-remittance-fee-comparator-2026',
+			type: BountyType.BOUNTY,
+			status: BountyStatus.ACTIVE,
+			compensationType: CompensationType.FIXED,
+			currency: 'SLE',
+			totalPrizePool: 4_000_000 * SLE,
+			numberOfWinners: 1,
+			maxBonusSpots: 1,
+			submissionDeadline: future(25),
+			judgingDeadline: future(40),
+			publishedAt: past(1),
+			description:
+				'<p>Build a public web tool that lets diaspora senders compare fees and FX margins for sending USD, GBP, and EUR to Sierra Leone (SLE). Cover the main corridors used by the SL diaspora — including WorldRemit, Sendwave, Western Union, and MoneyGram — and surface the true delivered amount in SLE per 100 of sending currency.</p>',
+			requirements:
+				'<ul><li>Mobile-first responsive web app, fast on a 3G connection</li><li>Support at least four providers and three sending currencies (USD, GBP, EUR)</li><li>Show: advertised fee, FX margin vs. mid-market rate, total delivered SLE per 100 sent</li><li>Either daily auto-refresh from provider APIs/scrapes, or a clearly documented manual update workflow with timestamps</li><li>Source code on GitHub under an OSI-approved license</li></ul>',
+			deliverables:
+				'<ul><li>Deployed URL (Vercel, Netlify, or similar)</li><li>GitHub repo with README and setup instructions</li><li>Short Loom / video walkthrough (3–5 min) showing the comparison flow</li></ul>',
+			prizeTiers: {
+				create: [
+					{ position: 1, amount: 3_000_000 * SLE, label: 'Winner' },
+					{ position: 99, amount: 1_000_000 * SLE, label: 'Bonus Prize' }
+				]
+			},
+			skills: {
+				create: b7SkillRows.map((s) => ({
+					skillId: s.id,
+					isRequired: b7RequiredSlugs.has(s.slug)
+				}))
+			}
+		}
+	});
+	console.log(`✓ Bounty: ${b7.title}`);
+
+	// --- Project 1: Tourism Booking MVP — Banana Islands & Tiwai (PROJECT, ACTIVE, FIXED) ---
+	const p1RequiredSlugs = new Set(['sveltekit', 'typescript', 'postgresql']);
+	const p1SkillRows = await prisma.skill.findMany({
+		where: {
+			slug: { in: ['sveltekit', 'typescript', 'postgresql', 'mobile-app-development', 'ui-design'] }
+		}
+	});
+	const p1 = await prisma.bounty.upsert({
+		where: { slug: 'tourism-booking-mvp-banana-tiwai-2026' },
+		update: {},
+		create: {
+			companyProfileId,
+			title: 'Tourism Booking MVP — Banana Islands & Tiwai Island',
+			slug: 'tourism-booking-mvp-banana-tiwai-2026',
+			type: BountyType.PROJECT,
+			status: BountyStatus.ACTIVE,
+			compensationType: CompensationType.FIXED,
+			currency: 'SLE',
+			totalPrizePool: 8_000_000 * SLE,
+			numberOfWinners: 1,
+			maxBonusSpots: 0,
+			timeToComplete: '6 weeks',
+			submissionDeadline: future(40),
+			judgingDeadline: future(55),
+			publishedAt: past(3),
+			description:
+				"<p>Build an MVP booking platform for two of Sierra Leone's standout eco-tourism destinations: the Banana Islands and Tiwai Island Wildlife Sanctuary. The goal is a single web app that lets travellers discover stays and experiences, check availability, and book — while giving local operators a simple back-office to manage their listings.</p>",
+			requirements:
+				'<ul><li>Public listings pages with photos, descriptions, and pricing for at least four operator profiles (we will supply sample content)</li><li>Availability calendar and booking flow with guest details, party size, and dates</li><li>Mobile-money checkout via the Monime sandbox (test mode is fine for the MVP)</li><li>Operator dashboard: create/edit listings, see upcoming bookings, mark check-ins</li><li>Confirmation email + itinerary to the guest after booking</li><li>Copy available in both Krio and English (UI toggle)</li></ul>',
+			deliverables:
+				'<ul><li>Deployed URL with at least one demo operator account and one demo guest account</li><li>GitHub repo with README, environment template, and run instructions</li><li>Brief design rationale doc (Figma link or PDF, 2–4 pages) covering the booking and operator flows</li></ul>',
+			prizeTiers: {
+				create: [{ position: 1, amount: 8_000_000 * SLE, label: 'Selected Builder' }]
+			},
+			skills: {
+				create: p1SkillRows.map((s) => ({
+					skillId: s.id,
+					isRequired: p1RequiredSlugs.has(s.slug)
+				}))
+			}
+		}
+	});
+	console.log(`✓ Project: ${p1.title}`);
+
+	// --- Project 2: Clinic Appointment Booking — Bo & Kenema Pilot (PROJECT, ACTIVE, FIXED) ---
+	const p2RequiredSlugs = new Set(['sveltekit', 'typescript', 'sms-gateway']);
+	const p2SkillRows = await prisma.skill.findMany({
+		where: {
+			slug: {
+				in: ['sveltekit', 'typescript', 'sms-gateway', 'postgresql', 'mobile-app-development']
+			}
+		}
+	});
+	const p2 = await prisma.bounty.upsert({
+		where: { slug: 'clinic-appointment-booking-bo-kenema-2026' },
+		update: {},
+		create: {
+			companyProfileId,
+			title: 'Clinic Appointment Booking — Bo & Kenema District Pilot',
+			slug: 'clinic-appointment-booking-bo-kenema-2026',
+			type: BountyType.PROJECT,
+			status: BountyStatus.ACTIVE,
+			compensationType: CompensationType.FIXED,
+			currency: 'SLE',
+			totalPrizePool: 7_500_000 * SLE,
+			numberOfWinners: 1,
+			maxBonusSpots: 0,
+			timeToComplete: '5 weeks',
+			submissionDeadline: future(45),
+			judgingDeadline: future(60),
+			publishedAt: past(4),
+			description:
+				'<p>Build a clinic appointment booking app for a four-clinic pilot across Bo and Kenema districts. The pilot operates outside Freetown, where connectivity is unstable and many patients use feature phones — so the system must lean on SMS for reminders and confirmations, and the patient UI must work well on low-end Android devices.</p>',
+			requirements:
+				"<ul><li>Patient-facing Android-first web UI: pick clinic, pick day/time slot, enter name + phone + reason for visit</li><li>SMS confirmation on booking and SMS reminder 24 hours before the appointment (Africa's Talking or Twilio, sandbox is fine for the pilot)</li><li>Offline-tolerant intake form: works on slow / dropping connections, retries on reconnect</li><li>Clinic-side admin: see today's and tomorrow's schedule, mark show / no-show, cancel slot</li><li>Designed for unstable 2G/3G connectivity in Bo and Kenema — minimise payload, avoid heavy client JS</li></ul>",
+			deliverables:
+				'<ul><li>Deployed URL with at least four seeded clinics (Bo: 2, Kenema: 2) and demo admin accounts</li><li>GitHub repo with README, env template, and a runbook for the clinic admins</li><li>Short walkthrough video (5–8 min) covering a patient booking + an admin checking the daily schedule</li></ul>',
+			prizeTiers: {
+				create: [{ position: 1, amount: 7_500_000 * SLE, label: 'Selected Builder' }]
+			},
+			skills: {
+				create: p2SkillRows.map((s) => ({
+					skillId: s.id,
+					isRequired: p2RequiredSlugs.has(s.slug)
+				}))
+			}
+		}
+	});
+	console.log(`✓ Project: ${p2.title}`);
+
 	// --- Submission on bounty 4 (JUDGING) from the test freelancer ---
 	const existingSubmission = await prisma.submission.findUnique({
 		where: { bountyId_freelancerProfileId: { bountyId: b4.id, freelancerProfileId } }
@@ -276,6 +448,10 @@ async function main() {
 	console.log('ACTIVE   Community Skills Marketplace UI Design');
 	console.log('JUDGING  WhatsApp Job Alert Bot (+ 1 submission from freelancer@fow.sl)');
 	console.log('DONE     Krio Tech Content Challenge (completed, winners announced)');
+	console.log('ACTIVE   Pharmacy Stock-Out Open Dataset — Freetown');
+	console.log('ACTIVE   Diaspora Remittance Fee Comparator — SL Corridors');
+	console.log('ACTIVE   Tourism Booking MVP — Banana Islands & Tiwai Island (PROJECT)');
+	console.log('ACTIVE   Clinic Appointment Booking — Bo & Kenema District Pilot (PROJECT)');
 
 	await prisma.$disconnect();
 }
