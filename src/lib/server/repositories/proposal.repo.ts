@@ -100,6 +100,10 @@ export async function listForProject(projectId: string): Promise<ProposalForComp
 	});
 }
 
+export async function countForProject(projectId: string): Promise<number> {
+	return prisma.projectProposal.count({ where: { projectId } });
+}
+
 export async function listForFreelancer(
 	freelancerProfileId: string
 ): Promise<ProposalForFreelancer[]> {

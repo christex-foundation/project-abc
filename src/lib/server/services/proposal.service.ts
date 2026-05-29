@@ -111,6 +111,16 @@ export async function listForProject(caller: AuthedUser, projectId: string) {
 	return proposalRepo.listForProject(projectId);
 }
 
+export async function countForProject(caller: AuthedUser, projectId: string): Promise<number> {
+	requireRole(caller, 'COMPANY', 'ADMIN');
+	const project = await projectRepo.findProjectById(projectId);
+	if (!project) throw new AppError('NOT_FOUND', 'Project not found.');
+	if (!(await ownsProject(caller, project.companyProfileId))) {
+		throw new AppError('FORBIDDEN', 'You do not own this project.');
+	}
+	return proposalRepo.countForProject(projectId);
+}
+
 export async function listForFreelancer(caller: AuthedUser) {
 	requireRole(caller, 'FREELANCER');
 	const freelancer = await freelancerRepo.findByUserId(caller.id);
