@@ -271,15 +271,11 @@
 	<Card>
 		<CardHeader>
 			<CardTitle>Wallet</CardTitle>
-			<CardDescription>
-				Receive your bounty earnings and withdraw to mobile money.
-			</CardDescription>
+			<CardDescription>Receive your bounty earnings and withdraw to mobile money.</CardDescription>
 		</CardHeader>
 		<CardContent class="space-y-4">
 			{#if !accountId}
-				<p class="text-sm text-zinc-500">
-					Activate your wallet to receive prize payouts.
-				</p>
+				<p class="text-sm text-zinc-500">Activate your wallet to receive prize payouts.</p>
 				<Button onclick={activateWallet} disabled={activating} variant="outline">
 					{activating ? 'Activating…' : 'Activate wallet'}
 				</Button>

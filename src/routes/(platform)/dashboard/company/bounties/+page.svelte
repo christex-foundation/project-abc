@@ -8,8 +8,7 @@
 	let { data, form } = $props();
 
 	const busy = new SvelteSet<string>();
-	const submitFor = (key: string) =>
-		trackSubmit((v) => (v ? busy.add(key) : busy.delete(key)));
+	const submitFor = (key: string) => trackSubmit((v) => (v ? busy.add(key) : busy.delete(key)));
 
 	function confirmCancel(e: Event, title: string, isDraft: boolean) {
 		const msg = isDraft

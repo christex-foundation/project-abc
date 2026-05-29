@@ -1,31 +1,21 @@
-import * as bountyService from '$lib/server/services/bounty.service';
+import * as projectService from '$lib/server/services/project.service';
 import * as skillService from '$lib/server/services/skill.service';
 import type { PageServerLoad } from './$types';
 
 /**
- * Projects feed — alias of the bounties list locked to `type=PROJECT`.
- * Same shape as `/bounties` so it can share components; the `type` query
- * parameter is force-set server-side and not exposed as a user-toggleable
- * filter on this page (the page IS the type).
+ * Projects feed — the standalone Project domain (a one-company-one-contractor
+ * engagement, distinct from the competitive Bounty feed at `/bounties`).
  */
 export const load: PageServerLoad = async ({ url }) => {
 	const params = Object.fromEntries(url.searchParams.entries());
 	const skillIdsAll = url.searchParams.getAll('skillIds');
-	const result = await bountyService.listBounties({
+	const result = await projectService.listProjects({
 		...params,
-		type: 'PROJECT',
 		...(skillIdsAll.length ? { skillIds: skillIdsAll } : {})
 	});
 	const skills = await skillService.listSkills();
 
-	const filterKeys = [
-		'compensationType',
-		'skillIds',
-		'minPrize',
-		'maxPrize',
-		'beforeDeadline',
-		'search'
-	];
+	const filterKeys = ['skillIds', 'minBudget', 'maxBudget', 'search'];
 	const hasFilter = filterKeys.some((k) => url.searchParams.has(k));
 
 	return {
@@ -34,10 +24,8 @@ export const load: PageServerLoad = async ({ url }) => {
 		page: Number(params.page ?? 1),
 		pageSize: Number(params.pageSize ?? 20),
 		filters: {
-			compensationType: params.compensationType ?? '',
-			minPrize: params.minPrize ?? '',
-			maxPrize: params.maxPrize ?? '',
-			beforeDeadline: params.beforeDeadline ?? '',
+			minBudget: params.minBudget ?? '',
+			maxBudget: params.maxBudget ?? '',
 			search: params.search ?? '',
 			skillIds: skillIdsAll
 		},

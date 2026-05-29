@@ -76,7 +76,7 @@
 			<!-- Companies-only Create CTA -->
 			{#if user.role === 'COMPANY'}
 				<a
-					href="/bounties/create"
+					href="/create"
 					class="bg-ink text-cream hover:bg-terracotta hidden items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors sm:inline-flex"
 				>
 					<Plus class="h-4 w-4" />

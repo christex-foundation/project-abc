@@ -48,6 +48,28 @@
 		draftResolution = '';
 	}
 
+	let mediating = $state(false);
+	async function mediate(projectId: string, action: 'refund' | 'release-milestone') {
+		const verb =
+			action === 'refund'
+				? 'refund the remaining escrow to the company and cancel the project'
+				: 'release the current milestone payment to the contractor';
+		if (!confirm(`This will ${verb}. Continue?`)) return;
+		mediating = true;
+		try {
+			const res = await fetch(`/api/admin/projects/${projectId}/${action}`, { method: 'POST' });
+			if (!res.ok) {
+				const j = await res.json().catch(() => ({}));
+				toast.error(j?.error?.message ?? `Failed (${res.status})`);
+				return;
+			}
+			toast.success(action === 'refund' ? 'Escrow refunded.' : 'Milestone released.');
+			await invalidateAll();
+		} finally {
+			mediating = false;
+		}
+	}
+
 	async function save(d: Row) {
 		saving = true;
 		try {
@@ -122,12 +144,24 @@
 			{#each data.disputes as d (d.id)}
 				<TableRow>
 					<TableCell>
-						<a
-							href={`/admin/bounties/${d.bounty.id ?? ''}`}
-							class="font-medium text-zinc-900 hover:text-indigo-600"
-						>
-							{d.bounty.title}
-						</a>
+						{#if d.bounty}
+							<a
+								href={`/admin/bounties/${d.bounty.id}`}
+								class="font-medium text-zinc-900 hover:text-indigo-600"
+							>
+								{d.bounty.title}
+							</a>
+						{:else if d.project}
+							<a
+								href={`/projects/${d.project.slug}`}
+								class="font-medium text-zinc-900 hover:text-indigo-600"
+							>
+								{d.project.title}
+								<span class="ml-1 text-[10px] tracking-wide text-zinc-400 uppercase">project</span>
+							</a>
+						{:else}
+							<span class="text-zinc-400">—</span>
+						{/if}
 					</TableCell>
 					<TableCell class="text-xs">
 						{#if d.raisedBy}
@@ -157,7 +191,7 @@
 	open={openId !== null}
 	onClose={closeDrawer}
 	title="Review dispute"
-	description={openRow ? openRow.bounty.title : ''}
+	description={openRow ? (openRow.bounty?.title ?? openRow.project?.title ?? '') : ''}
 	width="md"
 >
 	{#if openRow}
@@ -199,6 +233,31 @@
 					When set, this also moves status to Resolved and notifies the raiser.
 				</p>
 			</div>
+
+			{#if openRow.project}
+				<div class="rounded-md border border-zinc-200 p-3">
+					<p class="text-xs font-semibold text-zinc-700">Escrow mediation</p>
+					<p class="mt-1 text-[11px] text-zinc-500">
+						Resolve the money directly. These act on the project's remaining escrow.
+					</p>
+					<div class="mt-2 flex flex-wrap gap-2">
+						<Button
+							variant="outline"
+							disabled={mediating}
+							onclick={() => openRow?.project && mediate(openRow.project.id, 'refund')}
+						>
+							Refund remaining → company
+						</Button>
+						<Button
+							variant="outline"
+							disabled={mediating}
+							onclick={() => openRow?.project && mediate(openRow.project.id, 'release-milestone')}
+						>
+							Release milestone → contractor
+						</Button>
+					</div>
+				</div>
+			{/if}
 		</div>
 	{/if}
 	{#snippet footer()}

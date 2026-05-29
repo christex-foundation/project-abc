@@ -5,6 +5,7 @@ import * as notificationService from '$lib/server/services/notification.service'
 import * as creditService from '$lib/server/services/credit.service';
 import * as referralService from '$lib/server/services/referral.service';
 import * as freelancerService from '$lib/server/services/freelancer.service';
+import * as reviewService from '$lib/server/services/review.service';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals, parent }) => {
@@ -30,6 +31,7 @@ export const load: PageServerLoad = async ({ locals, parent }) => {
 		referralService.getMyReferralStatus(caller),
 		freelancerService.getMyProfile(caller)
 	]);
+	const rating = await reviewService.getAggregate(caller.id);
 	const isProfileComplete =
 		!!profile.headline?.trim() && !!profile.bio?.trim() && profile.skills.length > 0;
 	return {
@@ -40,6 +42,7 @@ export const load: PageServerLoad = async ({ locals, parent }) => {
 		credits,
 		creditTransactions,
 		referrals,
+		rating,
 		isProfileComplete
 	};
 };

@@ -46,7 +46,7 @@
 				</h1>
 			</div>
 			<Button
-				href="/bounties/create"
+				href="/create"
 				class="bg-ink text-cream hover:bg-terracotta inline-flex items-center gap-1.5"
 			>
 				{#snippet children()}
@@ -68,7 +68,10 @@
 				{stats.activeBountiesCount}
 			</p>
 		</div>
-		<div class="border-bone bg-cream rounded-2xl border px-5 py-5">
+		<a
+			href="/dashboard/company/projects"
+			class="border-bone bg-cream hover:border-ink rounded-2xl border px-5 py-5 transition-colors"
+		>
 			<p class="text-ink-soft text-[11px] tracking-wide uppercase">Active projects</p>
 			<p
 				class="font-display text-ink mt-2 text-3xl font-semibold tabular-nums"
@@ -76,7 +79,7 @@
 			>
 				{stats.activeProjectsCount}
 			</p>
-		</div>
+		</a>
 		<div class="border-bone bg-cream rounded-2xl border px-5 py-5">
 			<p class="text-ink-soft text-[11px] tracking-wide uppercase">Total submissions</p>
 			<p
@@ -130,7 +133,7 @@
 			description="Post your first bounty or project to start receiving submissions."
 		>
 			{#snippet action()}
-				<Button href="/bounties/create">Create a bounty</Button>
+				<Button href="/create">Post work</Button>
 			{/snippet}
 		</EmptyState>
 	{:else}

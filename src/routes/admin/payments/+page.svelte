@@ -102,12 +102,23 @@
 			{#each data.payments as p (p.id)}
 				<TableRow>
 					<TableCell>
-						<a
-							href={`/admin/bounties/${p.bounty.id ?? ''}`}
-							class="font-medium text-zinc-900 hover:text-indigo-600"
-						>
-							{p.bounty.title}
-						</a>
+						{#if p.bounty}
+							<a
+								href={`/admin/bounties/${p.bounty.id}`}
+								class="font-medium text-zinc-900 hover:text-indigo-600"
+							>
+								{p.bounty.title}
+							</a>
+						{:else if p.project}
+							<a
+								href={`/projects/${p.project.slug}`}
+								class="font-medium text-zinc-900 hover:text-indigo-600"
+							>
+								{p.project.title}
+							</a>
+						{:else}
+							<span class="text-zinc-400">—</span>
+						{/if}
 					</TableCell>
 					<TableCell><StatusBadge value={p.type} /></TableCell>
 					<TableCell><StatusBadge value={p.status} /></TableCell>
