@@ -114,8 +114,8 @@
 		}}
 	>
 		<div>
-			<label class="block text-xs font-medium text-zinc-600">Status</label>
-			<Select class="mt-1 !w-40" bind:value={status}>
+			<label for="filter-status" class="block text-xs font-medium text-zinc-600">Status</label>
+			<Select id="filter-status" class="mt-1 !w-40" bind:value={status}>
 				<option value="">Any</option>
 				<option value="OPEN">Open</option>
 				<option value="IN_REVIEW">In review</option>

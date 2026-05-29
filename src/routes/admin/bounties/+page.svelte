@@ -85,15 +85,21 @@
 		}}
 	>
 		<div class="min-w-64 flex-1">
-			<label class="block text-xs font-medium text-zinc-600">Search</label>
+			<label for="filter-search" class="block text-xs font-medium text-zinc-600">Search</label>
 			<div class="relative mt-1">
 				<Search class="absolute top-2.5 left-2.5 h-4 w-4 text-zinc-400" />
-				<Input class="!pl-8" type="search" bind:value={search} placeholder="title or slug" />
+				<Input
+					id="filter-search"
+					class="!pl-8"
+					type="search"
+					bind:value={search}
+					placeholder="title or slug"
+				/>
 			</div>
 		</div>
 		<div>
-			<label class="block text-xs font-medium text-zinc-600">Status</label>
-			<Select class="mt-1 !w-44" bind:value={status}>
+			<label for="filter-status" class="block text-xs font-medium text-zinc-600">Status</label>
+			<Select id="filter-status" class="mt-1 !w-44" bind:value={status}>
 				<option value="">Any</option>
 				<option value="DRAFT">Draft</option>
 				<option value="FUNDED">Funded</option>
@@ -104,8 +110,8 @@
 			</Select>
 		</div>
 		<div>
-			<label class="block text-xs font-medium text-zinc-600">Type</label>
-			<Select class="mt-1 !w-36" bind:value={type}>
+			<label for="filter-type" class="block text-xs font-medium text-zinc-600">Type</label>
+			<Select id="filter-type" class="mt-1 !w-36" bind:value={type}>
 				<option value="">Any</option>
 				<option value="BOUNTY">Bounty</option>
 				<option value="PROJECT">Project</option>
