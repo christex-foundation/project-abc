@@ -15,13 +15,8 @@ import { AppError } from '../http';
 import { isAiEnabled } from '../ai/ai-flag';
 import { checkRateLimit } from '../ai/rate-limit';
 import { completeJSON, MODEL_DEFAULT } from '../ai/claude';
-import {
-	scopeInput,
-	scopeOutput,
-	type ScopeInput,
-	type ScopeResult,
-	type ResolvedSkill
-} from '$lib/validators/ai';
+import { buildSystem, buildUserMessage } from '../ai/scope.prompt';
+import { scopeInput, scopeOutput, type ScopeResult, type ResolvedSkill } from '$lib/validators/ai';
 import * as skillRepo from '../repositories/skill.repo';
 
 const DAY_MS = 86_400_000;
@@ -141,25 +136,4 @@ export async function scopeWork(caller: AuthedUser, raw: unknown): Promise<Scope
 	// scopeOutput.superRefine guarantees the matching draft is present, so this is
 	// only reachable on a malformed-but-valid edge; treat as a hard failure.
 	throw new AppError('INTERNAL', 'AI returned an incomplete draft.');
-}
-
-function buildSystem(skillNames: string[]): string {
-	return `You are scoping a piece of work for a company on Future of Work. Decide whether it should be a BOUNTY (one-off competition, prize tiers) or a PROJECT (single contractor, milestone plan), and draft the matching brief.
-
-Rules:
-- Set "type" and fill ONLY the matching draft ("bounty" for BOUNTY, "project" for PROJECT). Leave the other null.
-- Write title/description/requirements/deliverables as plain text (no HTML, no markdown headings). Be concrete and usable as a brief.
-- For BOUNTY: use FIXED compensation with one prize tier per winner (positions 1..numberOfWinners); position 99 is an optional bonus tier. All amounts are minor units (SLE × 100). Use "submissionInDays" (whole days from now) — never a calendar date.
-- For PROJECT: provide a milestone plan (each a title, minor-unit amount, and optional dueInDays). The budget cap, if given, is the sum of milestone amounts.
-- Choose skills ONLY from this exact list, using the names verbatim. If none fit, return an empty skills array:
-${skillNames.join(', ')}`;
-}
-
-function buildUserMessage(input: ScopeInput): string {
-	const parts = [`What the company needs:\n${input.need}`];
-	if (input.budgetMinor != null) {
-		parts.push(`Approximate budget: ${input.budgetMinor} (minor units, SLE).`);
-	}
-	if (input.timeline) parts.push(`Timeline hint: ${input.timeline}`);
-	return parts.join('\n\n');
 }

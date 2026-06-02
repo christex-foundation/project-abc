@@ -18,7 +18,8 @@ import { requireRole, type AuthedUser } from '../auth-helpers';
 import { AppError } from '../http';
 import { isAiEnabled } from '../ai/ai-flag';
 import { checkRateLimit } from '../ai/rate-limit';
-import { completeJSON, MODEL_DEFAULT } from '../ai/claude';
+import { completeJSON, MODEL_FAST } from '../ai/claude';
+import { buildSystem, buildUserMessage } from '../ai/coach.prompt';
 import { coachInput, coachOutput, type CoachResult } from '$lib/validators/ai';
 import * as bountyService from './bounty.service';
 import * as projectService from './project.service';
@@ -62,10 +63,12 @@ export async function coachWork(caller: AuthedUser, raw: unknown): Promise<Coach
 	}
 
 	const out = await completeJSON({
+		// Haiku chosen via scripts/ai-eval.ts (Phase 4): 100% structural pass at ~1/3
+		// the cost of Sonnet with comparable latency. See ai-integration.md Results.
 		schema: coachOutput,
-		model: MODEL_DEFAULT,
+		model: MODEL_FAST,
 		system: buildSystem(kind),
-		messages: [{ role: 'user', content: `${brief}\n\nABOUT THE FREELANCER:\n${profileSummary}` }]
+		messages: [{ role: 'user', content: buildUserMessage(brief, profileSummary) }]
 	});
 
 	// Null = key removed mid-request; surface the same clean unavailable error.
@@ -85,27 +88,9 @@ export async function coachWork(caller: AuthedUser, raw: unknown): Promise<Coach
 }
 
 // --- prompt building --------------------------------------------------------
-
-function buildSystem(kind: 'BOUNTY' | 'PROJECT'): string {
-	const target =
-		kind === 'BOUNTY'
-			? 'a BOUNTY (a one-off competition — the freelancer submits work and the company picks winners)'
-			: 'a PROJECT (a single contractor is chosen from proposals, then delivers a milestone plan)';
-	const coverLetterRule =
-		kind === 'PROJECT'
-			? 'Fill "communication.coverLetter" with a short, editable proposal skeleton the freelancer can adapt and submit.'
-			: 'Set "communication.coverLetter" to null — a bounty submission has no cover letter.';
-	return `You are coaching a freelancer on Future of Work who is about to take on ${target}.
-
-Your job is to help them (a) APPROACH the work well and (b) COMMUNICATE professionally with the company. Coach with BALANCE: help them win THIS piece of work now, and also teach the transferable habit that makes them ready for global platforms like Upwork.
-
-Rules:
-- "approach": 2–6 concrete points — how to break the work down, what the brief is really asking for, what to prioritise, and the common pitfalls to avoid. For each point, "whyUpwork" is one short sentence on why the same habit pays off on Upwork too.
-- "communication.message": a short, professional draft note the freelancer could send the company (warm, specific, no fluff).
-- "communication.clarifyingQuestions": 0–6 sharp questions that de-risk the work before starting.
-- ${coverLetterRule}
-- Plain text only — no HTML, no markdown headings. Base everything only on the brief and the freelancer profile provided; do not invent facts.`;
-}
+// buildSystem / buildUserMessage live in ../ai/coach.prompt (imported above) so
+// the eval harness can reuse them without the service's import graph. The brief
+// builders below stay here — they depend on the loaded bounty/project shapes.
 
 function buildBountyBrief(b: Awaited<ReturnType<typeof bountyService.getBounty>>): string {
 	const skills = b.skills.map((s) => s.skill.name).join(', ');
