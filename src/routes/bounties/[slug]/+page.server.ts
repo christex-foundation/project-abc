@@ -2,6 +2,7 @@ import { error } from '@sveltejs/kit';
 import { env } from '$env/dynamic/public';
 import { AppError } from '$lib/server/http';
 import * as bountyService from '$lib/server/services/bounty.service';
+import { isAiEnabled } from '$lib/server/ai/ai-flag';
 import { buildBountyJsonLd, stripHtml } from '$lib/server/seo';
 import type { PageServerLoad } from './$types';
 
@@ -11,6 +12,8 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		const origin = env.PUBLIC_APP_URL || 'http://localhost:5173';
 		return {
 			bounty,
+			// Gates the freelancer "Coach me" panel; off → panel is absent.
+			aiEnabled: await isAiEnabled(),
 			jsonLd: buildBountyJsonLd(bounty, origin),
 			pageMetaTags: {
 				title: bounty.title,

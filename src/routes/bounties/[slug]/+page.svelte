@@ -2,6 +2,7 @@
 	import { MetaTags } from 'svelte-meta-tags';
 	import { page } from '$app/state';
 	import RichTextView from '$lib/components/editor/RichTextView.svelte';
+	import CoachPanel from '$lib/components/ai/CoachPanel.svelte';
 	import {
 		Button,
 		Card,
@@ -204,6 +205,10 @@
 						<p class="mt-2 text-xs text-zinc-500">* = required</p>
 					</CardContent>
 				</Card>
+			{/if}
+
+			{#if page.data.user?.role === 'FREELANCER'}
+				<CoachPanel kind="BOUNTY" bountyId={b.id} slug={b.slug} aiEnabled={data.aiEnabled} />
 			{/if}
 
 			{#if page.data.user?.role === 'FREELANCER' && b.status === 'ACTIVE' && !countdown.ago}
