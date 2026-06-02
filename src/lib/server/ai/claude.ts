@@ -58,14 +58,30 @@ export type CompleteJSONOptions<T> = {
 	maxTokens?: number;
 };
 
+/** Validated output plus the metadata the eval harness needs (cost + latency). */
+export type CompleteJSONMeta<T> = {
+	data: T;
+	/** Token counts from the API response, used to compute cost. */
+	usage: { inputTokens: number; outputTokens: number };
+	/** The model actually used (echoes opts.model / MODEL_DEFAULT). */
+	model: string;
+	/** Wall-clock latency of the messages.create call, in milliseconds. */
+	latencyMs: number;
+};
+
 /**
- * Run a Claude completion that is forced to return JSON matching `schema`.
+ * Like {@link completeJSON} but also returns token usage and latency. This is
+ * the real implementation; `completeJSON` is a thin wrapper that drops the
+ * metadata. Only the eval harness (`scripts/ai-eval.ts`) needs the metadata —
+ * the three services keep calling `completeJSON` unchanged.
  *
  * Returns `null` when no ANTHROPIC_API_KEY is configured (graceful degradation).
  * Throws `AppError('INTERNAL', …)` on a hard failure (API error, no tool_use
  * block, or schema validation failure) so callers can surface a clean error.
  */
-export async function completeJSON<T>(opts: CompleteJSONOptions<T>): Promise<T | null> {
+export async function completeJSONWithMeta<T>(
+	opts: CompleteJSONOptions<T>
+): Promise<CompleteJSONMeta<T> | null> {
 	const client = getClient();
 	if (!client) return null;
 
@@ -74,6 +90,7 @@ export async function completeJSON<T>(opts: CompleteJSONOptions<T>): Promise<T |
 	const fullSystem = [AI_SYSTEM_PREAMBLE, system].filter(Boolean).join('\n\n');
 
 	try {
+		const startedAt = Date.now();
 		const res = await client.messages.create({
 			model,
 			max_tokens: maxTokens,
@@ -88,14 +105,35 @@ export async function completeJSON<T>(opts: CompleteJSONOptions<T>): Promise<T |
 			],
 			tool_choice: { type: 'tool', name: TOOL_NAME }
 		});
+		const latencyMs = Date.now() - startedAt;
 
 		const block = res.content.find((b) => b.type === 'tool_use');
 		if (!block || block.type !== 'tool_use') {
 			throw new Error('Claude did not return a tool_use block');
 		}
-		return schema.parse(block.input);
+		return {
+			data: schema.parse(block.input),
+			usage: {
+				inputTokens: res.usage.input_tokens,
+				outputTokens: res.usage.output_tokens
+			},
+			model,
+			latencyMs
+		};
 	} catch (e) {
 		console.error('[claude] completeJSON failed:', e);
 		throw new AppError('INTERNAL', 'AI request failed.');
 	}
+}
+
+/**
+ * Run a Claude completion that is forced to return JSON matching `schema`.
+ *
+ * Returns `null` when no ANTHROPIC_API_KEY is configured (graceful degradation).
+ * Throws `AppError('INTERNAL', …)` on a hard failure (API error, no tool_use
+ * block, or schema validation failure) so callers can surface a clean error.
+ */
+export async function completeJSON<T>(opts: CompleteJSONOptions<T>): Promise<T | null> {
+	const meta = await completeJSONWithMeta(opts);
+	return meta ? meta.data : null;
 }
