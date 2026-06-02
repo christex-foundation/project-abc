@@ -233,6 +233,68 @@ experiment is for.
 - `tsx scripts/ai-eval.ts` runs clean and prints a comparison table. A model + prompt choice per
   flow is recorded here with rationale.
 
+### Results
+
+Harness: `scripts/ai-eval.ts` (`npm run ai:eval`) — 8 labelled scope fixtures + 6 coach fixtures
+× Haiku/Sonnet/Opus, scored with deterministic structural checks (classification, tiers/milestones
+present, positive minor-unit amounts, skills resolve to real `Skill` rows, conditional cover
+letter). Flow 2 excluded (needs seeded proposals; verified manually). Run 2 June 2026 (figures from
+the latest of two runs) — cost uses the approximate `PRICE_PER_MTOK` table, so read it as
+**relative**.
+
+**RQ1 — Model per flow.** Latest run:
+
+| Flow           | Model  | Classif | Struct | Avg latency | Avg cost/call |
+| -------------- | ------ | ------- | ------ | ----------- | ------------- |
+| Flow 1 decider | Haiku  | 88%     | 75%    | ~7.8s       | ~$0.005       |
+| Flow 1 decider | Sonnet | 100%    | 100%   | ~14.5s      | ~$0.018       |
+| Flow 1 decider | Opus   | 100%    | 100%   | ~14.3s      | ~$0.118       |
+| Flow 3 coach   | Haiku  | —       | 100%   | ~19s        | ~$0.009       |
+| Flow 3 coach   | Sonnet | —       | 100%   | ~31s        | ~$0.025       |
+| Flow 3 coach   | Opus   | —       | 100%   | ~22s        | ~$0.124       |
+
+- **Decider → Sonnet (`MODEL_DEFAULT`, unchanged).** Sonnet was the only model at 100%/100% in
+  **both** runs — the consistent choice. **Haiku is too unreliable for the decider**: it swung from
+  100%/88% (run 1, with two hallucinated off-taxonomy skills) to 88%/75% (run 2). **Opus matches
+  Sonnet's quality but not consistently and never cheaply** — it hit 100%/100% in run 2 but in run 1
+  produced a misclassification _and_ a malformed tool-output (`ZodError`: missing `type`/
+  `reasoning`), all at ~6.6× Sonnet's cost. No upside over Sonnet for this flow.
+- **Coach → Haiku (`MODEL_FAST`).** All three models hit 100% structural across all 6 coach
+  fixtures in both runs; Haiku does it at ~1/3 Sonnet's cost and lower latency, with no quality
+  loss. **Changed `coach.service.ts` from `MODEL_DEFAULT` to `MODEL_FAST`.**
+
+**RQ3 — Skill grounding.** Full-taxonomy-in-prompt held up on Sonnet (no hallucinations in either
+run), but Haiku invented off-taxonomy skills on the decider ("Audio Production", "Music
+Composition" on the jingle case). The service-layer reconciliation already drops these, so nothing
+bad persists — but it's another reason to keep the decider off Haiku, and a signal that an
+embeddings-assisted candidate shortlist would help if we ever move it to a cheaper model. Left as a
+Phase 5 follow-up.
+
+**RQ2 — Single-shot vs conversational.** One-shot is good enough on these fixtures (100%
+classification on Sonnet); no evidence yet that a multi-turn diagnostic is needed. Revisit only if
+real-world ambiguous inputs show one-shot misclassifying. Deferred.
+
+**RQ4 — Quality logging.** Deferred to Phase 5 (`AiInteraction` table) as planned.
+
+**Hardening — the phase's other two deliverables, scoped down by decision:**
+
+- **Streaming → deferred; replaced with a staged loading state.** Both AI calls return a single
+  Zod-validated structured object (forced tool-use), so there is no trustworthy partial output to
+  stream token-by-token. Instead `CoachPanel.svelte` and the `/create` "Ask AI to draft this"
+  action cycle staged labels ("Reading your brief…" → "Deciding…" → "Drafting…") while awaiting the
+  response — perceived-latency relief on 3G without the complexity. Real streaming revisited only
+  if the wait proves too long in the field.
+- **Rate-limit / cost-cap confirmation → deferred.** The in-memory per-user limiter
+  (`rate-limit.ts`, `checkRateLimit`) is unchanged and still gates each flow; this phase did not
+  add a spend cap or a repeated-call test. The eval calls `completeJSONWithMeta` directly and so
+  bypasses the limiter by design (it must make many calls). A cheap follow-up: a no-API unit check
+  that `checkRateLimit` trips after N calls.
+
+**Caveats.** Two runs on a small fixture set; output is non-deterministic and Haiku/Opus quality
+swung noticeably between them on the decider. Sonnet (decider) and Haiku (coach) were stable in
+both, and the cost/quality gaps are wide enough that the picks are safe — but treat absolute
+numbers as indicative, not exact, and re-run `npm run ai:eval` after any prompt change.
+
 ---
 
 ## Phase 5 — Beyond the slice (deferred, not in this experiment)
