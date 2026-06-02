@@ -19,7 +19,8 @@
 		"db:studio": "prisma studio",
 		"seed:invite": "tsx scripts/seed-invite.ts",
 		"seed:projects": "tsx scripts/dev-projects.ts",
-		"gen:icons": "tsx scripts/generate-pwa-icons.ts"
+		"gen:icons": "tsx scripts/generate-pwa-icons.ts",
+		"ai:eval": "tsx scripts/ai-eval.ts"
 	},
 	"prisma": {
 		"seed": "tsx prisma/seed.ts"
