@@ -21,10 +21,28 @@
 	let error = $state<string | null>(null);
 	let result = $state<CoachResult | null>(null);
 
+	// Staged loading labels — perceived latency on 3G without real streaming (the
+	// response is a single validated object, so there's nothing to stream yet).
+	const LOADING_STEPS = ['Reading the brief…', 'Planning your approach…', 'Drafting your message…'];
+	let stepIndex = $state(0);
+	let stepTimer: ReturnType<typeof setInterval> | null = null;
+
+	function startSteps() {
+		stepIndex = 0;
+		stepTimer = setInterval(() => {
+			stepIndex = Math.min(stepIndex + 1, LOADING_STEPS.length - 1);
+		}, 1800);
+	}
+	function stopSteps() {
+		if (stepTimer) clearInterval(stepTimer);
+		stepTimer = null;
+	}
+
 	async function coachMe() {
 		loading = true;
 		error = null;
 		result = null;
+		startSteps();
 		try {
 			const body = kind === 'BOUNTY' ? { bountyId } : { projectId };
 			const res = await fetch('/api/ai/coach', {
@@ -42,6 +60,7 @@
 		} catch {
 			error = 'Something went wrong. Please try again.';
 		} finally {
+			stopSteps();
 			loading = false;
 		}
 	}
@@ -87,7 +106,7 @@
 					<p class="text-red-600">{error}</p>
 				{/if}
 				<Button class="w-full" onclick={coachMe} disabled={loading}>
-					{loading ? 'Thinking…' : 'Coach me'}
+					{loading ? LOADING_STEPS[stepIndex] : 'Coach me'}
 				</Button>
 			{:else}
 				<div class="space-y-3">

@@ -28,6 +28,27 @@
 	let error = $state<string | null>(null);
 	let result = $state<ScopeResult | null>(null);
 
+	// Staged loading labels — perceived latency on 3G without real streaming (the
+	// response is a single validated object, so there's nothing to stream yet).
+	const LOADING_STEPS = [
+		'Reading your brief…',
+		'Deciding bounty vs project…',
+		'Drafting the brief…'
+	];
+	let stepIndex = $state(0);
+	let stepTimer: ReturnType<typeof setInterval> | null = null;
+
+	function startSteps() {
+		stepIndex = 0;
+		stepTimer = setInterval(() => {
+			stepIndex = Math.min(stepIndex + 1, LOADING_STEPS.length - 1);
+		}, 1800);
+	}
+	function stopSteps() {
+		if (stepTimer) clearInterval(stepTimer);
+		stepTimer = null;
+	}
+
 	async function askAi() {
 		if (need.trim().length < 10) {
 			error = 'Describe what you need in a sentence or two.';
@@ -36,6 +57,7 @@
 		loading = true;
 		error = null;
 		result = null;
+		startSteps();
 		try {
 			const major = budget.trim() ? Number(budget) : NaN;
 			const budgetMinor = Number.isFinite(major) ? Math.round(major * 100) : null;
@@ -58,6 +80,7 @@
 		} catch {
 			error = 'Something went wrong. Please try again.';
 		} finally {
+			stopSteps();
 			loading = false;
 		}
 	}
@@ -220,7 +243,7 @@
 							<p class="text-sm text-red-600">{error}</p>
 						{/if}
 						<Button onclick={askAi} disabled={loading}>
-							{loading ? 'Thinking…' : 'Ask AI to draft this'}
+							{loading ? LOADING_STEPS[stepIndex] : 'Ask AI to draft this'}
 						</Button>
 					</div>
 				{:else}
