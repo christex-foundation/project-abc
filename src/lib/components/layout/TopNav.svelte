@@ -125,7 +125,12 @@
 						)}
 					>
 						{#if user.role !== 'COMPANY' && avatarSrc}
-							<UserAvatar src={avatarSrc} alt={user.name ?? user.email} size={28} class="ring-bone ring-1" />
+							<UserAvatar
+								src={avatarSrc}
+								alt={user.name ?? user.email}
+								size={28}
+								class="ring-bone ring-1"
+							/>
 						{:else}
 							<span
 								class="bg-terracotta text-cream inline-flex h-7 w-7 items-center justify-center rounded-full font-mono text-[11px] font-semibold"

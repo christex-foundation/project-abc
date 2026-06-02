@@ -25,12 +25,12 @@ marketplace, learn the right approach, then expand.
 
 ### Locked decisions
 
-| Decision | Choice | Implication |
-| --- | --- | --- |
-| **Scope** | Thin slice of all three flows | Company decider + project proposal ranking + freelancer coach, each minimal |
-| **Autonomy** | Suggest & draft, human approves | AI **never** writes to the DB or sends messages. It returns drafts/rankings the user reviews and submits through existing sanitized paths |
-| **Provider** | Anthropic Claude for reasoning/generation | Keep OpenAI for embeddings only (already live) |
-| **Coaching style** | Balance | Coach toward winning now **and** explain the transferable Upwork-ready principle |
+| Decision           | Choice                                    | Implication                                                                                                                               |
+| ------------------ | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| **Scope**          | Thin slice of all three flows             | Company decider + project proposal ranking + freelancer coach, each minimal                                                               |
+| **Autonomy**       | Suggest & draft, human approves           | AI **never** writes to the DB or sends messages. It returns drafts/rankings the user reviews and submits through existing sanitized paths |
+| **Provider**       | Anthropic Claude for reasoning/generation | Keep OpenAI for embeddings only (already live)                                                                                            |
+| **Coaching style** | Balance                                   | Coach toward winning now **and** explain the transferable Upwork-ready principle                                                          |
 
 ### What already exists (do not rebuild)
 
@@ -49,7 +49,7 @@ marketplace, learn the right approach, then expand.
   `respondError(e)`.
 - **Money in minor units** (Int), currency defaults to `SLE`.
 - **Rich text is sanitised HTML on write** via `sanitizeRichText`; rendered via `{@html}`. AI text
-  only becomes stored HTML *after* a human submits it through the normal create path.
+  only becomes stored HTML _after_ a human submits it through the normal create path.
 - **Sponsor `notes`/`label`/`score` never reach freelancers** — `selectForFreelancer` boundary.
 - **Mobile-first**: < 200KB initial JS, < 3s FCP on 3G; AI must degrade gracefully.
 - **Background work is inline-only at MVP** via `event.platform.context.waitUntil(...)`.
@@ -63,7 +63,7 @@ marketplace, learn the right approach, then expand.
    state. The platform must stay fully usable with no AI key.
 2. **AI output is untrusted input.** Every Claude response is validated through a Zod schema before
    it reaches a service consumer or the client. Never `{@html}` raw model output.
-3. **Human-in-the-loop is non-negotiable for this experiment.** AI produces *drafts*; the existing
+3. **Human-in-the-loop is non-negotiable for this experiment.** AI produces _drafts_; the existing
    sanitized create/submit paths remain the only writers to the DB.
 4. **Flag-gated and off by default.** A platform `Setting` toggle plus key presence gate every AI
    endpoint, so we can dark-launch and kill instantly.
@@ -78,6 +78,7 @@ marketplace, learn the right approach, then expand.
 thin to build. No user-facing behaviour yet.
 
 **Deliverables**
+
 - Add dependency `@anthropic-ai/sdk`.
 - Add `ANTHROPIC_API_KEY` to `.env.example` (plan §16 already lists it as optional).
 - `src/lib/server/ai/claude.ts`:
@@ -96,10 +97,12 @@ thin to build. No user-facing behaviour yet.
   (In-memory per-instance counter is acceptable at MVP; note the limitation.)
 
 **Conventions**
-- Follow the fire-and-forget `enqueue` pattern only where appropriate; note that AI *drafting*
+
+- Follow the fire-and-forget `enqueue` pattern only where appropriate; note that AI _drafting_
   calls are **synchronous** (the user waits), unlike embeddings.
 
 **Verification / exit criteria**
+
 - `npm run check` passes. App boots with **no** `ANTHROPIC_API_KEY` set; `isAiEnabled()` returns
   `false`; nothing crashes. With key + flag on, a throwaway `completeJSON` call against a tiny
   schema returns a validated object.
@@ -112,6 +115,7 @@ thin to build. No user-facing behaviour yet.
 drafts the full brief, prefilling the existing create form. Suggest-only.
 
 **Deliverables**
+
 - `src/lib/validators/ai.ts`: `scopeInput` (need text + optional budget/timeline) and `scopeOutput`
   (`{ type: 'BOUNTY'|'PROJECT', reasoning, draft }`) where `draft` matches the create-form shapes:
   - **BOUNTY** → title, description, requirements, deliverables, suggested prize tiers
@@ -132,8 +136,9 @@ drafts the full brief, prefilling the existing create form. Suggest-only.
 **Maps to** `ai-features.md` #7 (Brief Builder) + #9 (Splitter), fused into the decision.
 
 **Verification / exit criteria**
-- *"I need one logo, best entry wins"* → `BOUNTY` with prize tiers.
-- *"I want a small 4-page website for my shop"* → `PROJECT` with a sensible milestone plan.
+
+- _"I need one logo, best entry wins"_ → `BOUNTY` with prize tiers.
+- _"I want a small 4-page website for my shop"_ → `PROJECT` with a sensible milestone plan.
 - Prefill loads into the create form; submitting still routes through the sanitized create path.
 - Suggested skills resolve to real `Skill` rows (no hallucinated skills persisted).
 
@@ -145,6 +150,7 @@ drafts the full brief, prefilling the existing create form. Suggest-only.
 tasks, with reasoning — building on existing embedding matches. Sponsor-facing only.
 
 **Deliverables**
+
 - `src/lib/validators/ai.ts`: `proposalRankOutput` —
   `[{ freelancerProfileId, rank, matchScore, strengths[], risks[], suggestedQuestions[] }]`.
 - `src/lib/server/services/proposal-rank.service.ts`:
@@ -162,6 +168,7 @@ tasks, with reasoning — building on existing embedding matches. Sponsor-facing
 **Maps to** the deferred plan §10 "Claude ranking" layer, scoped to project proposals.
 
 **Verification / exit criteria**
+
 - Seed a project + several proposals (`npm run seed:projects`) → owner gets a ranked list with
   per-candidate strengths/risks/questions. A freelancer hitting the endpoint gets `FORBIDDEN`.
 - With AI disabled, the panel falls back to embedding order and says so.
@@ -174,8 +181,9 @@ tasks, with reasoning — building on existing embedding matches. Sponsor-facing
 how to communicate with the company — balanced toward winning now and Upwork-ready habits.
 
 **Deliverables**
+
 - `src/lib/validators/ai.ts`: `coachInput` (`{ bountyId } | { projectId }`) and `coachOutput`:
-  - **approach**: how to break the work down, what the brief is *really* asking, what to
+  - **approach**: how to break the work down, what the brief is _really_ asking, what to
     prioritise, common pitfalls.
   - **communication**: a draft professional message / clarifying questions for the company; for
     projects, a `coverLetter` skeleton.
@@ -190,6 +198,7 @@ how to communicate with the company — balanced toward winning now and Upwork-r
 **Maps to** `ai-features.md` #3 (Submission Coach), extended with the communication/Upwork angle.
 
 **Verification / exit criteria**
+
 - As a freelancer, "Coach me" on a bounty returns approach + communication drafts with
   transferable-skill notes. Editing + submitting still passes through `sanitizeRichText`.
 
@@ -201,6 +210,7 @@ how to communicate with the company — balanced toward winning now and Upwork-r
 experiment is for.
 
 **Deliverables**
+
 - `scripts/ai-eval.ts` (tsx, mirrors existing `scripts/`): ~6–10 fixture inputs per flow; prints
   classification accuracy (Flow 1), draft quality, and **cost/latency per model** so we can
   compare Sonnet vs Haiku vs Opus per flow.
@@ -210,6 +220,7 @@ experiment is for.
 - Document findings inline here (a short "Results" subsection per research question).
 
 **Research questions to resolve**
+
 1. **Model per flow** — Sonnet everywhere vs Haiku (coach) / Opus (decider). Measure quality vs
    cost/latency on fixtures.
 2. **Single-shot vs conversational** — the decider may work better as a short multi-turn
@@ -218,6 +229,7 @@ experiment is for.
 4. **Quality logging** — see Phase 5.
 
 **Verification / exit criteria**
+
 - `tsx scripts/ai-eval.ts` runs clean and prints a comparison table. A model + prompt choice per
   flow is recorded here with rationale.
 
@@ -244,6 +256,7 @@ Only after the slice proves out. Each is its own scoped piece of work.
 ## Critical files (slice, Phases 0–4)
 
 **New**
+
 - `src/lib/server/ai/claude.ts` — lazy client + `completeJSON` + model/preamble constants
 - `src/lib/server/ai/ai-flag.ts` — `isAiEnabled()` over a platform `Setting`
 - `src/lib/validators/ai.ts` — Zod input/output schemas for all three flows
@@ -257,6 +270,7 @@ Only after the slice proves out. Each is its own scoped piece of work.
   proposals view; "Coach me" on bounty/project detail.
 
 **Reuse (do not duplicate)**
+
 - `src/lib/server/ai/embeddings.ts` — the graceful-degradation client pattern
 - `matchingService.findMatchesForProject()` — Flow 2's first-pass signal
 - `project.service.ts` (`loadOwnedProject`, `buildMilestonePlan`, `enqueue`),

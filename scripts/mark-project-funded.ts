@@ -113,7 +113,9 @@ async function main() {
 		);
 		process.exit(1);
 	} else {
-		console.log('--force set, project has no escrow account; funding without a Monime balance check');
+		console.log(
+			'--force set, project has no escrow account; funding without a Monime balance check'
+		);
 	}
 
 	const result = await prisma.$transaction(async (tx) => {
