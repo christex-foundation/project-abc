@@ -160,3 +160,53 @@ export type ScopeProjectResult = {
 };
 
 export type ScopeResult = ScopeBountyResult | ScopeProjectResult;
+
+// ---------------------------------------------------------------------------
+// Flow 2 — Company proposal ranking / "AI shortlist" (Phase 2)
+// ---------------------------------------------------------------------------
+
+// One ranked candidate the model returns. `freelancerProfileId` is reconciled
+// against the project's real proposals at the service layer (hallucinated ids
+// are dropped); the strings are bounded so the trust boundary stays tight.
+const aiRankItem = z.object({
+	freelancerProfileId: z.string().trim().min(1).max(64),
+	rank: z.number().int().min(1).max(50),
+	// The model's own holistic fit, 0–100. Distinct from the embedding cosine
+	// similarity (0–1) the service merges in separately.
+	matchScore: z.number().int().min(0).max(100),
+	strengths: z.array(z.string().trim().min(1).max(300)).max(5).default([]),
+	risks: z.array(z.string().trim().min(1).max(300)).max(5).default([]),
+	suggestedQuestions: z.array(z.string().trim().min(1).max(300)).max(5).default([])
+});
+
+/**
+ * The model's tool output for Flow 2. Wrapped in an object (not a bare array) so
+ * the derived JSON Schema has an `object` root that Claude tool-use accepts
+ * cleanly — same reason as `scopeOutput`.
+ */
+export const proposalRankOutput = z.object({
+	rankings: z.array(aiRankItem).max(50)
+});
+export type ProposalRankOutput = z.infer<typeof proposalRankOutput>;
+
+// Form-ready result the browser receives: each ranked proposal merged with its
+// display data and the embedding cosine. `rankedBy` drives the UI label:
+//   'ai'        → Claude-reasoned ranking (strengths/risks/questions present)
+//   'embedding' → fallback to cosine order only ("ranked by similarity only")
+//   'none'      → no signal at all (no proposals, or no embeddings either)
+export type ProposalRankedItem = {
+	proposalId: string;
+	freelancerProfileId: string | null;
+	displayName: string;
+	rank: number;
+	matchScore: number | null; // AI 0–100; null in fallback
+	similarity: number | null; // embedding cosine 0–1; null when unavailable
+	strengths: string[];
+	risks: string[];
+	suggestedQuestions: string[];
+};
+
+export type ProposalRankResult = {
+	rankedBy: 'ai' | 'embedding' | 'none';
+	items: ProposalRankedItem[];
+};

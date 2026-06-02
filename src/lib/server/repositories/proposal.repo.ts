@@ -38,6 +38,13 @@ export const selectForCompany = {
 			experienceLevel: true,
 			whatsappNumber: true,
 			monimeFinancialAccountId: true,
+			skills: {
+				select: {
+					proficiencyLevel: true,
+					yearsExperience: true,
+					skill: { select: { name: true } }
+				}
+			},
 			user: { select: { id: true, name: true, email: true } }
 		}
 	}
