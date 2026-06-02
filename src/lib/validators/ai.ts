@@ -210,3 +210,64 @@ export type ProposalRankResult = {
 	rankedBy: 'ai' | 'embedding' | 'none';
 	items: ProposalRankedItem[];
 };
+
+// ---------------------------------------------------------------------------
+// Flow 3 — Freelancer coach: approach + communication (Phase 3)
+// ---------------------------------------------------------------------------
+
+/**
+ * What the freelancer asks coaching on: exactly one of a bounty or a project.
+ * The id is a CUID; bounds keep the trust boundary tight (the service still
+ * loads the row through the public-safe loader before trusting it).
+ */
+export const coachInput = z
+	.object({
+		bountyId: z.string().trim().min(1).max(64).nullish(),
+		projectId: z.string().trim().min(1).max(64).nullish()
+	})
+	.superRefine((data, ctx) => {
+		const n = (data.bountyId ? 1 : 0) + (data.projectId ? 1 : 0);
+		if (n !== 1) {
+			ctx.addIssue({
+				code: 'custom',
+				message: 'Provide exactly one of bountyId or projectId.'
+			});
+		}
+	});
+export type CoachInput = z.infer<typeof coachInput>;
+
+// One coaching point + its transferable "why this matters on Upwork too" note
+// (the locked "balance" coaching style). Plain text only; bounded.
+const coachApproachItem = z.object({
+	point: z.string().trim().min(1).max(800),
+	whyUpwork: z.string().trim().min(1).max(400)
+});
+
+const coachCommunication = z.object({
+	// A draft professional note to the company. Plain text — it only becomes
+	// stored HTML if the freelancer carries it into the sanitized submit path.
+	message: z.string().trim().min(1).max(3000),
+	clarifyingQuestions: z.array(z.string().trim().min(1).max(300)).max(6).default([]),
+	// Project-only proposal skeleton; null for bounties (no message field there).
+	coverLetter: z.string().trim().max(6000).nullish()
+});
+
+/** The model's tool output for Flow 3 — an object root for clean tool-use. */
+export const coachOutput = z.object({
+	approach: z.array(coachApproachItem).min(1).max(6),
+	communication: coachCommunication
+});
+export type CoachOutput = z.infer<typeof coachOutput>;
+
+// Form-ready result the browser receives. `kind`/`title` carried from the
+// loaded row; `coverLetter` is forced null for bounties at the service layer.
+export type CoachResult = {
+	kind: 'BOUNTY' | 'PROJECT';
+	title: string;
+	approach: { point: string; whyUpwork: string }[];
+	communication: {
+		message: string;
+		clarifyingQuestions: string[];
+		coverLetter: string | null;
+	};
+};
