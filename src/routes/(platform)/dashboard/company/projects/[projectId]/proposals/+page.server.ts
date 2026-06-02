@@ -1,6 +1,7 @@
 import { error, fail } from '@sveltejs/kit';
 import { requireAuth, requireRole } from '$lib/server/auth-helpers';
 import { AppError } from '$lib/server/http';
+import { isAiEnabled } from '$lib/server/ai/ai-flag';
 import * as projectService from '$lib/server/services/project.service';
 import * as proposalService from '$lib/server/services/proposal.service';
 import * as reviewService from '$lib/server/services/review.service';
@@ -21,7 +22,9 @@ export const load: PageServerLoad = async ({ params, locals, parent }) => {
 				if (uid && !ratings[uid]) ratings[uid] = await reviewService.getAggregate(uid);
 			})
 		);
-		return { project, proposals, ratings };
+		// Label only — the actual ranking is fetched on demand from the AI shortlist
+		// endpoint, which itself degrades to embedding order when AI is off.
+		return { project, proposals, ratings, aiEnabled: await isAiEnabled() };
 	} catch (e) {
 		if (e instanceof AppError) {
 			if (e.code === 'NOT_FOUND') throw error(404, e.message);
