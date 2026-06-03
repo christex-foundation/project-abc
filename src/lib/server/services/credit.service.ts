@@ -92,6 +92,20 @@ export async function getBalanceForCaller(
 	const freelancer = await freelancerRepo.findByUserId(caller.id);
 	if (!freelancer) return null;
 
+	// Fast path: a plain read, no transaction. ~All calls hit this since the
+	// lazy reset only fires once per freelancer per month. Opening an
+	// interactive transaction here would hold a pooled connection for the full
+	// round-trip and, under the dashboard's concurrent load(), starve the pool.
+	const profile = await creditRepo.getProfileBalance(freelancer.id);
+	if (profile && profile.creditsPeriodKey === currentPeriodKey()) {
+		return {
+			balance: profile.creditsBalance,
+			monthlyAllocation: config.monthlyAllocation,
+			periodKey: profile.creditsPeriodKey
+		};
+	}
+
+	// Slow path (reset due): transaction performs the lazy MONTHLY_RESET write.
 	const { balance, periodKey } = await prisma.$transaction((tx) =>
 		ensureCurrentPeriod(freelancer.id, config.monthlyAllocation, tx)
 	);
@@ -139,7 +153,9 @@ export async function getForAdmin(
 
 	let balance = profileExists.creditsBalance;
 	let periodKey = profileExists.creditsPeriodKey;
-	if (config.enabled) {
+	// Only open a transaction when a lazy reset is actually due — when the
+	// cached period already matches, the read above is the answer.
+	if (config.enabled && profileExists.creditsPeriodKey !== currentPeriodKey()) {
 		const ensured = await prisma.$transaction((tx) =>
 			ensureCurrentPeriod(freelancerProfileId, config.monthlyAllocation, tx)
 		);

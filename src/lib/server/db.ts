@@ -9,7 +9,10 @@ function createClient(): PrismaClient {
 	if (!url) {
 		throw new Error('DATABASE_URL is required.');
 	}
-	const adapter = new PrismaPg({ connectionString: url });
+	// Explicit pool size: the default pg.Pool max of 10 is tight for the
+	// dashboard's concurrent Promise.all fan-out plus the layout load. 20 is
+	// safe against the Neon pooler (pgbouncer transaction mode multiplexes).
+	const adapter = new PrismaPg({ connectionString: url, max: 20 });
 	return new PrismaClient({ adapter });
 }
 
