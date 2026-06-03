@@ -141,6 +141,8 @@ export async function coachWorkspace(
 
 	const out = await completeJSON({
 		// Haiku — same tier and rationale as Flow 3 (coach); see ai-eval.ts.
+		// Token ceiling comes from completeJSON's default (8192) — this flow's output
+		// (gaps + selfCheck + a full polishedNote rewrite) needs the headroom.
 		schema: workspaceCoachOutput,
 		model: MODEL_FAST,
 		system: buildWorkspaceSystem(),

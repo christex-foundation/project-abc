@@ -5,7 +5,7 @@
 //
 // AI output is untrusted input: every response is forced through a single
 // tool-use call whose input_schema is derived from the caller's Zod schema, and
-// the returned object is re-validated with schema.parse() before it leaves here.
+// the returned object is re-validated against that schema before it leaves here.
 
 import Anthropic from '@anthropic-ai/sdk';
 import { z } from 'zod';
@@ -17,7 +17,12 @@ export const MODEL_DEFAULT = 'claude-sonnet-4-6';
 export const MODEL_FAST = 'claude-haiku-4-5';
 export const MODEL_DEEP = 'claude-opus-4-8';
 
-const DEFAULT_MAX_TOKENS = 2048;
+// Generous default ceiling. max_tokens is a CEILING, not a target — billing and
+// latency track the tokens actually produced, so a high default costs nothing for
+// the lighter flows while protecting every flow from truncation. The coach flows
+// (approach + message + cover-letter skeleton, or gaps + a full polished-note
+// rewrite) routinely exceed the old 2048 and would otherwise truncate.
+const DEFAULT_MAX_TOKENS = 8192;
 const TOOL_NAME = 'respond';
 
 // Shared system context prepended to every AI call. Keeps the platform facts
@@ -107,12 +112,33 @@ export async function completeJSONWithMeta<T>(
 		});
 		const latencyMs = Date.now() - startedAt;
 
+		// A response truncated at max_tokens leaves the forced tool call partial:
+		// the SDK can't parse the incomplete JSON, so `block.input` comes back `{}`,
+		// which would silently parse to an "empty" result (defaults + nullish fields)
+		// and surface as a blank panel. Treat truncation as a hard failure instead.
+		if (res.stop_reason === 'max_tokens') {
+			console.error(
+				`[claude] response truncated at max_tokens (model=${model}, max_tokens=${maxTokens}, output_tokens=${res.usage.output_tokens})`
+			);
+			throw new AppError('INTERNAL', 'AI response was truncated.');
+		}
+
 		const block = res.content.find((b) => b.type === 'tool_use');
 		if (!block || block.type !== 'tool_use') {
 			throw new Error('Claude did not return a tool_use block');
 		}
+
+		// Re-validate the (untrusted) tool output. safeParse so we can log WHICH
+		// field/constraint failed instead of an opaque ZodError — invaluable when an
+		// output shape drifts. Output bounds are generous hints (see validators/ai.ts),
+		// so this should only fire on a genuinely malformed response.
+		const parsed = schema.safeParse(block.input);
+		if (!parsed.success) {
+			console.error('[claude] tool output failed schema validation:', parsed.error.issues);
+			throw new AppError('INTERNAL', 'AI returned an unexpected response shape.');
+		}
 		return {
-			data: schema.parse(block.input),
+			data: parsed.data,
 			usage: {
 				inputTokens: res.usage.input_tokens,
 				outputTokens: res.usage.output_tokens
@@ -121,14 +147,15 @@ export async function completeJSONWithMeta<T>(
 			latencyMs
 		};
 	} catch (e) {
+		// Preserve our own typed failures (truncation / bad-shape) — they have
+		// specific messages and have already logged their cause.
+		if (e instanceof AppError) throw e;
 		// Anthropic SDK errors carry an HTTP status + a typed name (APIError
 		// subclasses). Log those explicitly so the terminal names the cause
 		// (401 auth, 404 model_not_found, 429 overloaded, connection error)
 		// instead of just an opaque object. The user-facing message stays generic.
 		if (e instanceof Anthropic.APIError) {
-			console.error(
-				`[claude] API error: status=${e.status} name=${e.name} message=${e.message}`
-			);
+			console.error(`[claude] API error: status=${e.status} name=${e.name} message=${e.message}`);
 		} else {
 			console.error('[claude] completeJSON failed:', e);
 		}

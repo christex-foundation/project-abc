@@ -237,24 +237,26 @@ export const coachInput = z
 export type CoachInput = z.infer<typeof coachInput>;
 
 // One coaching point + its transferable "why this matters on Upwork too" note
-// (the locked "balance" coaching style). Plain text only; bounded.
+// (the locked "balance" coaching style). Plain text only.
+// As with Flow 4 above, the OUTPUT `.max()` bounds are advisory model hints, not a
+// trust boundary; set generously so the model can't 500 the request by exceeding one.
 const coachApproachItem = z.object({
-	point: z.string().trim().min(1).max(800),
-	whyUpwork: z.string().trim().min(1).max(400)
+	point: z.string().trim().min(1).max(2000),
+	whyUpwork: z.string().trim().min(1).max(1500)
 });
 
 const coachCommunication = z.object({
 	// A draft professional note to the company. Plain text — it only becomes
 	// stored HTML if the freelancer carries it into the sanitized submit path.
-	message: z.string().trim().min(1).max(3000),
-	clarifyingQuestions: z.array(z.string().trim().min(1).max(300)).max(6).default([]),
+	message: z.string().trim().min(1).max(8000),
+	clarifyingQuestions: z.array(z.string().trim().min(1).max(1000)).max(20).default([]),
 	// Project-only proposal skeleton; null for bounties (no message field there).
-	coverLetter: z.string().trim().max(6000).nullish()
+	coverLetter: z.string().trim().max(20_000).nullish()
 });
 
 /** The model's tool output for Flow 3 — an object root for clean tool-use. */
 export const coachOutput = z.object({
-	approach: z.array(coachApproachItem).min(1).max(6),
+	approach: z.array(coachApproachItem).min(1).max(20),
 	communication: coachCommunication
 });
 export type CoachOutput = z.infer<typeof coachOutput>;
@@ -308,22 +310,28 @@ export type WorkspaceCoachInput = z.infer<typeof workspaceCoachInput>;
 
 // One gap between the contractor's draft and the brief, plus how to close it.
 const workspaceGap = z.object({
-	point: z.string().trim().min(1).max(800),
-	suggestion: z.string().trim().min(1).max(600)
+	point: z.string().trim().min(1).max(2000),
+	suggestion: z.string().trim().min(1).max(2000)
 });
 
+// NOTE: the `.max()` bounds on the OUTPUT below are advisory model hints
+// (`maxLength` in the tool schema), NOT a trust boundary — this is plain text the
+// contractor sees, re-sanitized at the real submit/comment write paths. They are
+// set generously (well above what `max_tokens` can produce) so a count/length cap
+// is never the binding constraint that fails `schema.parse` and 500s the request.
+// Truncation (handled in completeJSONWithMeta) is the only real limit.
 /** The model's tool output for Flow 4 — an object root for clean tool-use. */
 export const workspaceCoachOutput = z.object({
 	// (1) review work vs brief — gaps to close before submitting for approval
-	gaps: z.array(workspaceGap).max(8).default([]),
+	gaps: z.array(workspaceGap).max(20).default([]),
 	// self-check on the contractor's OWN draft tone/clarity (the "moderation"
 	// self-check — a warning to them, never a block).
-	selfCheck: z.array(z.string().trim().min(1).max(300)).max(6).default([]),
+	selfCheck: z.array(z.string().trim().min(1).max(1000)).max(20).default([]),
 	// (2) interpret client feedback — plain-language summary + a draft reply
-	clientNeedsSummary: z.string().trim().max(2000).nullish(),
-	replyDraft: z.string().trim().max(3000).nullish(),
+	clientNeedsSummary: z.string().trim().max(6000).nullish(),
+	replyDraft: z.string().trim().max(6000).nullish(),
 	// (3) polish — a cleaned-up version of their update note (plain text)
-	polishedNote: z.string().trim().max(8000).nullish()
+	polishedNote: z.string().trim().max(20_000).nullish()
 });
 export type WorkspaceCoachOutput = z.infer<typeof workspaceCoachOutput>;
 
