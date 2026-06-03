@@ -22,7 +22,7 @@
 	} as const;
 
 	let need = $state('');
-	let budget = $state(''); // major-unit SLE; converted to minor on submit
+	let budget = $state<number | ''>(''); // major-unit SLE; converted to minor on submit
 	let timeline = $state('');
 	let loading = $state(false);
 	let error = $state<string | null>(null);
@@ -59,8 +59,8 @@
 		result = null;
 		startSteps();
 		try {
-			const major = budget.trim() ? Number(budget) : NaN;
-			const budgetMinor = Number.isFinite(major) ? Math.round(major * 100) : null;
+			const budgetMinor =
+				typeof budget === 'number' && Number.isFinite(budget) ? Math.round(budget * 100) : null;
 			const res = await fetch('/api/ai/scope', {
 				method: 'POST',
 				headers: { 'content-type': 'application/json' },
@@ -77,7 +77,8 @@
 			}
 			const body = await res.json();
 			result = body.result as ScopeResult;
-		} catch {
+		} catch (e) {
+			console.error('[ai draft] request failed:', e);
 			error = 'Something went wrong. Please try again.';
 		} finally {
 			stopSteps();

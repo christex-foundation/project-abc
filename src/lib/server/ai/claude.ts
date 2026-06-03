@@ -121,7 +121,17 @@ export async function completeJSONWithMeta<T>(
 			latencyMs
 		};
 	} catch (e) {
-		console.error('[claude] completeJSON failed:', e);
+		// Anthropic SDK errors carry an HTTP status + a typed name (APIError
+		// subclasses). Log those explicitly so the terminal names the cause
+		// (401 auth, 404 model_not_found, 429 overloaded, connection error)
+		// instead of just an opaque object. The user-facing message stays generic.
+		if (e instanceof Anthropic.APIError) {
+			console.error(
+				`[claude] API error: status=${e.status} name=${e.name} message=${e.message}`
+			);
+		} else {
+			console.error('[claude] completeJSON failed:', e);
+		}
 		throw new AppError('INTERNAL', 'AI request failed.');
 	}
 }
