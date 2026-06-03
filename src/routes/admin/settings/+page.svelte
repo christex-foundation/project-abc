@@ -36,6 +36,10 @@
 		(data.settings?.COMPANY_SELF_REGISTER as { enabled?: boolean } | undefined)?.enabled === true
 	);
 	// svelte-ignore state_referenced_locally
+	let aiAssistEnabled = $state(
+		(data.settings?.AI_ASSIST_ENABLED as { enabled?: boolean } | undefined)?.enabled === true
+	);
+	// svelte-ignore state_referenced_locally
 	const creditSetting = data.settings?.FREELANCER_CREDIT_SYSTEM as
 		| { enabled?: boolean; monthlyAllocation?: number }
 		| undefined;
@@ -134,6 +138,7 @@
 
 	const SECTIONS = [
 		{ id: 'platform', label: 'Platform' },
+		{ id: 'ai', label: 'AI assist' },
 		{ id: 'credits', label: 'Credits' },
 		{ id: 'referrals', label: 'Referrals' },
 		{ id: 'social', label: 'Social links' },
@@ -181,6 +186,30 @@
 					disabled={savingKey === 'COMPANY_SELF_REGISTER'}
 					onclick={() =>
 						saveSetting('COMPANY_SELF_REGISTER', { enabled: companyEnabled }, 'Self-register')}
+				>
+					<Save class="h-3.5 w-3.5" /> Save
+				</Button>
+			</div>
+		</Card>
+
+		<!-- AI ASSIST -->
+		<Card id="ai" class="p-5">
+			<h2 class="text-sm font-semibold text-zinc-900">AI assist (experiment)</h2>
+			<p class="mt-1 text-xs text-zinc-500">
+				Turns on the AI helpers: the "Ask AI to draft this" decider on the create flow, the
+				proposal shortlist for project owners, and "Coach me" on bounty/project pages. AI only
+				drafts — a human still reviews and submits everything. Also requires
+				<code>ANTHROPIC_API_KEY</code> on the server; without it this stays off no matter what.
+			</p>
+			<label class="mt-3 flex items-center gap-2 text-sm">
+				<Checkbox bind:checked={aiAssistEnabled} />
+				Enabled
+			</label>
+			<div class="mt-4">
+				<Button
+					size="sm"
+					disabled={savingKey === 'AI_ASSIST_ENABLED'}
+					onclick={() => saveSetting('AI_ASSIST_ENABLED', { enabled: aiAssistEnabled }, 'AI assist')}
 				>
 					<Save class="h-3.5 w-3.5" /> Save
 				</Button>
