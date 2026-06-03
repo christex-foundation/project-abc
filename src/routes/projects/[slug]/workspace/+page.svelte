@@ -2,6 +2,7 @@
 	import { invalidateAll } from '$app/navigation';
 	import RichTextView from '$lib/components/editor/RichTextView.svelte';
 	import RaiseDisputeButton from '$lib/components/shared/RaiseDisputeButton.svelte';
+	import WorkspaceCoachPanel from '$lib/components/ai/WorkspaceCoachPanel.svelte';
 	import {
 		Button,
 		Input,
@@ -316,6 +317,22 @@
 							</Button>
 						</div>
 					</div>
+				{/if}
+
+				<!-- Contractor: AI delivery coach (suggest-only, never writes the DB) -->
+				{#if isContractor && m.status !== 'APPROVED' && project.status === 'ACTIVE' && data.aiEnabled}
+					<Separator />
+					<WorkspaceCoachPanel
+						milestoneId={m.id}
+						aiEnabled={data.aiEnabled}
+						getDraft={() => ({
+							note: updateNote[m.id] ?? '',
+							deliverables: updateLinks[m.id] ?? [],
+							comment: commentBody[m.id] ?? ''
+						})}
+						onApplyReply={(text) => (commentBody[m.id] = text)}
+						onApplyNote={(text) => (updateNote[m.id] = text)}
+					/>
 				{/if}
 
 				<!-- Owner: approve / request changes on a submitted milestone -->

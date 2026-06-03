@@ -20,10 +20,23 @@ import { isAiEnabled } from '../ai/ai-flag';
 import { checkRateLimit } from '../ai/rate-limit';
 import { completeJSON, MODEL_FAST } from '../ai/claude';
 import { buildSystem, buildUserMessage } from '../ai/coach.prompt';
-import { coachInput, coachOutput, type CoachResult } from '$lib/validators/ai';
+import {
+	buildSystem as buildWorkspaceSystem,
+	buildUserMessage as buildWorkspaceUserMessage
+} from '../ai/workspace-coach.prompt';
+import {
+	coachInput,
+	coachOutput,
+	type CoachResult,
+	workspaceCoachInput,
+	workspaceCoachOutput,
+	type WorkspaceCoachResult
+} from '$lib/validators/ai';
 import * as bountyService from './bounty.service';
 import * as projectService from './project.service';
 import * as freelancerRepo from '../repositories/freelancer.repo';
+import * as milestoneRepo from '../repositories/milestone.repo';
+import * as projectRepo from '../repositories/project.repo';
 
 function stripHtml(input: string | null | undefined): string {
 	if (!input) return '';
@@ -87,6 +100,59 @@ export async function coachWork(caller: AuthedUser, raw: unknown): Promise<Coach
 	};
 }
 
+// Flow 4 — Workspace coach: help the awarded CONTRACTOR deliver a milestone the
+// client will approve. SUGGEST-ONLY (never writes the DB). Contractor-only, and
+// every input it reads is data the contractor already sees on the workspace
+// page, so there's no new privacy surface (sponsor-private notes/label/score
+// live on bounty submissions, not milestones).
+export async function coachWorkspace(
+	caller: AuthedUser,
+	raw: unknown
+): Promise<WorkspaceCoachResult> {
+	// Guard order mirrors coachWork: role → flag → rate-limit → input.
+	requireRole(caller, 'FREELANCER');
+	if (!(await isAiEnabled())) {
+		throw new AppError('FORBIDDEN', 'AI assist is currently unavailable.');
+	}
+	checkRateLimit(caller.id, { flow: 'workspace-coach' });
+
+	const input = workspaceCoachInput.parse(raw);
+
+	// Load the milestone + its project, then authorise the caller as THIS
+	// project's awarded contractor (same check as milestone.service loadParties,
+	// which isn't exported — we only need the contractor branch here).
+	const milestone = await milestoneRepo.findById(input.milestoneId);
+	if (!milestone) throw new AppError('NOT_FOUND', 'Milestone not found.');
+	const project = await projectRepo.findProjectById(milestone.projectId);
+	if (!project) throw new AppError('NOT_FOUND', 'Milestone not found.');
+
+	const profile = await freelancerRepo.findByUserId(caller.id);
+	if (!profile || profile.id !== project.contractorProfileId) {
+		throw new AppError('FORBIDDEN', 'You do not have access to this milestone.');
+	}
+
+	const brief = buildMilestoneBrief(project, milestone);
+	const thread = buildThreadSummary(milestone);
+	const draft = {
+		note: input.draftNote ?? '',
+		deliverables: input.draftDeliverables.map((d) => ({ label: d.label, url: d.url })),
+		comment: input.draftComment ?? ''
+	};
+
+	const out = await completeJSON({
+		// Haiku — same tier and rationale as Flow 3 (coach); see ai-eval.ts.
+		schema: workspaceCoachOutput,
+		model: MODEL_FAST,
+		system: buildWorkspaceSystem(),
+		messages: [{ role: 'user', content: buildWorkspaceUserMessage(brief, thread, draft) }]
+	});
+
+	// Null = key removed mid-request; surface the same clean unavailable error.
+	if (!out) throw new AppError('FORBIDDEN', 'AI assist is currently unavailable.');
+
+	return { ...out, milestoneTitle: milestone.title };
+}
+
 // --- prompt building --------------------------------------------------------
 // buildSystem / buildUserMessage live in ../ai/coach.prompt (imported above) so
 // the eval harness can reuse them without the service's import graph. The brief
@@ -135,6 +201,64 @@ function buildProjectBrief(p: Awaited<ReturnType<typeof projectService.getProjec
 		milestones ? `Milestone plan:\n${milestones}` : ''
 	]
 		.filter(Boolean)
+		.join('\n');
+}
+
+// Flow 4 brief: the project context + the specific milestone the contractor is
+// delivering. Public-safe allowlist only — no escrow/checkout fields reach the
+// prompt, matching buildProjectBrief's discipline above.
+function buildMilestoneBrief(
+	project: projectRepo.ProjectForCompany,
+	milestone: milestoneRepo.MilestoneWithThread
+): string {
+	const skills = project.skills.map((s) => s.skill.name).join(', ');
+	return [
+		`PROJECT BRIEF`,
+		`Title: ${project.title}`,
+		`Description: ${stripHtml(project.description)}`,
+		project.requirements ? `Requirements: ${stripHtml(project.requirements)}` : '',
+		project.deliverables ? `Deliverables: ${stripHtml(project.deliverables)}` : '',
+		skills ? `Skills: ${skills}` : '',
+		``,
+		`THE MILESTONE BEING DELIVERED`,
+		`#${milestone.position}: ${milestone.title}`,
+		milestone.description ? `Details: ${stripHtml(milestone.description)}` : '',
+		`Reward on approval: ${milestone.amount} (minor units, ${project.currency})`,
+		`Current status: ${milestone.status}`,
+		milestone.revisionCount > 0 ? `Revision round: #${milestone.revisionCount}` : ''
+	]
+		.filter(Boolean)
+		.join('\n');
+}
+
+// The update/comment thread, oldest-first, role-labelled. Both parties already
+// see this in the workspace; we strip HTML to plain text for the prompt.
+function buildThreadSummary(milestone: milestoneRepo.MilestoneWithThread): string {
+	type Entry = { at: number; line: string };
+	const entries: Entry[] = [];
+	for (const u of milestone.updates) {
+		const links = Array.isArray(u.deliverables)
+			? (u.deliverables as { label?: string; url?: string }[])
+					.map((d) => d.url)
+					.filter(Boolean)
+					.join(', ')
+			: '';
+		entries.push({
+			at: new Date(u.createdAt).getTime(),
+			line: `[contractor update] ${stripHtml(u.note)}${links ? ` (links: ${links})` : ''}`
+		});
+	}
+	for (const c of milestone.comments) {
+		const who = c.authorRole === 'COMPANY' ? 'client' : 'contractor';
+		entries.push({
+			at: new Date(c.createdAt).getTime(),
+			line: `[${who} comment] ${stripHtml(c.body)}`
+		});
+	}
+	if (entries.length === 0) return '(no updates or comments yet)';
+	return entries
+		.sort((a, b) => a.at - b.at)
+		.map((e) => e.line)
 		.join('\n');
 }
 

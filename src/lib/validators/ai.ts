@@ -271,3 +271,62 @@ export type CoachResult = {
 		coverLetter: string | null;
 	};
 };
+
+// ---------------------------------------------------------------------------
+// Flow 4 — Workspace coach: contractor milestone DELIVERY assistant (Phase 4)
+// ---------------------------------------------------------------------------
+//
+// Unlike Flow 3 (pre-application), this runs AFTER the freelancer has won a
+// project and is mid-milestone in the workspace. It is contractor-only and
+// suggest-only — nothing here writes the DB. Everything it reads (project brief,
+// milestone description, the update/comment thread) is data the contractor
+// already sees on the workspace page, so there is no new privacy surface;
+// sponsor-private fields (notes/label/score) live on bounty Submissions, not
+// project milestones.
+
+/**
+ * What the contractor asks coaching on: a milestone, plus their in-progress
+ * draft from the workspace form (all optional — they may ask before typing
+ * anything). The id is a CUID; bounds keep the trust boundary tight (the
+ * service still loads the row and authorises the caller before trusting it).
+ */
+export const workspaceCoachInput = z.object({
+	milestoneId: z.string().trim().min(1).max(64),
+	draftNote: z.string().trim().max(20_000).nullish(),
+	draftDeliverables: z
+		.array(
+			z.object({
+				label: z.string().trim().max(120).default(''),
+				url: z.string().trim().max(2000).default('')
+			})
+		)
+		.max(20)
+		.default([]),
+	draftComment: z.string().trim().max(10_000).nullish()
+});
+export type WorkspaceCoachInput = z.infer<typeof workspaceCoachInput>;
+
+// One gap between the contractor's draft and the brief, plus how to close it.
+const workspaceGap = z.object({
+	point: z.string().trim().min(1).max(800),
+	suggestion: z.string().trim().min(1).max(600)
+});
+
+/** The model's tool output for Flow 4 — an object root for clean tool-use. */
+export const workspaceCoachOutput = z.object({
+	// (1) review work vs brief — gaps to close before submitting for approval
+	gaps: z.array(workspaceGap).max(8).default([]),
+	// self-check on the contractor's OWN draft tone/clarity (the "moderation"
+	// self-check — a warning to them, never a block).
+	selfCheck: z.array(z.string().trim().min(1).max(300)).max(6).default([]),
+	// (2) interpret client feedback — plain-language summary + a draft reply
+	clientNeedsSummary: z.string().trim().max(2000).nullish(),
+	replyDraft: z.string().trim().max(3000).nullish(),
+	// (3) polish — a cleaned-up version of their update note (plain text)
+	polishedNote: z.string().trim().max(8000).nullish()
+});
+export type WorkspaceCoachOutput = z.infer<typeof workspaceCoachOutput>;
+
+// Form-ready result the browser receives; `milestoneTitle` carried from the
+// loaded row so the panel can label which milestone it coached.
+export type WorkspaceCoachResult = WorkspaceCoachOutput & { milestoneTitle: string };

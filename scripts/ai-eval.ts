@@ -27,7 +27,13 @@ import {
 } from '../src/lib/server/ai/claude';
 import * as scopePrompt from '../src/lib/server/ai/scope.prompt';
 import * as coachPrompt from '../src/lib/server/ai/coach.prompt';
-import { scopeOutput, coachOutput, type ScopeInput } from '../src/lib/validators/ai';
+import * as workspaceCoachPrompt from '../src/lib/server/ai/workspace-coach.prompt';
+import {
+	scopeOutput,
+	coachOutput,
+	workspaceCoachOutput,
+	type ScopeInput
+} from '../src/lib/validators/ai';
 import * as skillRepo from '../src/lib/server/repositories/skill.repo';
 
 // --- pricing ----------------------------------------------------------------
@@ -180,6 +186,100 @@ const COACH_FIXTURES: CoachFixture[] = [
 	}
 ];
 
+// Flow 4 — workspace coach. Each fixture is a milestone brief + thread + the
+// contractor's current draft. `expect` flags what a good response must contain.
+type WorkspaceFixture = {
+	label: string;
+	brief: string;
+	thread: string;
+	draft: workspaceCoachPrompt.WorkspaceDraft;
+	expect: { feedback: boolean; polish: boolean; selfCheck?: boolean };
+};
+
+const WORKSPACE_FIXTURES: WorkspaceFixture[] = [
+	{
+		// Vague "make it pop" change request → must interpret + draft a reply.
+		label: 'vague change request',
+		brief: [
+			'PROJECT BRIEF',
+			'Title: Brand identity package',
+			'Description: Full brand identity for a juice startup.',
+			'',
+			'THE MILESTONE BEING DELIVERED',
+			'#1: Logo and palette',
+			'Reward on approval: 400000 (minor units, SLE)',
+			'Current status: CHANGES_REQUESTED',
+			'Revision round: #1'
+		].join('\n'),
+		thread: [
+			'[contractor update] First draft of the logo and colour palette. (links: https://drive/x)',
+			'[client comment] Thanks but it does not really pop, can you make it more lively?'
+		].join('\n'),
+		draft: { note: '', deliverables: [], comment: '' },
+		expect: { feedback: true, polish: false }
+	},
+	{
+		// Thin note that omits a required deliverable → must flag a gap + polish.
+		label: 'thin update note',
+		brief: [
+			'PROJECT BRIEF',
+			'Title: 4-page shop website',
+			'Description: A mobile-first marketing website.',
+			'Requirements: Must include a deployed staging URL and the source repo.',
+			'',
+			'THE MILESTONE BEING DELIVERED',
+			'#2: Build and launch',
+			'Reward on approval: 500000 (minor units, SLE)',
+			'Current status: IN_PROGRESS'
+		].join('\n'),
+		thread: '(no updates or comments yet)',
+		draft: {
+			note: 'done',
+			deliverables: [{ label: 'repo', url: 'https://github.com/x/y' }],
+			comment: ''
+		},
+		expect: { feedback: false, polish: true }
+	},
+	{
+		// No client feedback yet → feedback fields must be null; coach the start.
+		label: 'no feedback yet',
+		brief: [
+			'PROJECT BRIEF',
+			'Title: Product catalog design',
+			'Description: A 12-page print-ready product catalog.',
+			'',
+			'THE MILESTONE BEING DELIVERED',
+			'#1: Layout and first draft',
+			'Reward on approval: 400000 (minor units, SLE)',
+			'Current status: IN_PROGRESS'
+		].join('\n'),
+		thread: '(no updates or comments yet)',
+		draft: { note: '', deliverables: [], comment: '' },
+		expect: { feedback: false, polish: false }
+	},
+	{
+		// Curt/defensive draft comment → must surface a self-check warning.
+		label: 'rude draft comment',
+		brief: [
+			'PROJECT BRIEF',
+			'Title: Brand identity package',
+			'',
+			'THE MILESTONE BEING DELIVERED',
+			'#1: Logo and palette',
+			'Reward on approval: 400000 (minor units, SLE)',
+			'Current status: CHANGES_REQUESTED',
+			'Revision round: #2'
+		].join('\n'),
+		thread: '[client comment] Could the spacing be tightened a little?',
+		draft: {
+			note: '',
+			deliverables: [],
+			comment: 'I already did this, just look properly. Not my problem if you cannot see it.'
+		},
+		expect: { feedback: true, polish: false, selfCheck: true }
+	}
+];
+
 // --- structural checks ------------------------------------------------------
 
 type Sample = {
@@ -241,6 +341,30 @@ function checkCoach(
 	return { structuralPass: issues.length === 0, issues };
 }
 
+function checkWorkspace(
+	out: ReturnType<typeof workspaceCoachOutput.parse>,
+	fx: WorkspaceFixture
+): { structuralPass: boolean; issues: string[] } {
+	const issues: string[] = [];
+	const hasFeedback = !!out.clientNeedsSummary?.trim() && !!out.replyDraft?.trim();
+	if (fx.expect.feedback && !hasFeedback) {
+		issues.push('expected a client-feedback summary + reply');
+	}
+	if (!fx.expect.feedback && (out.clientNeedsSummary?.trim() || out.replyDraft?.trim())) {
+		issues.push('invented client feedback (no feedback in thread)');
+	}
+	const hasPolish = !!out.polishedNote?.trim();
+	if (fx.expect.polish && !hasPolish) issues.push('expected a polished note');
+	if (!fx.draft.note.trim() && hasPolish) issues.push('polished a note the contractor never wrote');
+	if (fx.expect.selfCheck && out.selfCheck.length < 1) {
+		issues.push('expected a self-check warning on a rude draft');
+	}
+	if (out.gaps.some((g) => !g.point?.trim() || !g.suggestion?.trim())) {
+		issues.push('gap missing point/suggestion');
+	}
+	return { structuralPass: issues.length === 0, issues };
+}
+
 // --- runner -----------------------------------------------------------------
 
 async function runScope(
@@ -283,6 +407,36 @@ async function runCoach(model: string, fx: CoachFixture): Promise<Sample> {
 		});
 		if (!meta) return hardFail();
 		const c = checkCoach(meta.data, fx);
+		return {
+			ok: true,
+			classificationCorrect: null,
+			structuralPass: c.structuralPass,
+			issues: c.issues,
+			latencyMs: meta.latencyMs,
+			inputTokens: meta.usage.inputTokens,
+			outputTokens: meta.usage.outputTokens,
+			costUsd: costUsd(model, meta.usage.inputTokens, meta.usage.outputTokens)
+		};
+	} catch (e) {
+		return hardFail([`threw: ${String((e as Error)?.message ?? e)}`]);
+	}
+}
+
+async function runWorkspace(model: string, fx: WorkspaceFixture): Promise<Sample> {
+	try {
+		const meta = await completeJSONWithMeta({
+			schema: workspaceCoachOutput,
+			model,
+			system: workspaceCoachPrompt.buildSystem(),
+			messages: [
+				{
+					role: 'user',
+					content: workspaceCoachPrompt.buildUserMessage(fx.brief, fx.thread, fx.draft)
+				}
+			]
+		});
+		if (!meta) return hardFail();
+		const c = checkWorkspace(meta.data, fx);
 		return {
 			ok: true,
 			classificationCorrect: null,
@@ -404,7 +558,7 @@ async function main() {
 	}
 
 	console.log(
-		`AI eval — ${SCOPE_FIXTURES.length} scope fixtures, ${COACH_FIXTURES.length} coach fixtures × ${MODELS.length} models.`
+		`AI eval — ${SCOPE_FIXTURES.length} scope, ${COACH_FIXTURES.length} coach, ${WORKSPACE_FIXTURES.length} workspace-coach fixtures × ${MODELS.length} models.`
 	);
 	console.log(
 		'Flow 2 (proposal ranking) is excluded — verify it manually via `npm run seed:projects`.'
@@ -441,10 +595,25 @@ async function main() {
 		coachAggs.push(aggregate(model, samples, false));
 	}
 
+	// Flow 4 — workspace coach
+	const workspaceAggs: Agg[] = [];
+	for (const model of MODELS) {
+		const samples: Sample[] = [];
+		for (const fx of WORKSPACE_FIXTURES) {
+			process.stdout.write(`  workspace/${model}/${fx.label}… `);
+			const s = await runWorkspace(model, fx);
+			console.log(s.structuralPass ? 'ok' : `issues: ${s.issues.join('; ')}`);
+			samples.push(s);
+		}
+		workspaceAggs.push(aggregate(model, samples, false));
+	}
+
 	printTable('Flow 1 — decider (scope)', scopeAggs, true);
 	console.log(`  → suggested pick: ${suggestPick(scopeAggs, true)}`);
 	printTable('Flow 3 — coach', coachAggs, false);
 	console.log(`  → suggested pick: ${suggestPick(coachAggs, false)}`);
+	printTable('Flow 4 — workspace coach', workspaceAggs, false);
+	console.log(`  → suggested pick: ${suggestPick(workspaceAggs, false)}`);
 	console.log('\nRecord the chosen model per flow in ai-integration.md (Phase 4 → Results).');
 }
 
