@@ -57,7 +57,8 @@
 			}
 			const b = await res.json();
 			result = b.result as CoachResult;
-		} catch {
+		} catch (e) {
+			console.error('[ai coach] request failed:', e);
 			error = 'Something went wrong. Please try again.';
 		} finally {
 			stopSteps();
@@ -87,7 +88,7 @@
 		} catch {
 			// Storage disabled/full — fall through; the form just won't be prefilled.
 		}
-		goto(`/projects/${slug}/apply`);
+		goto(`/projects/${slug}/apply?coach=1`);
 	}
 </script>
 
