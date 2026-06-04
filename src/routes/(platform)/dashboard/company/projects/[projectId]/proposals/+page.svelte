@@ -12,12 +12,34 @@
 		Separator
 	} from '$lib/components/ui';
 	import { trackSubmit } from '$lib/client/forms';
+	import type { ProposalRankResult } from '$lib/validators/ai';
 
 	let { data, form } = $props();
 	const project = $derived(data.project);
 
 	const busy = new SvelteSet<string>();
 	const submitFor = (key: string) => trackSubmit((v) => (v ? busy.add(key) : busy.delete(key)));
+
+	// AI shortlist — fetched on demand. Sponsor-facing only; the endpoint degrades
+	// to embedding order when AI is off (rankedBy tells us which path ran).
+	let shortlist = $state<ProposalRankResult | null>(null);
+	let shortlistLoading = $state(false);
+	let shortlistError = $state<string | null>(null);
+
+	async function loadShortlist() {
+		shortlistLoading = true;
+		shortlistError = null;
+		try {
+			const res = await fetch(`/api/projects/${project.id}/ai-shortlist`, { method: 'POST' });
+			const body = await res.json();
+			if (!res.ok) throw new Error(body?.error?.message ?? 'Could not rank proposals.');
+			shortlist = body.result as ProposalRankResult;
+		} catch (e) {
+			shortlistError = e instanceof Error ? e.message : 'Could not rank proposals.';
+		} finally {
+			shortlistLoading = false;
+		}
+	}
 
 	function confirmAward(e: Event, name: string) {
 		if (
@@ -104,6 +126,85 @@
 			{/if}
 		</CardContent>
 	</Card>
+
+	{#if data.proposals.some((p) => p.status === 'SUBMITTED')}
+		<Card>
+			<CardHeader>
+				<div class="flex flex-wrap items-center justify-between gap-2">
+					<CardTitle class="text-base">AI shortlist</CardTitle>
+					<Button variant="outline" size="sm" onclick={loadShortlist} disabled={shortlistLoading}>
+						{shortlistLoading ? 'Ranking…' : shortlist ? 'Re-rank' : 'Rank applicants'}
+					</Button>
+				</div>
+				<p class="text-sm text-zinc-500">
+					{#if data.aiEnabled}
+						Get a reasoned ranking of submitted proposals. Suggestions only — you still choose.
+					{:else}
+						AI ranking is off — applicants will be ordered by profile similarity only.
+					{/if}
+				</p>
+			</CardHeader>
+			{#if shortlistError || shortlist}
+				<CardContent class="space-y-3">
+					{#if shortlistError}
+						<p class="text-sm text-red-600">{shortlistError}</p>
+					{:else if shortlist}
+						{#if shortlist.rankedBy === 'embedding'}
+							<p class="text-xs text-amber-600">Ranked by similarity only — AI unavailable.</p>
+						{:else if shortlist.rankedBy === 'none'}
+							<p class="text-sm text-zinc-500">Not enough signal to rank these proposals yet.</p>
+						{/if}
+						{#each shortlist.items as item (item.proposalId)}
+							<div class="rounded-md border p-3">
+								<div class="flex flex-wrap items-center justify-between gap-2">
+									<div class="flex items-center gap-2">
+										<Badge variant="outline">#{item.rank}</Badge>
+										<span class="font-medium">{item.displayName}</span>
+									</div>
+									<div class="flex items-center gap-2 text-xs text-zinc-500">
+										{#if item.matchScore != null}
+											<span>Fit {item.matchScore}/100</span>
+										{/if}
+										{#if item.similarity != null}
+											<span>· similarity {(item.similarity * 100).toFixed(0)}%</span>
+										{/if}
+									</div>
+								</div>
+								{#if item.strengths.length || item.risks.length || item.suggestedQuestions.length}
+									<div class="mt-2 grid gap-2 text-sm sm:grid-cols-3">
+										{#if item.strengths.length}
+											<div>
+												<p class="text-xs font-medium text-emerald-700">Strengths</p>
+												<ul class="list-disc pl-4 text-zinc-600">
+													{#each item.strengths as s, i (i)}<li>{s}</li>{/each}
+												</ul>
+											</div>
+										{/if}
+										{#if item.risks.length}
+											<div>
+												<p class="text-xs font-medium text-amber-700">Risks</p>
+												<ul class="list-disc pl-4 text-zinc-600">
+													{#each item.risks as r, i (i)}<li>{r}</li>{/each}
+												</ul>
+											</div>
+										{/if}
+										{#if item.suggestedQuestions.length}
+											<div>
+												<p class="text-xs font-medium text-indigo-700">Ask them</p>
+												<ul class="list-disc pl-4 text-zinc-600">
+													{#each item.suggestedQuestions as q, i (i)}<li>{q}</li>{/each}
+												</ul>
+											</div>
+										{/if}
+									</div>
+								{/if}
+							</div>
+						{/each}
+					{/if}
+				</CardContent>
+			{/if}
+		</Card>
+	{/if}
 
 	{#if data.proposals.length === 0}
 		<Card>

@@ -11,7 +11,6 @@ import { adventurer } from '@dicebear/collection';
  */
 export function avatarDataUri(seed: string): string {
 	return (
-		'data:image/svg+xml;utf8,' +
-		encodeURIComponent(createAvatar(adventurer, { seed }).toString())
+		'data:image/svg+xml;utf8,' + encodeURIComponent(createAvatar(adventurer, { seed }).toString())
 	);
 }

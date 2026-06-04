@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { browser } from '$app/environment';
 	import { onMount, untrack } from 'svelte';
 	import RichTextEditor from '$lib/components/editor/RichTextEditor.svelte';
 	import { useLocalDraft } from '$lib/hooks/useLocalDraft';
@@ -13,7 +14,7 @@
 		CardContent,
 		Separator
 	} from '$lib/components/ui';
-	import { createProposalInput } from '$lib/validators/proposal';
+	import { createProposalInput, findCoverLetterPlaceholders } from '$lib/validators/proposal';
 
 	let { data } = $props();
 	const project = $derived(data.project);
@@ -22,16 +23,31 @@
 	const initial: Draft = { coverLetter: '', proposedTimeline: '' };
 
 	const draftStore = useLocalDraft<Draft>(untrack(() => `project-apply-${data.project.id}`));
-	let d = $state<Draft>(initial);
+
+	// Prefill synchronously (not in onMount) when arriving from the AI coach, so the
+	// editor mounts already populated — RichTextEditor reads initialHTML once on mount.
+	function loadInitial(): Draft {
+		if (browser && new URLSearchParams(window.location.search).has('coach')) {
+			const saved = draftStore.load();
+			if (saved) return saved;
+		}
+		return initial;
+	}
+
+	let d = $state<Draft>(loadInitial());
 	let restorePrompt = $state(false);
+	// Bumped to force a RichTextEditor remount so a restored draft is visible.
+	let editorKey = $state(0);
 
 	onMount(() => {
-		if (draftStore.load()) restorePrompt = true;
+		const isCoach = new URLSearchParams(window.location.search).has('coach');
+		if (!isCoach && draftStore.load()) restorePrompt = true;
 	});
 
 	function restore() {
 		const saved = draftStore.load();
 		if (saved) d = saved;
+		editorKey++;
 		restorePrompt = false;
 	}
 	function discard() {
@@ -51,10 +67,20 @@
 	let submitting = $state(false);
 	let submitError = $state<string | null>(null);
 
+	// Coach drafts leave bracketed placeholders ([YOUR NAME], [PLATFORM], …); the
+	// freelancer must replace them before this counts as a finished proposal.
+	const placeholders = $derived(findCoverLetterPlaceholders(d.coverLetter));
+
 	async function submit() {
 		submitting = true;
 		submitError = null;
 		try {
+			if (placeholders.length > 0) {
+				submitError = `Replace the remaining placeholders in your cover letter first: ${placeholders.join(', ')}`;
+				submitting = false;
+				return;
+			}
+
 			const payload = {
 				coverLetter: d.coverLetter,
 				proposedTimeline: d.proposedTimeline || null
@@ -144,11 +170,20 @@
 			<CardContent class="space-y-4">
 				<div class="space-y-1">
 					<Label for="cover">Cover letter</Label>
-					<RichTextEditor
-						initialHTML={d.coverLetter}
-						placeholder="Why you're a good fit, relevant experience, your approach…"
-						onChange={(html) => (d.coverLetter = html)}
-					/>
+					{#key editorKey}
+						<RichTextEditor
+							initialHTML={d.coverLetter}
+							placeholder="Why you're a good fit, relevant experience, your approach…"
+							onChange={(html) => (d.coverLetter = html)}
+						/>
+					{/key}
+					{#if placeholders.length > 0}
+						<p class="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">
+							Fill in {placeholders.length === 1 ? 'this placeholder' : 'these placeholders'} from the
+							AI draft before you submit — replace each with your own details:
+							<span class="font-medium">{placeholders.join(', ')}</span>
+						</p>
+					{/if}
 				</div>
 				<div class="space-y-1">
 					<Label for="timeline">Proposed timeline (optional)</Label>
@@ -161,7 +196,7 @@
 
 		<div class="flex justify-end gap-2">
 			<Button variant="ghost" href={`/projects/${project.slug}`}>Cancel</Button>
-			<Button onclick={submit} disabled={submitting}>
+			<Button onclick={submit} disabled={submitting || placeholders.length > 0}>
 				{submitting ? 'Submitting…' : 'Submit proposal'}
 			</Button>
 		</div>

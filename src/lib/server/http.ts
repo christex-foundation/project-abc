@@ -43,13 +43,8 @@ export function respondError(e: unknown): Response {
 	if (e instanceof ZodError) {
 		const first = e.issues[0];
 		const path = first?.path.join('.');
-		const message = first
-			? `${path ? path + ': ' : ''}${first.message}`
-			: 'Validation failed';
-		return json(
-			{ error: { code: 'BAD_REQUEST', message, details: e.issues } },
-			{ status: 400 }
-		);
+		const message = first ? `${path ? path + ': ' : ''}${first.message}` : 'Validation failed';
+		return json({ error: { code: 'BAD_REQUEST', message, details: e.issues } }, { status: 400 });
 	}
 	console.error('[respondError] unexpected error:', e);
 	return json({ error: { code: 'INTERNAL', message: 'Internal server error' } }, { status: 500 });

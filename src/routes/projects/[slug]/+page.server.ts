@@ -2,6 +2,7 @@ import { error } from '@sveltejs/kit';
 import { AppError } from '$lib/server/http';
 import * as projectService from '$lib/server/services/project.service';
 import * as proposalService from '$lib/server/services/proposal.service';
+import { isAiEnabled } from '$lib/server/ai/ai-flag';
 import { stripHtml } from '$lib/server/seo';
 import type { PageServerLoad } from './$types';
 
@@ -23,6 +24,8 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 			project,
 			isOwner,
 			proposalCount,
+			// Gates the freelancer "Coach me" panel; off → panel is absent.
+			aiEnabled: await isAiEnabled(),
 			pageMetaTags: {
 				title: project.title,
 				description: stripHtml(project.description) || `Apply to ${project.title} on FOW.`

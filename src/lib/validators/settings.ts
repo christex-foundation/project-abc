@@ -40,8 +40,13 @@ export const featureFlagsValue = z.object({
 	paymentsPaused: z.boolean().default(false)
 });
 
+// Toggles the AI assist experiment (see src/lib/server/ai/ai-flag.ts). Off by
+// default; also requires ANTHROPIC_API_KEY to be set for AI to actually run.
+export const aiAssistEnabledValue = z.object({ enabled: z.boolean().default(false) });
+
 export type UpdateSettingInput = z.infer<typeof updateSettingSchema>;
 export type CompanySelfRegisterValue = z.infer<typeof companySelfRegisterValue>;
 export type SocialLinksValue = z.infer<typeof socialLinksValue>;
 export type LegalLinksValue = z.infer<typeof legalLinksValue>;
 export type FeatureFlagsValue = z.infer<typeof featureFlagsValue>;
+export type AiAssistEnabledValue = z.infer<typeof aiAssistEnabledValue>;

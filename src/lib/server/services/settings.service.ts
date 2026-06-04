@@ -6,7 +6,8 @@ import {
 	companySelfRegisterValue,
 	socialLinksValue,
 	legalLinksValue,
-	featureFlagsValue
+	featureFlagsValue,
+	aiAssistEnabledValue
 } from '$lib/validators/settings';
 import { freelancerCreditSystemValue } from '$lib/validators/credit';
 import { freelancerReferralSystemValue } from '$lib/validators/referral';
@@ -17,7 +18,8 @@ const VALIDATORS: Record<string, { parse: (v: unknown) => unknown }> = {
 	FREELANCER_REFERRAL_SYSTEM: freelancerReferralSystemValue,
 	SOCIAL_LINKS: socialLinksValue,
 	LEGAL_LINKS: legalLinksValue,
-	FEATURE_FLAGS: featureFlagsValue
+	FEATURE_FLAGS: featureFlagsValue,
+	AI_ASSIST_ENABLED: aiAssistEnabledValue
 };
 
 export async function getAll(): Promise<Record<string, unknown>> {

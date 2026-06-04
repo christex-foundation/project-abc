@@ -19,7 +19,8 @@
 		"db:studio": "prisma studio",
 		"seed:invite": "tsx scripts/seed-invite.ts",
 		"seed:projects": "tsx scripts/dev-projects.ts",
-		"gen:icons": "tsx scripts/generate-pwa-icons.ts"
+		"gen:icons": "tsx scripts/generate-pwa-icons.ts",
+		"ai:eval": "tsx scripts/ai-eval.ts"
 	},
 	"prisma": {
 		"seed": "tsx prisma/seed.ts"
@@ -47,6 +48,7 @@
 		"vite": "^8.0.7"
 	},
 	"dependencies": {
+		"@anthropic-ai/sdk": "^0.100.1",
 		"@dicebear/collection": "^9.4.2",
 		"@dicebear/core": "^9.4.2",
 		"@fontsource-variable/fraunces": "^5.2.9",

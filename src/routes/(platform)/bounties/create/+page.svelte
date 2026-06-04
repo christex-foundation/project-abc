@@ -82,7 +82,18 @@
 
 	onMount(() => {
 		const saved = draftStore.load();
-		if (saved) restorePrompt = true;
+		if (!saved) return;
+		// Arriving from the AI decider (/create?ai=1): apply the seeded draft
+		// directly and remount the editors, skipping the restore prompt. Drop the
+		// query param so a later refresh falls back to the normal restore flow.
+		if (new URLSearchParams(window.location.search).get('ai') === '1') {
+			saved.step = Math.min(Math.max(1, saved.step ?? 1), steps.length);
+			d = saved;
+			editorNonce++;
+			history.replaceState({}, '', window.location.pathname);
+			return;
+		}
+		restorePrompt = true;
 	});
 
 	function restore() {
