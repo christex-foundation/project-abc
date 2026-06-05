@@ -2,16 +2,18 @@
 	import { page } from '$app/state';
 </script>
 
-<h1 class="text-xl font-semibold">Check your inbox</h1>
+<h1 class="fow-display text-ink text-3xl">Check your inbox</h1>
 {#if page.url.searchParams.get('error')}
-	<p class="mt-4 text-sm text-red-600">{page.url.searchParams.get('error')}</p>
-{:else}
-	<p class="mt-4 text-sm">
-		We've sent you a verification link. Click it to activate your account, then return to
-		<a class="underline" href="/login">sign in</a>.
+	<p class="mt-4 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">
+		{page.url.searchParams.get('error')}
 	</p>
-	<p class="mt-2 text-xs text-zinc-500">
+{:else}
+	<p class="text-ink-soft mt-4 text-sm">
+		We've sent you a verification link. Click it to activate your account, then come back to
+		<a class="text-terracotta underline-offset-4 hover:underline" href="/login">sign in</a>.
+	</p>
+	<p class="text-ink-soft mt-2 text-xs">
 		In local dev, the link is printed to the server console. Open the terminal running
-		<code>npm run dev</code> to find it.
+		<code class="font-mono">npm run dev</code> to find it.
 	</p>
 {/if}

@@ -12,6 +12,6 @@
 	let { class: className, children, hover = true, ...rest }: Props = $props();
 </script>
 
-<tr class={cn(hover && 'transition-colors hover:bg-zinc-50/80', className)} {...rest}>
+<tr class={cn(hover && 'hover:bg-paper/50 transition-colors', className)} {...rest}>
 	{@render children()}
 </tr>

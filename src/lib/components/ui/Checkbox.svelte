@@ -14,8 +14,8 @@
 	type="checkbox"
 	bind:checked
 	class={cn(
-		'h-4 w-4 shrink-0 rounded border border-zinc-300 text-zinc-900',
-		'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2',
+		'border-bone text-terracotta accent-terracotta h-4 w-4 shrink-0 rounded border',
+		'focus-visible:ring-terracotta focus-visible:ring-offset-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
 		'disabled:cursor-not-allowed disabled:opacity-50',
 		className
 	)}

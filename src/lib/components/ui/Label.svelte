@@ -12,7 +12,7 @@
 </script>
 
 <label
-	class={cn('text-sm font-medium leading-none text-zinc-900 select-none', className)}
+	class={cn('text-sm font-medium text-ink leading-none select-none', className)}
 	{...rest}
 >
 	{@render children()}

@@ -47,15 +47,17 @@
 
 <section class="space-y-6 p-4 md:p-6">
 	<header>
-		<h1 class="text-xl font-semibold text-zinc-900">Account</h1>
-		<p class="mt-1 text-sm text-zinc-600">
-			Download a copy of everything we hold about you, or permanently delete your account.
+		<h1 class="fow-display text-ink text-3xl">Account</h1>
+		<p class="text-ink-soft mt-1 text-sm">
+			Download a copy of everything we hold about you, or close your account for good.
 		</p>
 	</header>
 
-	<section class="rounded-lg border border-zinc-200 bg-white p-4">
-		<h2 class="text-sm font-semibold text-zinc-700">Download your data</h2>
-		<p class="mt-1 text-xs text-zinc-600">
+	<section
+		class="border-bone rounded-[var(--radius-card)] border bg-white p-5 shadow-[var(--shadow-card)]"
+	>
+		<h2 class="text-ink font-semibold tracking-tight">Download your data</h2>
+		<p class="text-ink-soft mt-1 text-xs">
 			We'll prepare a ZIP with your profile, activity, and a <code>data.json</code> bundle of everything
 			the platform stores about you. CSV files are included for tabular records.
 		</p>
@@ -66,27 +68,28 @@
 		</div>
 	</section>
 
-	<section class="rounded-lg border border-red-200 bg-white p-4">
-		<h2 class="text-sm font-semibold text-red-700">Delete account</h2>
-		<p class="mt-1 text-xs text-zinc-600">
+	<section class="rounded-[var(--radius-card)] border border-red-200 bg-red-50/40 p-5">
+		<p class="font-mono text-[11px] tracking-wide text-red-700 uppercase">Danger zone</p>
+		<h2 class="mt-1 font-semibold tracking-tight text-red-700">Delete account</h2>
+		<p class="text-ink-soft mt-1 text-xs">
 			This permanently erases your profile, sessions, and personal data. Records that involve other
-			people (bounties, submissions, payments you participated in) survive without your identity
-			attached so the counterparty keeps their history.
+			people (bounties, submissions, payments you took part in) stay, but without your identity
+			attached, so the other side keeps their history.
 		</p>
 
 		{#if data.blockers.length > 0}
-			<div class="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3">
-				<p class="text-xs font-semibold text-amber-800">
-					Resolve these before you can delete your account:
+			<div class="bg-ochre-soft/60 border-bone mt-3 rounded-[var(--radius-card)] border p-3">
+				<p class="text-clay text-xs font-semibold">
+					Sort these out before you can delete your account:
 				</p>
-				<ul class="mt-2 space-y-1 text-xs text-amber-900">
+				<ul class="text-ink mt-2 space-y-1 text-xs">
 					{#each data.blockers as b (b.code)}
 						<li class="flex items-start gap-2">
 							<span aria-hidden="true">•</span>
 							<span>
 								{b.message}
 								{#if b.link}
-									<a class="ml-1 font-medium underline" href={b.link}>Resolve</a>
+									<a class="text-terracotta ml-1 font-medium underline" href={b.link}>Resolve</a>
 								{/if}
 							</span>
 						</li>

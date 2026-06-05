@@ -104,7 +104,7 @@
 				return;
 			}
 			draftStore.clear();
-			await goto('/dashboard/freelancer/proposals');
+			await goto('/dashboard/freelancer/submissions');
 		} catch (e) {
 			submitError = (e as Error).message;
 			submitting = false;
@@ -114,12 +114,15 @@
 
 <div class="space-y-6 px-2 py-4 md:px-0">
 	<header>
-		<a href={`/projects/${project.slug}`} class="text-sm text-zinc-500 hover:underline">
+		<a
+			href={`/projects/${project.slug}`}
+			class="text-ink-soft hover:text-terracotta text-sm transition-colors"
+		>
 			← {project.title}
 		</a>
-		<h1 class="mt-1 text-2xl font-semibold">Apply with a proposal</h1>
-		<p class="text-sm text-zinc-500">
-			The company has set the milestone plan below (total <strong
+		<h1 class="fow-display text-ink mt-1 text-3xl">Apply with a proposal</h1>
+		<p class="text-ink-soft text-sm">
+			The company set the milestone plan below (total <strong class="text-ink"
 				>{formatMoney(project.budgetCap)}</strong
 			>). Send a cover letter telling them why you're the right contractor.
 		</p>
@@ -127,9 +130,12 @@
 
 	{#if data.alreadyApplied}
 		<Card>
-			<CardContent class="py-8 text-center text-zinc-600">
+			<CardContent class="text-ink-soft py-8 text-center">
 				You've already applied to this project.
-				<a href="/dashboard/freelancer/proposals" class="underline">View your proposals</a>.
+				<a
+					href="/dashboard/freelancer/submissions"
+					class="text-ink hover:text-terracotta underline transition-colors">View your proposals</a
+				>.
 			</CardContent>
 		</Card>
 	{:else}
@@ -178,9 +184,9 @@
 						/>
 					{/key}
 					{#if placeholders.length > 0}
-						<p class="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">
+						<p class="border-ochre/40 bg-ochre-soft text-clay rounded-xl border px-3 py-2 text-sm">
 							Fill in {placeholders.length === 1 ? 'this placeholder' : 'these placeholders'} from the
-							AI draft before you submit — replace each with your own details:
+							AI draft before you submit. Replace each with your own details:
 							<span class="font-medium">{placeholders.join(', ')}</span>
 						</p>
 					{/if}
@@ -192,7 +198,7 @@
 			</CardContent>
 		</Card>
 
-		{#if submitError}<p class="text-sm text-red-600">{submitError}</p>{/if}
+		{#if submitError}<p class="text-sm text-red-700">{submitError}</p>{/if}
 
 		<div class="flex justify-end gap-2">
 			<Button variant="ghost" href={`/projects/${project.slug}`}>Cancel</Button>

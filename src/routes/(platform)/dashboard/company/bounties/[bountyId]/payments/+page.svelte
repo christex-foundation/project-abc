@@ -65,7 +65,7 @@
 
 <div class="space-y-6">
 	<header class="space-y-1">
-		<div class="flex items-center gap-2 text-sm text-zinc-500">
+		<div class="text-ink-soft flex items-center gap-2 text-sm">
 			<a href="/dashboard/company/bounties" class="underline">Bounties</a>
 			<span>/</span>
 			<a href={`/dashboard/company/bounties/${bounty.id}/submissions`} class="underline">
@@ -74,11 +74,11 @@
 			<span>/</span>
 			<span>Payments</span>
 		</div>
-		<h1 class="text-2xl font-semibold">{bounty.title}</h1>
+		<h1 class="fow-display text-ink text-3xl">{bounty.title}</h1>
 		<div class="flex flex-wrap items-center gap-2 text-sm">
 			<Badge variant="outline">{bounty.status}</Badge>
 			<Badge variant="outline">PROJECT</Badge>
-			<span class="text-zinc-500">
+			<span class="text-ink-soft">
 				Prize pool: {formatMoney(bounty.totalPrizePool, bounty.currency)} · Paid:
 				{formatMoney(paidSoFar, bounty.currency)} · Remaining:
 				{formatMoney(remaining, bounty.currency)}
@@ -92,9 +92,9 @@
 			class:border-red-300={!form?.success}
 			class:bg-red-50={!form?.success}
 			class:text-red-700={!form?.success}
-			class:border-emerald-300={form?.success}
-			class:bg-emerald-50={form?.success}
-			class:text-emerald-700={form?.success}
+			class:border-forest={form?.success}
+			class:bg-forest-soft={form?.success}
+			class:text-forest={form?.success}
 		>
 			{form.message}
 		</div>
@@ -104,13 +104,13 @@
 		<!-- ── BOUNTY: multi-winner payout breakdown ── -->
 		{#if !bounty.isWinnersAnnounced}
 			<Card>
-				<CardContent class="py-12 text-center text-zinc-500">
+				<CardContent class="text-ink-soft py-12 text-center">
 					Winners haven't been announced yet. Payouts will appear here after announcement.
 				</CardContent>
 			</Card>
 		{:else if winners.length === 0}
 			<Card>
-				<CardContent class="py-12 text-center text-zinc-500">
+				<CardContent class="text-ink-soft py-12 text-center">
 					No winners were selected for this bounty.
 				</CardContent>
 			</Card>
@@ -121,11 +121,11 @@
 				</CardHeader>
 				<CardContent class="py-2">
 					<table class="w-full text-sm">
-						<thead class="text-left text-xs text-zinc-500 uppercase">
+						<thead class="text-ink-soft text-left font-mono text-xs uppercase">
 							<tr>
 								<th class="py-2 pr-4">Freelancer</th>
 								<th class="py-2 pr-4">Position</th>
-								<th class="py-2 pr-4">Prize</th>
+								<th class="py-2 pr-4 text-right">Prize</th>
 								<th class="py-2 pr-4">Method</th>
 								<th class="py-2 pr-4">Payment status</th>
 								<th class="py-2">Paid on</th>
@@ -135,24 +135,26 @@
 							{#each winners as w (w.id)}
 								{@const payment = prizePayments.find((p) => p.submissionId === w.id)}
 								{@const label = methodLabel(payment?.method)}
-								<tr class="border-t">
+								<tr class="border-bone hover:bg-paper/50 border-t">
 									<td class="py-2 pr-4">
 										<div class="font-medium">
 											{w.freelancer?.displayName ?? w.freelancerNameSnapshot ?? '(deleted user)'}
 										</div>
 										{#if w.freelancer}
-											<div class="text-xs text-zinc-500">{w.freelancer.user.email}</div>
+											<div class="text-ink-soft text-xs">{w.freelancer.user.email}</div>
 										{/if}
 									</td>
 									<td class="py-2 pr-4">
 										{w.winnerPosition === 99 ? 'Bonus' : `#${w.winnerPosition}`}
 									</td>
-									<td class="py-2 pr-4">{formatMoney(w.prizeAmount, bounty.currency)}</td>
+									<td class="py-2 pr-4 text-right tabular-nums"
+										>{formatMoney(w.prizeAmount, bounty.currency)}</td
+									>
 									<td class="py-2 pr-4">
 										{#if label}
 											<Badge variant="outline" class="text-xs">{label}</Badge>
 										{:else}
-											<span class="text-zinc-400">—</span>
+											<span class="text-ink-soft">—</span>
 										{/if}
 									</td>
 									<td class="py-2 pr-4">
@@ -166,7 +168,7 @@
 											<Badge variant="outline">PENDING</Badge>
 										{/if}
 									</td>
-									<td class="py-2 text-zinc-600">
+									<td class="text-ink-soft py-2">
 										{payment ? fmtDate(payment.createdAt) : '—'}
 									</td>
 								</tr>
@@ -180,7 +182,7 @@
 		<!-- ── PROJECT: single-winner tranche payments ── -->
 		{#if !winner}
 			<Card>
-				<CardContent class="py-12 text-center text-zinc-500">
+				<CardContent class="text-ink-soft py-12 text-center">
 					No winner has been selected yet.
 				</CardContent>
 			</Card>
@@ -190,7 +192,7 @@
 					<CardTitle class="text-base">
 						{winner.freelancer?.displayName ?? winner.freelancerNameSnapshot ?? '(deleted user)'}
 						{#if winner.freelancer}
-							<span class="ml-2 text-xs font-normal text-zinc-500">
+							<span class="text-ink-soft ml-2 text-xs font-normal">
 								{winner.freelancer.user.email}
 							</span>
 						{/if}
@@ -198,13 +200,13 @@
 				</CardHeader>
 				<CardContent class="space-y-4">
 					{#if tranches.length === 0}
-						<p class="text-sm text-zinc-500">No tranches paid yet.</p>
+						<p class="text-ink-soft text-sm">No tranches paid yet.</p>
 					{:else}
 						<table class="w-full text-sm">
-							<thead class="text-left text-xs text-zinc-500 uppercase">
+							<thead class="text-ink-soft text-left font-mono text-xs uppercase">
 								<tr>
 									<th class="pr-4 pb-1">#</th>
-									<th class="pr-4 pb-1">Amount</th>
+									<th class="pr-4 pb-1 text-right">Amount</th>
 									<th class="pr-4 pb-1">Method</th>
 									<th class="pr-4 pb-1">Final</th>
 									<th class="pb-1">Payment reference</th>
@@ -219,18 +221,20 @@
 											? 'MOMO_PAYOUT'
 											: null}
 									{@const trancheLabel = methodLabel(trancheMethod)}
-									<tr class="border-t">
+									<tr class="border-bone hover:bg-paper/50 border-t">
 										<td class="py-1 pr-4">{t.tranche}</td>
-										<td class="py-1 pr-4">{formatMoney(t.amount, bounty.currency)}</td>
+										<td class="py-1 pr-4 text-right tabular-nums"
+											>{formatMoney(t.amount, bounty.currency)}</td
+										>
 										<td class="py-1 pr-4">
 											{#if trancheLabel}
 												<Badge variant="outline" class="text-xs">{trancheLabel}</Badge>
 											{:else}
-												<span class="text-zinc-400">—</span>
+												<span class="text-ink-soft">—</span>
 											{/if}
 										</td>
 										<td class="py-1 pr-4">{t.final ? 'Yes' : '—'}</td>
-										<td class="py-1 font-mono text-xs text-zinc-500">
+										<td class="text-ink-soft py-1 font-mono text-xs">
 											{monimeRef ?? '—'}
 										</td>
 									</tr>
@@ -260,10 +264,10 @@
 							</Button>
 						</form>
 					{:else if winner.isPaid}
-						<p class="text-sm text-emerald-700">All tranches paid.</p>
+						<p class="text-forest text-sm">All tranches paid.</p>
 					{:else}
-						<p class="text-sm text-zinc-500">
-							Cannot initiate next tranche — wait for the previous one to settle.
+						<p class="text-ink-soft text-sm">
+							Cannot start the next tranche until the previous one settles.
 						</p>
 					{/if}
 				</CardContent>

@@ -5,6 +5,7 @@
 	import Compass from '@lucide/svelte/icons/compass';
 	import LayoutDashboard from '@lucide/svelte/icons/layout-dashboard';
 	import Bell from '@lucide/svelte/icons/bell';
+	import Wallet from '@lucide/svelte/icons/wallet';
 	import User from '@lucide/svelte/icons/user';
 
 	type Props = { user: AuthedUser | null };
@@ -30,14 +31,26 @@
 			label: 'Dashboard',
 			href: dashboardHref,
 			icon: LayoutDashboard,
-			active: pathname.startsWith('/dashboard')
+			active:
+				pathname === dashboardHref ||
+				(pathname.startsWith('/dashboard') &&
+					!pathname.startsWith('/dashboard/freelancer/earnings'))
 		},
-		{
-			label: 'Inbox',
-			href: '/notifications',
-			icon: Bell,
-			active: pathname.startsWith('/notifications')
-		},
+		// Freelancers get a direct Earnings/wallet tab (their most-asked-for surface,
+		// otherwise only reachable on desktop). Companies keep the notifications Inbox.
+		user?.role === 'FREELANCER'
+			? {
+					label: 'Earnings',
+					href: '/dashboard/freelancer/earnings',
+					icon: Wallet,
+					active: pathname.startsWith('/dashboard/freelancer/earnings')
+				}
+			: {
+					label: 'Inbox',
+					href: '/notifications',
+					icon: Bell,
+					active: pathname.startsWith('/notifications')
+				},
 		{
 			label: 'Profile',
 			href: profileHref,

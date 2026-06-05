@@ -10,7 +10,12 @@
 	let { class: className, children }: Props = $props();
 </script>
 
-<div class={cn('overflow-x-auto rounded-lg border border-zinc-200 bg-white', className)}>
+<div
+	class={cn(
+		'border-bone overflow-x-auto rounded-[var(--radius-card)] border bg-white shadow-[var(--shadow-card)]',
+		className
+	)}
+>
 	<table class="w-full border-collapse text-[13px]">
 		{@render children()}
 	</table>

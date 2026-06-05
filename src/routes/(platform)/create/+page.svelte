@@ -192,24 +192,25 @@
 </script>
 
 <div class="mx-auto max-w-3xl space-y-6 px-2 py-6 md:px-0">
-	<header>
-		<h1 class="text-2xl font-semibold">Post work</h1>
-		<p class="text-sm text-zinc-500">Choose how you want to engage freelancers.</p>
+	<header class="space-y-1">
+		<p class="text-ink-soft font-mono text-xs tracking-wide uppercase">Post work</p>
+		<h1 class="fow-display text-ink text-4xl">How do you want to hire?</h1>
+		<p class="text-ink-soft text-sm">Run a competition or hire one contractor.</p>
 	</header>
 
 	{#if data.aiEnabled}
-		<Card class="border-zinc-200">
+		<Card>
 			<CardContent class="space-y-4 py-6">
 				<div class="space-y-1">
 					<span
-						class="bg-forest-soft text-forest inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold tracking-wide uppercase"
+						class="bg-terracotta-soft text-clay inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-mono text-[11px] font-semibold tracking-wide uppercase"
 					>
 						AI assist
 					</span>
-					<h2 class="text-lg font-semibold">Not sure where to start?</h2>
-					<p class="text-sm text-zinc-600">
-						Describe what you need in a sentence or two. AI will suggest whether to run a bounty or
-						hire a contractor, and draft the brief for you to review and edit.
+					<h2 class="text-ink text-lg font-semibold tracking-tight">Not sure where to start?</h2>
+					<p class="text-ink-soft text-sm">
+						Describe what you need in a sentence or two. AI suggests whether to run a bounty or hire
+						a contractor, and drafts the brief for you to review and edit.
 					</p>
 				</div>
 
@@ -241,7 +242,7 @@
 							</div>
 						</div>
 						{#if error}
-							<p class="text-sm text-red-600">{error}</p>
+							<p class="text-sm text-red-700">{error}</p>
 						{/if}
 						<Button onclick={askAi} disabled={loading}>
 							{loading ? LOADING_STEPS[stepIndex] : 'Ask AI to draft this'}
@@ -251,13 +252,18 @@
 					{@const decided = result.type === 'BOUNTY' ? 'bounty' : 'project'}
 					{@const other = decided === 'bounty' ? 'project' : 'bounty'}
 					<div class="space-y-4">
-						<div class="space-y-2 rounded-lg border border-zinc-200 bg-zinc-50 p-4">
+						<div
+							class="border-terracotta-soft bg-terracotta-soft/40 space-y-2 rounded-xl border p-4"
+						>
+							<p class="text-clay font-mono text-[11px] font-medium tracking-wide uppercase">
+								AI suggestion
+							</p>
 							<div class="flex items-center gap-2">
-								<span class="text-sm text-zinc-500">AI suggests:</span>
+								<span class="text-ink-soft text-sm">AI suggests:</span>
 								<Badge>{result.type}</Badge>
 							</div>
-							<p class="text-sm text-zinc-700">{result.reasoning}</p>
-							<p class="text-sm font-medium text-zinc-900">{result.draft.title}</p>
+							<p class="text-ink-soft text-sm">{result.reasoning}</p>
+							<p class="text-ink text-sm font-medium">{result.draft.title}</p>
 						</div>
 						<div class="flex flex-wrap gap-2">
 							<Button onclick={() => useDraft(decided)}>Use this draft →</Button>
@@ -266,9 +272,9 @@
 							</Button>
 							<Button variant="ghost" onclick={reset}>Start over</Button>
 						</div>
-						<p class="text-xs text-zinc-500">
-							You'll be taken to the create form, prefilled and fully editable. Nothing is posted
-							until you submit it yourself.
+						<p class="text-ink-soft text-xs">
+							You'll land on the create form, prefilled and fully editable. Nothing is posted until
+							you submit it yourself.
 						</p>
 					</div>
 				{/if}
@@ -277,22 +283,23 @@
 
 		<div class="flex items-center gap-3">
 			<Separator class="flex-1" />
-			<span class="text-xs tracking-wide text-zinc-400 uppercase">or choose yourself</span>
+			<span class="text-ink-soft font-mono text-xs tracking-wide uppercase">or choose yourself</span
+			>
 			<Separator class="flex-1" />
 		</div>
 	{/if}
 
 	<div class="grid gap-4 sm:grid-cols-2">
 		<a href="/bounties/create" class="block">
-			<Card class="h-full transition-colors hover:border-zinc-900">
+			<Card class="fow-lift hover:border-terracotta h-full transition-colors">
 				<CardContent class="space-y-2 py-6">
 					<span
-						class="bg-terracotta-soft text-clay inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold tracking-wide uppercase"
+						class="bg-terracotta-soft text-clay inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-mono text-[11px] font-semibold tracking-wide uppercase"
 					>
 						Bounty
 					</span>
-					<h2 class="text-lg font-semibold">Run a competition</h2>
-					<p class="text-sm text-zinc-600">
+					<h2 class="text-ink text-lg font-semibold tracking-tight">Run a competition</h2>
+					<p class="text-ink-soft text-sm">
 						Post a prize, many freelancers submit work, and you pick the winners. Best for one-off
 						deliverables with a fixed or open reward.
 					</p>
@@ -301,15 +308,15 @@
 		</a>
 
 		<a href="/projects/create" class="block">
-			<Card class="h-full transition-colors hover:border-zinc-900">
+			<Card class="fow-lift hover:border-forest h-full transition-colors">
 				<CardContent class="space-y-2 py-6">
 					<span
-						class="bg-forest-soft text-forest inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold tracking-wide uppercase"
+						class="bg-forest-soft text-forest inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-mono text-[11px] font-semibold tracking-wide uppercase"
 					>
 						Project
 					</span>
-					<h2 class="text-lg font-semibold">Hire one contractor</h2>
-					<p class="text-sm text-zinc-600">
+					<h2 class="text-ink text-lg font-semibold tracking-tight">Hire one contractor</h2>
+					<p class="text-ink-soft text-sm">
 						Set a budget, freelancers apply with a milestone proposal, and you award one. Work is
 						delivered and paid milestone by milestone from escrow.
 					</p>

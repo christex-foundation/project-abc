@@ -203,24 +203,24 @@
 	</CardHeader>
 	<CardContent class="space-y-4">
 		{#if items.length === 0 && !formOpen}
-			<p class="text-sm text-zinc-500">No proof of work yet. Add a project to stand out.</p>
+			<p class="text-ink-soft text-sm">No proof of work yet. Add a project to stand out.</p>
 		{/if}
 
 		{#if items.length > 0}
 			<ul class="space-y-3">
 				{#each items as item (item.id)}
-					<li class="rounded-md border border-zinc-200 p-3">
+					<li class="border-bone rounded-xl border p-3">
 						<div class="flex items-start justify-between gap-3">
 							<div class="min-w-0 space-y-1">
 								<div class="flex items-center gap-2">
-									<h3 class="truncate font-medium">{item.title}</h3>
+									<h3 class="text-ink truncate font-medium tracking-tight">{item.title}</h3>
 								</div>
-								<p class="text-sm text-zinc-600">{item.description}</p>
+								<p class="text-ink-soft text-sm">{item.description}</p>
 								<a
 									href={item.link}
 									target="_blank"
 									rel="noopener noreferrer"
-									class="inline-block text-xs break-all text-blue-600 hover:underline"
+									class="text-terracotta inline-block text-xs break-all hover:underline"
 								>
 									{item.link}
 								</a>
@@ -254,7 +254,7 @@
 		{#if !formOpen}
 			<Button variant="outline" onclick={openCreate}>Add proof of work</Button>
 		{:else}
-			<div class="space-y-4 rounded-md border border-zinc-200 p-4">
+			<div class="border-bone bg-paper space-y-4 rounded-xl border p-4">
 				<div class="space-y-1">
 					<Label for="pow-title">Project title</Label>
 					<Input
@@ -275,7 +275,7 @@
 						rows={3}
 						placeholder="Project Description"
 					/>
-					<p class="text-xs text-zinc-500">
+					<p class="text-ink-soft text-xs">
 						{descriptionLeft} character{descriptionLeft === 1 ? '' : 's'} left
 					</p>
 				</div>
@@ -283,7 +283,7 @@
 				<div class="space-y-2">
 					<Label>Skills</Label>
 					{#if topLevelSkills.length === 0}
-						<p class="text-xs text-zinc-500">No skills available.</p>
+						<p class="text-ink-soft text-xs">No skills available.</p>
 					{:else}
 						<div class="flex flex-wrap gap-2">
 							{#each topLevelSkills as skill (skill.id)}
@@ -291,7 +291,7 @@
 								<button
 									type="button"
 									onclick={() => toggleParent(skill.id)}
-									class={`rounded-md border px-2 py-1 text-sm ${sel ? 'border-zinc-900 bg-zinc-900 text-white' : 'border-zinc-200 hover:border-zinc-400'}`}
+									class={`rounded-lg border px-2 py-1 text-sm transition-colors ${sel ? 'border-ink bg-ink text-cream' : 'border-bone text-ink-soft hover:border-ink'}`}
 								>
 									{skill.name}
 								</button>
@@ -303,9 +303,9 @@
 				<div class="space-y-2">
 					<Label>Sub skills</Label>
 					{#if selectedParentIds.length === 0}
-						<p class="text-xs text-zinc-500">Select a skill to see sub-skills.</p>
+						<p class="text-ink-soft text-xs">Select a skill to see sub-skills.</p>
 					{:else if availableSubSkills.length === 0}
-						<p class="text-xs text-zinc-500">No sub-skills for the selected skill(s).</p>
+						<p class="text-ink-soft text-xs">No sub-skills for the selected skill(s).</p>
 					{:else}
 						<div class="flex flex-wrap gap-2">
 							{#each availableSubSkills as skill (skill.id)}
@@ -313,7 +313,7 @@
 								<button
 									type="button"
 									onclick={() => toggleSub(skill.id)}
-									class={`rounded-md border px-2 py-1 text-sm ${sel ? 'border-zinc-900 bg-zinc-50' : 'border-zinc-200 hover:border-zinc-400'}`}
+									class={`rounded-lg border px-2 py-1 text-sm transition-colors ${sel ? 'border-terracotta bg-terracotta-soft text-clay' : 'border-bone text-ink-soft hover:border-ink'}`}
 								>
 									{skill.name}
 								</button>

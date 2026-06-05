@@ -51,11 +51,7 @@
 <header class="border-bone bg-cream/85 sticky top-0 z-30 border-b backdrop-blur">
 	<div class="mx-auto flex h-16 max-w-6xl items-center gap-3 px-4 sm:gap-5">
 		<!-- Wordmark -->
-		<a
-			href="/"
-			class="font-display text-ink text-2xl font-semibold tracking-tight"
-			style="font-variation-settings: 'opsz' 144, 'wght' 700;"
-		>
+		<a href="/" class="font-display text-ink text-3xl font-bold tracking-tight lowercase">
 			fow<span class="text-terracotta">.</span>
 		</a>
 
@@ -179,6 +175,10 @@
 
 				<DropdownSeparator />
 				<DropdownItem href={dashboardHref}>Dashboard</DropdownItem>
+				{#if user.role === 'FREELANCER'}
+					<DropdownItem href="/dashboard/freelancer/submissions">My work</DropdownItem>
+					<DropdownItem href="/dashboard/freelancer/earnings">Earnings</DropdownItem>
+				{/if}
 				<DropdownItem href={profileHref}>Profile</DropdownItem>
 				<DropdownItem href="/notifications">Notifications</DropdownItem>
 				<DropdownItem href="/settings/account">Account &amp; data</DropdownItem>

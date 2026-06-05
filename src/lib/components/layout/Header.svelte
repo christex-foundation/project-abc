@@ -13,8 +13,7 @@
 	<div class="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
 		<a
 			href={isAdminHost ? '/admin' : '/'}
-			class="font-display text-ink text-2xl font-semibold tracking-tight"
-			style="font-variation-settings: 'opsz' 144, 'wght' 700;"
+			class="font-display text-ink text-3xl font-bold tracking-tight lowercase"
 		>
 			fow<span class="text-terracotta">.</span>{isAdminHost ? ' · admin' : ''}
 		</a>
@@ -34,16 +33,15 @@
 						Sign out
 					</button>
 				</form>
-			{:else}
+			{:else if isAdminHost}
 				<a href="/login" class="text-ink-soft hover:text-ink transition-colors">Sign in</a>
-				{#if !isAdminHost}
-					<a
-						href="/register"
-						class="bg-ink text-cream hover:bg-terracotta rounded-full px-3.5 py-1.5 transition-colors"
-					>
-						Get started
-					</a>
-				{/if}
+			{:else}
+				<a
+					href="/register"
+					class="bg-ink text-cream hover:bg-terracotta rounded-full px-5 py-2.5 text-sm font-medium transition-colors"
+				>
+					Get started
+				</a>
 			{/if}
 		</nav>
 	</div>

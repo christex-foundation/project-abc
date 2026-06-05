@@ -75,18 +75,18 @@
 
 <div class="space-y-6">
 	<header class="space-y-1">
-		<div class="flex items-center gap-2 text-sm text-zinc-500">
+		<div class="text-ink-soft flex items-center gap-2 text-sm">
 			<a href="/dashboard/company/bounties" class="underline">Bounties</a>
 			<span>/</span>
 			<span>Submissions</span>
 		</div>
 		<div class="flex flex-wrap items-center justify-between gap-3">
 			<div>
-				<h1 class="text-2xl font-semibold">{bounty.title}</h1>
+				<h1 class="fow-display text-ink text-3xl">{bounty.title}</h1>
 				<div class="mt-1 flex flex-wrap items-center gap-2 text-sm">
 					<Badge variant="outline">{bounty.status}</Badge>
 					<Badge variant="outline">{bounty.type}</Badge>
-					<span class="text-zinc-500">
+					<span class="text-ink-soft">
 						Prize pool: {formatMoney(bounty.totalPrizePool, bounty.currency)}
 					</span>
 				</div>
@@ -134,9 +134,9 @@
 			class:border-red-300={!form?.success}
 			class:bg-red-50={!form?.success}
 			class:text-red-700={!form?.success}
-			class:border-emerald-300={form?.success}
-			class:bg-emerald-50={form?.success}
-			class:text-emerald-700={form?.success}
+			class:border-forest={form?.success}
+			class:bg-forest-soft={form?.success}
+			class:text-forest={form?.success}
 		>
 			{form.message}
 		</div>
@@ -144,7 +144,7 @@
 
 	{#if submissions.length === 0}
 		<Card>
-			<CardContent class="py-12 text-center text-zinc-500">No submissions yet.</CardContent>
+			<CardContent class="text-ink-soft py-12 text-center">No submissions yet.</CardContent>
 		</Card>
 	{:else}
 		<div class="space-y-4">
@@ -156,7 +156,7 @@
 							<CardTitle class="text-base">
 								{s.freelancer?.displayName ?? s.freelancerNameSnapshot ?? '(deleted user)'}
 								{#if s.freelancer}
-									<span class="ml-2 text-xs font-normal text-zinc-500">
+									<span class="text-ink-soft ml-2 text-xs font-normal">
 										{s.freelancer.user.email}
 									</span>
 								{/if}
@@ -202,14 +202,16 @@
 						</div>
 
 						{#if s.otherInfo}
-							<div class="rounded-md border bg-zinc-50 p-3 text-sm">
-								<div class="mb-1 text-xs font-medium text-zinc-500 uppercase">Additional info</div>
+							<div class="border-bone bg-paper rounded-md border p-3 text-sm">
+								<div class="text-ink-soft mb-1 font-mono text-xs font-medium uppercase">
+									Additional info
+								</div>
 								<div>{@html s.otherInfo}</div>
 							</div>
 						{/if}
 
 						{#if eligibilityQuestions.length > 0}
-							<details class="rounded-md border p-3 text-sm">
+							<details class="border-bone rounded-md border p-3 text-sm">
 								<summary class="cursor-pointer font-medium">Eligibility answers</summary>
 								<ul class="mt-2 space-y-2">
 									{#each eligibilityQuestions as q (q.question)}
@@ -220,7 +222,7 @@
 											}> | null
 										)?.find((a) => a.question === q.question)?.answer}
 										<li>
-											<div class="text-xs text-zinc-500">
+											<div class="text-ink-soft text-xs">
 												{q.question}{q.optional ? ' (optional)' : ''}
 											</div>
 											<div>{answer ?? '—'}</div>

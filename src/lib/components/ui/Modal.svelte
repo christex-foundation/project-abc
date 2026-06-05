@@ -38,7 +38,7 @@
 	<div class="fixed inset-0 z-50 flex items-center justify-center p-4">
 		<button
 			type="button"
-			class="absolute inset-0 bg-zinc-950/40 backdrop-blur-sm"
+			class="bg-ink/40 absolute inset-0 backdrop-blur-sm"
 			aria-label="Close modal"
 			onclick={onClose}
 		></button>
@@ -47,23 +47,23 @@
 			aria-modal="true"
 			aria-labelledby={title ? 'modal-title' : undefined}
 			class={cn(
-				'relative w-full overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-2xl',
+				'border-bone relative w-full overflow-hidden rounded-[var(--radius-card)] border bg-cream shadow-[var(--shadow-card-lift)]',
 				sizeClass
 			)}
 		>
 			{#if title || description}
-				<header class="flex items-start justify-between gap-4 border-b border-zinc-200 px-5 py-4">
+				<header class="border-bone flex items-start justify-between gap-4 border-b px-5 py-4">
 					<div class="min-w-0">
 						{#if title}
-							<h2 id="modal-title" class="text-base font-semibold text-zinc-900">{title}</h2>
+							<h2 id="modal-title" class="text-ink text-base font-semibold">{title}</h2>
 						{/if}
 						{#if description}
-							<p class="mt-0.5 text-xs text-zinc-500">{description}</p>
+							<p class="text-ink-soft mt-0.5 text-xs">{description}</p>
 						{/if}
 					</div>
 					<button
 						type="button"
-						class="-m-2 rounded-md p-2 text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900"
+						class="text-ink-soft hover:bg-paper hover:text-ink -m-2 rounded-md p-2 transition-colors"
 						onclick={onClose}
 						aria-label="Close"
 					>
@@ -75,7 +75,7 @@
 				{@render children()}
 			</div>
 			{#if footer}
-				<footer class="flex justify-end gap-2 border-t border-zinc-200 bg-zinc-50/60 px-5 py-3">
+				<footer class="border-bone bg-paper/50 flex justify-end gap-2 border-t px-5 py-3">
 					{@render footer()}
 				</footer>
 			{/if}

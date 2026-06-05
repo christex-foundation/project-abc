@@ -87,23 +87,28 @@
 
 <section class="space-y-6 p-4 md:p-6">
 	<header>
-		<h1 class="text-xl font-semibold text-zinc-900">Notifications</h1>
-		<p class="mt-1 text-sm text-zinc-600">
-			Choose how FOW keeps you informed about bounties, submissions, and payouts.
+		<h1 class="fow-display text-ink text-3xl">Notifications</h1>
+		<p class="text-ink-soft mt-1 text-sm">
+			Choose how FOW keeps you posted on bounties, submissions, and payouts.
 		</p>
 	</header>
 
 	<form onsubmit={save} class="space-y-6">
-		<fieldset class="rounded-lg border border-zinc-200 bg-white p-4">
-			<legend class="px-1 text-sm font-semibold text-zinc-700">Email</legend>
-			<ul class="divide-y divide-zinc-100">
+		<fieldset
+			class="border-bone rounded-[var(--radius-card)] border bg-white p-5 shadow-[var(--shadow-card)]"
+		>
+			<legend class="text-ink px-1 font-mono text-[11px] tracking-wide uppercase">Email</legend>
+			<ul class="divide-bone divide-y">
 				{#each data.emailEvents as event (event)}
-					<li class="flex items-center justify-between py-2 text-sm">
-						<span class="text-zinc-700">{EVENT_LABEL[event] ?? event}</span>
+					<li class="flex items-center justify-between py-2.5 text-sm">
+						<label class="text-ink flex-1 cursor-pointer" for={`email-${event}`}>
+							{EVENT_LABEL[event] ?? event}
+						</label>
 						<input
+							id={`email-${event}`}
 							type="checkbox"
 							bind:checked={email[event]}
-							class="h-4 w-4 cursor-pointer accent-zinc-900"
+							class="accent-forest h-4 w-4 cursor-pointer"
 							aria-label={EVENT_LABEL[event] ?? event}
 						/>
 					</li>
@@ -111,16 +116,23 @@
 			</ul>
 		</fieldset>
 
-		<fieldset class="rounded-lg border border-zinc-200 bg-white p-4">
-			<legend class="px-1 text-sm font-semibold text-zinc-700">Push (urgent events only)</legend>
-			<ul class="divide-y divide-zinc-100">
+		<fieldset
+			class="border-bone rounded-[var(--radius-card)] border bg-white p-5 shadow-[var(--shadow-card)]"
+		>
+			<legend class="text-ink px-1 font-mono text-[11px] tracking-wide uppercase"
+				>Push · urgent events only</legend
+			>
+			<ul class="divide-bone divide-y">
 				{#each data.pushEvents as event (event)}
-					<li class="flex items-center justify-between py-2 text-sm">
-						<span class="text-zinc-700">{EVENT_LABEL[event] ?? event}</span>
+					<li class="flex items-center justify-between py-2.5 text-sm">
+						<label class="text-ink flex-1 cursor-pointer" for={`push-${event}`}>
+							{EVENT_LABEL[event] ?? event}
+						</label>
 						<input
+							id={`push-${event}`}
 							type="checkbox"
 							bind:checked={push[event]}
-							class="h-4 w-4 cursor-pointer accent-zinc-900"
+							class="accent-forest h-4 w-4 cursor-pointer"
 							aria-label={EVENT_LABEL[event] ?? event}
 						/>
 					</li>
@@ -132,31 +144,34 @@
 			<button
 				type="submit"
 				disabled={saving}
-				class="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
+				class="bg-ink text-cream hover:bg-terracotta rounded-full px-5 py-2.5 text-sm font-medium transition-colors disabled:opacity-60"
 			>
 				{saving ? 'Saving…' : 'Save preferences'}
 			</button>
 			{#if saved}
-				<span class="text-xs text-emerald-600">Saved</span>
+				<span class="text-forest text-xs font-medium">Saved</span>
 			{/if}
 		</div>
 	</form>
 
-	<section class="rounded-lg border border-zinc-200 bg-white p-4">
-		<h2 class="text-sm font-semibold text-zinc-700">This device</h2>
-		<p class="mt-1 text-xs text-zinc-600">
-			Push goes through your browser's notification permission. Enable it once per device.
+	<section
+		class="border-bone rounded-[var(--radius-card)] border bg-white p-5 shadow-[var(--shadow-card)]"
+	>
+		<h2 class="text-ink font-semibold tracking-tight">This device</h2>
+		<p class="text-ink-soft mt-1 text-xs">
+			Push goes through your browser's notification permission. Turn it on once per device, when you
+			want it.
 		</p>
 		<div class="mt-3 flex items-center gap-3">
 			{#if hasPush}
-				<span class="text-xs text-emerald-600"
+				<span class="text-forest text-xs font-medium"
 					>Subscribed ({data.deviceCount} device{data.deviceCount === 1 ? '' : 's'})</span
 				>
 				<button
 					type="button"
 					onclick={disablePushDevice}
 					disabled={deviceBusy}
-					class="rounded-md border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 disabled:opacity-60"
+					class="border-bone bg-cream text-ink hover:border-ink rounded-full border px-4 py-2 text-xs font-medium transition-colors disabled:opacity-60"
 				>
 					{deviceBusy ? 'Working…' : 'Disable on this device'}
 				</button>
@@ -165,7 +180,7 @@
 					type="button"
 					onclick={enablePushDevice}
 					disabled={deviceBusy}
-					class="rounded-md bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60"
+					class="bg-ink text-cream hover:bg-terracotta rounded-full px-4 py-2 text-xs font-medium transition-colors disabled:opacity-60"
 				>
 					{deviceBusy ? 'Working…' : 'Enable on this device'}
 				</button>

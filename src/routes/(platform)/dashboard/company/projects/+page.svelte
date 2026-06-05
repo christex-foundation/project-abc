@@ -54,8 +54,8 @@
 <div class="space-y-6">
 	<header class="flex items-center justify-between gap-3">
 		<div>
-			<h1 class="text-2xl font-semibold">Your projects</h1>
-			<p class="text-sm text-zinc-500">Drafts, open proposals, and active engagements.</p>
+			<h1 class="fow-display text-ink text-3xl">Your projects</h1>
+			<p class="text-ink-soft mt-1 text-sm">Drafts, open proposals, and active engagements.</p>
 		</div>
 		<Button href="/projects/create">+ Create</Button>
 	</header>
@@ -66,9 +66,9 @@
 			class:border-red-300={!form?.success}
 			class:bg-red-50={!form?.success}
 			class:text-red-700={!form?.success}
-			class:border-emerald-300={form?.success}
-			class:bg-emerald-50={form?.success}
-			class:text-emerald-700={form?.success}
+			class:border-forest={form?.success}
+			class:bg-forest-soft={form?.success}
+			class:text-forest={form?.success}
 		>
 			{form.message}
 		</div>
@@ -76,7 +76,7 @@
 
 	{#if data.projects.length === 0}
 		<Card>
-			<CardContent class="py-12 text-center text-zinc-500">
+			<CardContent class="text-ink-soft py-12 text-center">
 				No projects yet. <a href="/projects/create" class="underline">Create your first one</a>.
 			</CardContent>
 		</Card>
@@ -84,14 +84,14 @@
 		{#each statusOrder as s (s)}
 			{#if grouped[s].length > 0}
 				<section class="space-y-2">
-					<h2 class="text-sm font-semibold text-zinc-500 uppercase">{s}</h2>
+					<h2 class="text-ink-soft font-mono text-xs font-semibold tracking-wide uppercase">{s}</h2>
 					<div class="grid gap-3 sm:grid-cols-2">
 						{#each grouped[s] as p (p.id)}
 							<Card>
 								<CardHeader>
 									<div class="flex items-center justify-between">
 										<Badge variant={badgeVariant(s)}>{s}</Badge>
-										<span class="text-xs text-zinc-500"
+										<span class="text-ink-soft font-mono text-xs tabular-nums"
 											>up to {formatMoney(p.budgetCap, p.currency)}</span
 										>
 									</div>

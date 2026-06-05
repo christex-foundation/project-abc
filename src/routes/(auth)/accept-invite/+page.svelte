@@ -6,34 +6,36 @@
 	let submitting = $state(false);
 </script>
 
-<h1 class="text-xl font-semibold">Set your password</h1>
-<p class="mt-2 text-sm text-zinc-600">
+<h1 class="fow-display text-ink text-3xl">Set your password</h1>
+<p class="text-ink-soft mt-2 text-sm">
 	Welcome to FOW. Pick a password to finish setting up your company account.
 </p>
 
 {#if !data.token}
-	<p class="mt-4 text-sm text-red-600">Missing reset token. Use the link from your invite email.</p>
+	<p class="mt-4 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">
+		Missing reset token. Use the link from your invite email.
+	</p>
 {:else}
-	<form method="POST" use:enhance={trackSubmit((v) => (submitting = v))} class="mt-4 space-y-3">
+	<form method="POST" use:enhance={trackSubmit((v) => (submitting = v))} class="mt-6 space-y-4">
 		<input type="hidden" name="token" value={data.token} />
-		<label class="block text-sm">
-			Password
+		<label class="text-ink block text-sm font-medium">
+			Password <span class="text-terracotta">*</span>
 			<input
 				type="password"
 				name="password"
 				required
 				minlength="8"
-				class="mt-1 block w-full rounded border border-zinc-300 px-3 py-2"
+				class="border-bone bg-cream focus-visible:ring-terracotta focus-visible:ring-offset-cream mt-1.5 block min-h-[44px] w-full rounded-xl border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
 			/>
-			<span class="mt-1 block text-xs text-zinc-500">At least 8 characters with one digit.</span>
+			<span class="text-ink-soft mt-1.5 block text-xs">At least 8 characters with one digit.</span>
 		</label>
 		{#if form?.error}
-			<p class="text-sm text-red-600">{form.error}</p>
+			<p class="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{form.error}</p>
 		{/if}
 		<button
 			type="submit"
 			disabled={submitting}
-			class="w-full rounded bg-zinc-900 px-4 py-2 text-white disabled:opacity-60"
+			class="bg-ink text-cream hover:bg-terracotta min-h-[44px] w-full rounded-full px-5 py-2.5 text-sm font-medium transition-colors disabled:opacity-60"
 		>
 			{submitting ? 'Setting up…' : 'Finish setup'}
 		</button>

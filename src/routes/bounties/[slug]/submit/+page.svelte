@@ -40,15 +40,17 @@
 
 <article class="mx-auto max-w-2xl space-y-6">
 	<header class="space-y-2">
-		<div class="text-sm text-zinc-500">
-			<a href={`/bounties/${bounty.slug}`} class="underline">{bounty.title}</a>
+		<div class="text-ink-soft text-sm">
+			<a href={`/bounties/${bounty.slug}`} class="hover:text-terracotta underline transition-colors"
+				>{bounty.title}</a
+			>
 		</div>
-		<h1 class="text-2xl font-semibold">Submit your work</h1>
+		<h1 class="fow-display text-ink text-3xl">Submit your work</h1>
 		<div class="flex flex-wrap items-center gap-2 text-sm">
 			<Badge variant="outline">{bounty.type}</Badge>
 			<Badge variant="outline">{bounty.compensationType}</Badge>
 			{#if bounty.compensationType === 'RANGE'}
-				<span class="text-zinc-500">
+				<span class="text-ink-soft">
 					Range: {formatMoney(bounty.minRewardAsk, bounty.currency)} – {formatMoney(
 						bounty.maxRewardAsk,
 						bounty.currency
@@ -59,25 +61,23 @@
 	</header>
 
 	{#if form?.message}
-		<div class="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">
+		<div class="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
 			{form.message}
 		</div>
 	{/if}
 
 	{#if credits && creditExempt}
-		<div
-			class="rounded-md border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-800"
-		>
-			This bounty is credit-exempt — submitting will not use a credit.
+		<div class="border-forest/30 bg-forest-soft text-forest rounded-xl border px-3 py-2 text-sm">
+			This bounty is credit-exempt. Submitting won't use a credit.
 		</div>
 	{:else if credits && noCredits}
-		<div class="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-			You have no credits remaining this month (0 / {credits.monthlyAllocation}). Credits reset on
-			the 1st of next month.
+		<div class="border-ochre/40 bg-ochre-soft text-clay rounded-xl border px-3 py-2 text-sm">
+			You have no credits left this month (0 / {credits.monthlyAllocation}). Credits reset on the
+			1st of next month.
 		</div>
 	{:else if credits}
-		<div class="rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-700">
-			Cost: 1 credit. You have <span class="font-medium">{credits.balance}</span> of
+		<div class="border-bone bg-paper text-ink-soft rounded-xl border px-3 py-2 text-sm">
+			Cost: 1 credit. You have <span class="text-ink font-medium">{credits.balance}</span> of
 			{credits.monthlyAllocation} this month.
 		</div>
 	{/if}
@@ -96,8 +96,8 @@
 						required
 						value={(form?.values?.link as string) ?? ''}
 					/>
-					<p class="mt-1 text-xs text-zinc-500">
-						Paste a public URL — GitHub, Drive, deployed app, anywhere reachable.
+					<p class="text-ink-soft mt-1 text-xs">
+						Paste a public URL: GitHub, Drive, a deployed app, anywhere reachable.
 					</p>
 				</div>
 
@@ -169,9 +169,7 @@
 				</Button>
 			</div>
 			{#if willCharge}
-				<p class="text-xs text-zinc-500">
-					Credits are spent at submission time and are not refunded.
-				</p>
+				<p class="text-ink-soft text-xs">Credits are spent at submission and aren't refunded.</p>
 			{/if}
 		</div>
 	</form>

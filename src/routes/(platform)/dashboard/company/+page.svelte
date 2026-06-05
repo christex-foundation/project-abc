@@ -36,11 +36,8 @@
 		</div>
 		<div class="relative flex flex-wrap items-end justify-between gap-4">
 			<div>
-				<p class="text-ink-soft text-[11px] tracking-wide uppercase">Your desk</p>
-				<h1
-					class="font-display text-ink mt-2 text-4xl font-semibold tracking-tight sm:text-5xl"
-					style="font-variation-settings: 'opsz' 144, 'wght' 600;"
-				>
+				<p class="text-ink-soft font-mono text-[11px] tracking-wide uppercase">Your desk</p>
+				<h1 class="fow-display text-ink mt-2 text-4xl sm:text-5xl">
 					Bounties, escrow,
 					<span class="text-terracotta italic">and winners.</span>
 				</h1>
@@ -59,42 +56,36 @@
 
 	<!-- Stat band -->
 	<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4" data-reveal-step="2">
-		<div class="border-bone bg-cream rounded-2xl border px-5 py-5">
-			<p class="text-ink-soft text-[11px] tracking-wide uppercase">Active bounties</p>
-			<p
-				class="font-display text-ink mt-2 text-3xl font-semibold tabular-nums"
-				style="font-variation-settings: 'opsz' 144, 'wght' 600;"
-			>
+		<div
+			class="border-bone bg-cream rounded-[var(--radius-card)] border px-5 py-5 shadow-[var(--shadow-card)]"
+		>
+			<p class="text-ink-soft font-mono text-[11px] tracking-wide uppercase">Active bounties</p>
+			<p class="fow-display text-ink mt-2 text-3xl tabular-nums">
 				{stats.activeBountiesCount}
 			</p>
 		</div>
 		<a
 			href="/dashboard/company/projects"
-			class="border-bone bg-cream hover:border-ink rounded-2xl border px-5 py-5 transition-colors"
+			class="border-bone bg-cream hover:border-ink rounded-[var(--radius-card)] border px-5 py-5 shadow-[var(--shadow-card)] transition-colors"
 		>
-			<p class="text-ink-soft text-[11px] tracking-wide uppercase">Active projects</p>
-			<p
-				class="font-display text-ink mt-2 text-3xl font-semibold tabular-nums"
-				style="font-variation-settings: 'opsz' 144, 'wght' 600;"
-			>
+			<p class="text-ink-soft font-mono text-[11px] tracking-wide uppercase">Active projects</p>
+			<p class="fow-display text-ink mt-2 text-3xl tabular-nums">
 				{stats.activeProjectsCount}
 			</p>
 		</a>
-		<div class="border-bone bg-cream rounded-2xl border px-5 py-5">
-			<p class="text-ink-soft text-[11px] tracking-wide uppercase">Total submissions</p>
-			<p
-				class="font-display text-ink mt-2 text-3xl font-semibold tabular-nums"
-				style="font-variation-settings: 'opsz' 144, 'wght' 600;"
-			>
+		<div
+			class="border-bone bg-cream rounded-[var(--radius-card)] border px-5 py-5 shadow-[var(--shadow-card)]"
+		>
+			<p class="text-ink-soft font-mono text-[11px] tracking-wide uppercase">Total submissions</p>
+			<p class="fow-display text-ink mt-2 text-3xl tabular-nums">
 				{stats.totalSubmissions}
 			</p>
 		</div>
-		<div class="border-bone bg-forest text-forest-soft rounded-2xl border px-5 py-5">
-			<p class="text-forest-soft/70 text-[11px] tracking-wide uppercase">Escrow funded</p>
-			<p
-				class="font-display text-cream mt-2 text-3xl font-semibold tabular-nums"
-				style="font-variation-settings: 'opsz' 144, 'wght' 600;"
-			>
+		<div
+			class="border-bone bg-forest text-forest-soft rounded-[var(--radius-card)] border px-5 py-5 shadow-[var(--shadow-card)]"
+		>
+			<p class="text-forest-soft/70 font-mono text-[11px] tracking-wide uppercase">Escrow funded</p>
+			<p class="fow-display text-cream mt-2 text-3xl tabular-nums">
 				{formatMoneyCompact(stats.totalEscrowFunded, 'Le')}
 			</p>
 		</div>
@@ -103,20 +94,20 @@
 	{#if hasBounties}
 		<div class="grid gap-3 sm:grid-cols-3" data-reveal-step="3">
 			<div class="border-bone bg-paper rounded-xl border px-4 py-3">
-				<p class="text-ink-soft text-[11px] tracking-wide uppercase">Drafts</p>
-				<p class="font-display text-ink mt-1 text-xl font-semibold tabular-nums">
+				<p class="text-ink-soft font-mono text-[11px] tracking-wide uppercase">Drafts</p>
+				<p class="text-ink mt-1 text-xl font-semibold tracking-tight tabular-nums">
 					{stats.draftCount}
 				</p>
 			</div>
 			<div class="border-bone bg-paper rounded-xl border px-4 py-3">
-				<p class="text-ink-soft text-[11px] tracking-wide uppercase">Funded</p>
-				<p class="font-display text-ink mt-1 text-xl font-semibold tabular-nums">
+				<p class="text-ink-soft font-mono text-[11px] tracking-wide uppercase">Funded</p>
+				<p class="text-ink mt-1 text-xl font-semibold tracking-tight tabular-nums">
 					{stats.fundedCount}
 				</p>
 			</div>
 			<div class="border-bone bg-paper rounded-xl border px-4 py-3">
-				<p class="text-ink-soft text-[11px] tracking-wide uppercase">Completed</p>
-				<p class="font-display text-ink mt-1 text-xl font-semibold tabular-nums">
+				<p class="text-ink-soft font-mono text-[11px] tracking-wide uppercase">Completed</p>
+				<p class="text-ink mt-1 text-xl font-semibold tracking-tight tabular-nums">
 					{stats.completedCount}
 				</p>
 			</div>

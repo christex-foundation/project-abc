@@ -156,8 +156,8 @@
 
 <div class="space-y-6">
 	<header class="space-y-1">
-		<h1 class="text-2xl font-semibold">Company profile</h1>
-		<p class="text-sm text-zinc-500">
+		<h1 class="fow-display text-ink text-3xl">Company profile</h1>
+		<p class="text-ink-soft text-sm">
 			This is how freelancers see your company on bounty listings and detail pages.
 		</p>
 	</header>
@@ -227,7 +227,7 @@
 		</CardHeader>
 		<CardContent class="space-y-4">
 			{#if !accountId}
-				<p class="text-sm text-zinc-500">
+				<p class="text-ink-soft text-sm">
 					Activate your wallet to fund bounties instantly and receive refunds.
 				</p>
 				<Button onclick={activateWallet} disabled={activating} variant="outline">
@@ -235,9 +235,11 @@
 				</Button>
 			{:else}
 				<div class="space-y-3">
-					<div class="flex items-center justify-between rounded-md bg-zinc-50 px-3 py-2">
+					<div class="bg-paper flex items-center justify-between rounded-md px-3 py-2">
 						<div class="space-y-0.5">
-							<p class="text-xs font-medium tracking-wide text-zinc-500 uppercase">Balance</p>
+							<p class="text-ink-soft font-mono text-xs font-medium tracking-wide uppercase">
+								Balance
+							</p>
 							<p class="text-sm font-semibold">
 								{accountLoading ? 'Loading…' : formatMoney(balance)}
 							</p>
@@ -254,9 +256,9 @@
 					</div>
 
 					<!-- Refund destination -->
-					<div class="rounded-md border p-3">
+					<div class="border-bone rounded-md border p-3">
 						<div class="mb-2 flex items-center justify-between">
-							<p class="text-xs font-medium tracking-wide text-zinc-500 uppercase">
+							<p class="text-ink-soft font-mono text-xs font-medium tracking-wide uppercase">
 								Refund mobile money
 							</p>
 							{#if destination && !editingDestination}
@@ -269,12 +271,12 @@
 						{#if destination && !editingDestination}
 							<div class="space-y-0.5">
 								<p class="font-mono text-sm">+{destination.phone}</p>
-								<p class="text-xs text-zinc-600">
+								<p class="text-ink-soft text-xs">
 									{destination.holderName} · {destination.providerName}
 								</p>
 							</div>
 						{:else}
-							<p class="mb-2 text-xs text-zinc-500">
+							<p class="text-ink-soft mb-2 text-xs">
 								If we ever refund you, it goes straight to this verified number.
 							</p>
 							<div class="flex gap-2">
@@ -307,7 +309,7 @@
 					</div>
 
 					{#if showWithdraw && destination}
-						<div class="rounded-md border p-4">
+						<div class="border-bone rounded-md border p-4">
 							<p class="mb-3 text-sm font-medium">Withdraw to mobile money</p>
 							<WithdrawalForm {destination} />
 						</div>

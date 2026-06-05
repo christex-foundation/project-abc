@@ -6,6 +6,6 @@
 	let { class: className, children }: Props = $props();
 </script>
 
-<thead class={cn('border-b border-zinc-200 bg-zinc-50/60', className)}>
+<thead class={cn('border-bone bg-paper/50 border-b', className)}>
 	{@render children()}
 </thead>

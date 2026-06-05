@@ -5,11 +5,15 @@
 </script>
 
 <div class="space-y-6 px-2 py-4 md:px-0">
-	<header>
-		<a href="/create" class="text-sm text-zinc-500 hover:underline">&larr; Choose type</a>
-		<h1 class="text-2xl font-semibold">Create a project</h1>
-		<p class="text-sm text-zinc-500">
-			Define the scope and milestone plan. Freelancers apply with a proposal; you award one, fund
+	<header class="space-y-1">
+		<a
+			href="/create"
+			class="text-ink-soft hover:text-terracotta font-mono text-xs tracking-wide uppercase"
+			>&larr; Choose type</a
+		>
+		<h1 class="fow-display text-ink text-3xl">Create a project</h1>
+		<p class="text-ink-soft text-sm">
+			Define the scope and milestone plan. Freelancers apply with a proposal. You award one, fund
 			escrow, and release each milestone as it's approved.
 		</p>
 	</header>

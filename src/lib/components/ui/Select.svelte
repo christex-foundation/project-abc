@@ -15,8 +15,8 @@
 <select
 	bind:value
 	class={cn(
-		'flex h-10 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm',
-		'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2',
+		'border-bone bg-cream text-ink flex h-10 w-full rounded-xl border px-3 py-2 text-sm',
+		'focus-visible:ring-terracotta focus-visible:ring-offset-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
 		'disabled:cursor-not-allowed disabled:opacity-50',
 		className
 	)}

@@ -8,5 +8,5 @@
 <div
 	role="separator"
 	aria-orientation={orientation}
-	class={cn('bg-zinc-200', orientation === 'horizontal' ? 'h-px w-full' : 'h-full w-px', className)}
+	class={cn('bg-bone', orientation === 'horizontal' ? 'h-px w-full' : 'h-full w-px', className)}
 ></div>

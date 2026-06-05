@@ -15,9 +15,9 @@
 
 <header class={cn('mb-6 flex flex-wrap items-start justify-between gap-4', className)}>
 	<div class="min-w-0">
-		<h1 class="text-xl font-semibold tracking-tight text-zinc-900">{title}</h1>
+		<h1 class="fow-display text-ink text-3xl">{title}</h1>
 		{#if description}
-			<p class="mt-1 text-sm text-zinc-600">{description}</p>
+			<p class="text-ink-soft mt-1 text-sm">{description}</p>
 		{/if}
 		{#if meta}
 			<div class="mt-2 flex flex-wrap items-center gap-2">

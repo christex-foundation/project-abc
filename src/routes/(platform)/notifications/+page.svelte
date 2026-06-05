@@ -95,9 +95,9 @@
 <div class="space-y-6">
 	<header class="flex items-center justify-between">
 		<div>
-			<h1 class="text-2xl font-semibold">Notifications</h1>
-			<p class="text-sm text-zinc-500">
-				{unreadCount > 0 ? `${unreadCount} unread` : 'You are all caught up.'}
+			<h1 class="fow-display text-ink text-3xl">Notifications</h1>
+			<p class="text-ink-soft text-sm">
+				{unreadCount > 0 ? `${unreadCount} unread` : "You're all caught up."}
 			</p>
 		</div>
 		{#if unreadCount > 0}
@@ -105,7 +105,7 @@
 				type="button"
 				onclick={markAllRead}
 				disabled={busy}
-				class="rounded border border-zinc-300 px-3 py-1.5 text-sm font-medium hover:bg-zinc-50 disabled:opacity-50"
+				class="border-bone bg-cream text-ink hover:border-ink rounded-full border px-4 py-2 text-sm font-medium transition-colors disabled:opacity-50"
 			>
 				{busy ? 'Working…' : 'Mark all read'}
 			</button>
@@ -113,7 +113,7 @@
 	</header>
 
 	{#if errorMsg}
-		<p class="text-sm text-red-600">{errorMsg}</p>
+		<p class="text-sm text-red-700">{errorMsg}</p>
 	{/if}
 
 	{#if data.notifications.length === 0}
@@ -125,50 +125,64 @@
 		<div class="space-y-6">
 			{#each grouped as [day, rows] (day)}
 				<section class="space-y-2">
-					<h2 class="text-xs font-semibold tracking-wide text-zinc-500 uppercase">{day}</h2>
-					<ul class="divide-y divide-zinc-100 rounded-lg border border-zinc-200 bg-white">
+					<h2 class="text-ink-soft font-mono text-[11px] tracking-wide uppercase">{day}</h2>
+					<ul
+						class="divide-bone border-bone divide-y rounded-[var(--radius-card)] border bg-white shadow-[var(--shadow-card)]"
+					>
 						{#each rows as n (n.id)}
 							<li>
 								{#if n.link}
 									<a
 										href={n.link}
 										onclick={() => onRowClick(n)}
-										class="flex w-full items-start gap-3 px-4 py-3 text-left hover:bg-zinc-50"
+										class="hover:bg-paper flex w-full items-start gap-3 px-4 py-3.5 text-left transition-colors"
 									>
 										<span
-											class={`mt-2 inline-block h-2 w-2 shrink-0 rounded-full ${n.isRead ? 'bg-transparent' : 'bg-zinc-900'}`}
-											aria-label={n.isRead ? 'Read' : 'Unread'}
+											class={`mt-2 inline-block h-2 w-2 shrink-0 rounded-full ${n.isRead ? 'bg-transparent' : 'bg-terracotta'}`}
+											aria-hidden="true"
 										></span>
 										<div class="min-w-0 flex-1">
 											<div class="flex items-baseline justify-between gap-3">
-												<p class="truncate text-sm font-medium text-zinc-900">{n.title}</p>
-												<span class="shrink-0 text-xs text-zinc-400">{fmtTime(n.createdAt)}</span>
+												<p
+													class={`truncate text-sm ${n.isRead ? 'text-ink-soft font-medium' : 'text-ink font-semibold'}`}
+												>
+													{n.title}
+												</p>
+												<span class="text-ink-soft shrink-0 text-xs">{fmtTime(n.createdAt)}</span>
 											</div>
 											{#if n.message}
-												<p class="mt-0.5 text-sm text-zinc-600">{n.message}</p>
+												<p class="text-ink-soft mt-0.5 text-sm">{n.message}</p>
 											{/if}
-											<p class="mt-1 text-xs text-zinc-400">{eventLabel(n.eventType)}</p>
+											<p class="text-ink-soft mt-1 text-xs">
+												{eventLabel(n.eventType)}{n.isRead ? '' : ' · Unread'}
+											</p>
 										</div>
 									</a>
 								{:else}
 									<button
 										type="button"
 										onclick={() => onRowClick(n)}
-										class="flex w-full items-start gap-3 px-4 py-3 text-left hover:bg-zinc-50"
+										class="hover:bg-paper flex w-full items-start gap-3 px-4 py-3.5 text-left transition-colors"
 									>
 										<span
-											class={`mt-2 inline-block h-2 w-2 shrink-0 rounded-full ${n.isRead ? 'bg-transparent' : 'bg-zinc-900'}`}
-											aria-label={n.isRead ? 'Read' : 'Unread'}
+											class={`mt-2 inline-block h-2 w-2 shrink-0 rounded-full ${n.isRead ? 'bg-transparent' : 'bg-terracotta'}`}
+											aria-hidden="true"
 										></span>
 										<div class="min-w-0 flex-1">
 											<div class="flex items-baseline justify-between gap-3">
-												<p class="truncate text-sm font-medium text-zinc-900">{n.title}</p>
-												<span class="shrink-0 text-xs text-zinc-400">{fmtTime(n.createdAt)}</span>
+												<p
+													class={`truncate text-sm ${n.isRead ? 'text-ink-soft font-medium' : 'text-ink font-semibold'}`}
+												>
+													{n.title}
+												</p>
+												<span class="text-ink-soft shrink-0 text-xs">{fmtTime(n.createdAt)}</span>
 											</div>
 											{#if n.message}
-												<p class="mt-0.5 text-sm text-zinc-600">{n.message}</p>
+												<p class="text-ink-soft mt-0.5 text-sm">{n.message}</p>
 											{/if}
-											<p class="mt-1 text-xs text-zinc-400">{eventLabel(n.eventType)}</p>
+											<p class="text-ink-soft mt-1 text-xs">
+												{eventLabel(n.eventType)}{n.isRead ? '' : ' · Unread'}
+											</p>
 										</div>
 									</button>
 								{/if}

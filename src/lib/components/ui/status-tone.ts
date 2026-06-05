@@ -46,10 +46,10 @@ export function toneFor(value: string): StatusTone {
 }
 
 export const TONE_CLASSES: Record<StatusTone, string> = {
-	neutral: 'bg-zinc-100 text-zinc-700 ring-zinc-200',
-	info: 'bg-sky-50 text-sky-700 ring-sky-200',
-	success: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
-	warning: 'bg-amber-50 text-amber-800 ring-amber-200',
+	neutral: 'bg-paper text-ink-soft ring-bone',
+	info: 'bg-bone text-ink ring-ink/15',
+	success: 'bg-forest-soft text-forest ring-forest/20',
+	warning: 'bg-ochre-soft text-clay ring-ochre/30',
 	danger: 'bg-red-50 text-red-700 ring-red-200',
-	accent: 'bg-indigo-50 text-indigo-700 ring-indigo-200'
+	accent: 'bg-terracotta-soft text-terracotta ring-terracotta/30'
 };

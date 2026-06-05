@@ -17,45 +17,51 @@
 			error = res.error.message ?? 'Sign-in failed.';
 			return;
 		}
-		goto('/');
+		await goto('/', { invalidateAll: true });
 	}
 </script>
 
-<h1 class="text-xl font-semibold">Sign in</h1>
-<form class="mt-4 space-y-3" onsubmit={submit}>
-	<label class="block text-sm">
-		Email
+<h1 class="fow-display text-ink text-3xl">Welcome back</h1>
+<p class="text-ink-soft mt-2 text-sm">Sign in to pick up where you left off.</p>
+
+<form class="mt-6 space-y-4" onsubmit={submit}>
+	<label class="text-ink block text-sm font-medium">
+		Email <span class="text-terracotta">*</span>
 		<input
 			type="email"
 			required
 			bind:value={email}
-			class="mt-1 block w-full rounded border border-zinc-300 px-3 py-2"
+			aria-invalid={error ? 'true' : undefined}
+			class="border-bone bg-cream focus-visible:ring-terracotta focus-visible:ring-offset-cream mt-1.5 block min-h-[44px] w-full rounded-xl border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
 		/>
 	</label>
-	<label class="block text-sm">
-		Password
+	<label class="text-ink block text-sm font-medium">
+		Password <span class="text-terracotta">*</span>
 		<input
 			type="password"
 			required
 			bind:value={password}
-			class="mt-1 block w-full rounded border border-zinc-300 px-3 py-2"
+			aria-invalid={error ? 'true' : undefined}
+			class="border-bone bg-cream focus-visible:ring-terracotta focus-visible:ring-offset-cream mt-1.5 block min-h-[44px] w-full rounded-xl border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
 		/>
 	</label>
 	{#if error}
-		<p class="text-sm text-red-600">{error}</p>
+		<p class="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
 	{/if}
 	<button
 		type="submit"
 		disabled={loading}
-		class="w-full rounded bg-zinc-900 px-4 py-2 text-white disabled:opacity-50"
+		class="bg-ink text-cream hover:bg-terracotta min-h-[44px] w-full rounded-full px-5 py-2.5 text-sm font-medium transition-colors disabled:opacity-50"
 	>
 		{loading ? 'Signing in…' : 'Sign in'}
 	</button>
 </form>
-<p class="mt-4 text-center text-sm text-zinc-600">
-	<a href="/forgot-password" class="underline">Forgot your password?</a>
+<p class="text-ink-soft mt-5 text-center text-sm">
+	<a href="/forgot-password" class="text-terracotta underline-offset-4 hover:underline"
+		>Forgot your password?</a
+	>
 </p>
-<p class="mt-2 text-center text-sm text-zinc-600">
-	No account?
-	<a href="/register" class="underline">Sign up</a>
+<p class="text-ink-soft mt-2 text-center text-sm">
+	No account yet?
+	<a href="/register" class="text-terracotta underline-offset-4 hover:underline">Sign up</a>
 </p>

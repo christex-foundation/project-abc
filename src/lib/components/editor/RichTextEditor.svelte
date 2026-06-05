@@ -123,12 +123,12 @@
 
 	const btn =
 		'inline-flex h-8 min-w-8 items-center justify-center rounded px-2 text-xs font-medium ' +
-		'text-zinc-700 hover:bg-zinc-100 disabled:opacity-50';
+		'text-ink-soft hover:bg-paper hover:text-ink disabled:opacity-50';
 </script>
 
 <ProseKit {editor}>
-	<div class={cn('rounded-md border border-zinc-300 bg-white', className)}>
-		<div class="flex flex-wrap items-center gap-1 border-b border-zinc-200 px-2 py-1.5">
+	<div class={cn('border-bone rounded-xl border bg-white', className)}>
+		<div class="border-bone flex flex-wrap items-center gap-1 border-b px-2 py-1.5">
 			<button
 				type="button"
 				class={btn}
@@ -150,7 +150,7 @@
 				onmousedown={exec(() => editor.commands.toggleCode())}
 				title="Inline code">{'</>'}</button
 			>
-			<span class="mx-1 h-5 w-px bg-zinc-200"></span>
+			<span class="bg-bone mx-1 h-5 w-px"></span>
 			<button
 				type="button"
 				class={btn}
@@ -165,7 +165,7 @@
 				onmousedown={exec(() => editor.commands.toggleHeading({ level: 3 }))}
 				title="Heading 3">H3</button
 			>
-			<span class="mx-1 h-5 w-px bg-zinc-200"></span>
+			<span class="bg-bone mx-1 h-5 w-px"></span>
 			<button
 				type="button"
 				class={btn}
@@ -180,7 +180,7 @@
 				onmousedown={exec(() => editor.commands.toggleList({ kind: 'ordered' }))}
 				title="Numbered list">1.</button
 			>
-			<span class="mx-1 h-5 w-px bg-zinc-200"></span>
+			<span class="bg-bone mx-1 h-5 w-px"></span>
 			<button
 				type="button"
 				class={btn}
@@ -194,7 +194,7 @@
 		</div>
 		<div
 			use:mountAction
-			class="prose prose-sm min-h-[180px] max-w-none px-3 py-2 focus:outline-none"
+			class="prose prose-sm text-ink min-h-[180px] max-w-none px-3 py-2 focus:outline-none"
 			class:opacity-50={disabled}
 			class:pointer-events-none={disabled}
 		></div>
@@ -208,7 +208,7 @@
 	:global(.ProseMirror p.is-empty:first-child::before) {
 		content: attr(data-placeholder);
 		float: left;
-		color: rgb(161 161 170);
+		color: color-mix(in srgb, var(--color-ink-soft) 55%, transparent);
 		pointer-events: none;
 		height: 0;
 	}

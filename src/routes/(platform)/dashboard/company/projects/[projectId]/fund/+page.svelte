@@ -39,15 +39,15 @@
 
 <div class="mx-auto max-w-2xl space-y-6">
 	<header class="space-y-1">
-		<a href="/dashboard/company/projects" class="text-sm text-zinc-500 hover:underline">
+		<a href="/dashboard/company/projects" class="text-ink-soft text-sm hover:underline">
 			&larr; Back to projects
 		</a>
-		<h1 class="text-2xl font-semibold">Fund project</h1>
-		<p class="text-sm text-zinc-500">{data.project.title} · awarded to {data.contractorName}</p>
+		<h1 class="fow-display text-ink text-3xl">Fund project</h1>
+		<p class="text-ink-soft text-sm">{data.project.title} · awarded to {data.contractorName}</p>
 	</header>
 
 	{#if data.cancelled}
-		<div class="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+		<div class="border-ochre bg-ochre-soft text-clay rounded-md border px-3 py-2 text-sm">
 			Checkout was cancelled. You can try again whenever you're ready.
 		</div>
 	{/if}
@@ -67,54 +67,56 @@
 			</CardDescription>
 		</CardHeader>
 		<CardContent class="space-y-1.5">
-			<ul class="divide-y text-sm">
+			<ul class="divide-bone divide-y text-sm">
 				{#each data.milestones as m (m.id)}
 					<li class="flex items-center justify-between py-2">
 						<span class="flex items-center gap-2">
 							<Badge variant="secondary">#{m.position}</Badge>
-							<span class="text-zinc-700">{m.title}</span>
+							<span class="text-ink">{m.title}</span>
 						</span>
-						<span class="font-medium">{formatMoney(m.amount, data.project.currency)}</span>
+						<span class="font-medium tabular-nums"
+							>{formatMoney(m.amount, data.project.currency)}</span
+						>
 					</li>
 				{/each}
 			</ul>
 		</CardContent>
-		<CardFooter class="flex items-center justify-between border-t pt-4">
-			<span class="text-sm font-medium text-zinc-500">Total to escrow</span>
-			<span class="text-lg font-semibold">{formatMoney(totalMinor, data.project.currency)}</span>
+		<CardFooter class="border-bone flex items-center justify-between border-t pt-4">
+			<span class="text-ink-soft text-sm font-medium">Total to escrow</span>
+			<span class="text-lg font-semibold tabular-nums"
+				>{formatMoney(totalMinor, data.project.currency)}</span
+			>
 		</CardFooter>
 	</Card>
 
 	{#if overMomoLimit}
-		<div class="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+		<div class="border-ochre bg-ochre-soft text-clay rounded-md border px-3 py-2 text-sm">
 			<strong>Heads up:</strong> this amount exceeds the SLE 15,000 daily Mobile Money limit. Use a bank
 			transfer on the secure checkout, or fund from your wallet if you have sufficient balance.
 		</div>
 	{/if}
 
 	<div class="space-y-3">
-		<p class="text-sm font-medium text-zinc-700">Choose payment method</p>
+		<p class="text-ink text-sm font-medium">Choose payment method</p>
 
 		<button
 			type="button"
 			onclick={() => (selectedMethod = 'checkout')}
 			class="w-full rounded-lg border-2 p-4 text-left transition-colors
-				{selectedMethod === 'checkout'
-				? 'border-zinc-900 bg-zinc-50'
-				: 'border-zinc-200 hover:border-zinc-300'}"
+				{selectedMethod === 'checkout' ? 'border-ink bg-paper' : 'border-bone hover:border-ink'}"
 		>
 			<div class="flex items-start gap-3">
 				<div
 					class="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2
-					{selectedMethod === 'checkout' ? 'border-zinc-900' : 'border-zinc-400'}"
+					{selectedMethod === 'checkout' ? 'border-ink' : 'border-ink-soft'}"
 				>
 					{#if selectedMethod === 'checkout'}
-						<div class="h-2 w-2 rounded-full bg-zinc-900"></div>
+						<div class="bg-ink h-2 w-2 rounded-full"></div>
 					{/if}
 				</div>
 				<div>
-					<p class="font-medium text-zinc-900">Pay via card or mobile money</p>
-					<p class="mt-0.5 text-sm text-zinc-500">
+					<p class="text-ink font-medium">Pay via card or mobile money</p>
+					<p class="text-ink-soft mt-0.5 text-sm">
 						Card, mobile money, or bank transfer · Redirects to a secure payment page
 					</p>
 				</div>
@@ -128,26 +130,26 @@
 				disabled={!hasSufficientBalance}
 				class="w-full rounded-lg border-2 p-4 text-left transition-colors
 					{selectedMethod === 'internal_transfer'
-					? 'border-zinc-900 bg-zinc-50'
+					? 'border-ink bg-paper'
 					: hasSufficientBalance
-						? 'border-zinc-200 hover:border-zinc-300'
-						: 'cursor-not-allowed border-zinc-200 opacity-60'}"
+						? 'border-bone hover:border-ink'
+						: 'border-bone cursor-not-allowed opacity-60'}"
 			>
 				<div class="flex items-start gap-3">
 					<div
 						class="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2
-						{selectedMethod === 'internal_transfer' ? 'border-zinc-900' : 'border-zinc-400'}"
+						{selectedMethod === 'internal_transfer' ? 'border-ink' : 'border-ink-soft'}"
 					>
 						{#if selectedMethod === 'internal_transfer'}
-							<div class="h-2 w-2 rounded-full bg-zinc-900"></div>
+							<div class="bg-ink h-2 w-2 rounded-full"></div>
 						{/if}
 					</div>
 					<div class="flex-1">
 						<div class="flex items-center gap-2">
-							<p class="font-medium text-zinc-900">Pay from wallet</p>
+							<p class="text-ink font-medium">Pay from wallet</p>
 							<Badge variant="outline" class="text-xs">Instant</Badge>
 						</div>
-						<p class="mt-0.5 text-sm text-zinc-500">
+						<p class="text-ink-soft mt-0.5 text-sm">
 							{#if accountUvan}Wallet: {accountUvan} ·
 							{/if}Balance: {formatMoney(accountBalance, data.project.currency)}
 						</p>
@@ -161,10 +163,10 @@
 				</div>
 			</button>
 		{:else}
-			<div class="rounded-lg border-2 border-dashed border-zinc-200 p-4 text-sm text-zinc-400">
+			<div class="border-bone text-ink-soft rounded-lg border-2 border-dashed p-4 text-sm">
 				<p class="font-medium">Pay from wallet</p>
 				<p class="mt-0.5">
-					<a href="/dashboard/company/profile" class="underline hover:text-zinc-600">
+					<a href="/dashboard/company/profile" class="hover:text-ink underline">
 						Activate your wallet
 					</a>
 					on your profile page to use this option.

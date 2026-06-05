@@ -6,6 +6,6 @@
 	let { class: className, children }: Props = $props();
 </script>
 
-<p class={cn('text-sm text-zinc-500', className)}>
+<p class={cn('text-ink-soft text-sm', className)}>
 	{@render children()}
 </p>

@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { Badge, Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui';
+	import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui';
 	import RaiseDisputeButton from '$lib/components/shared/RaiseDisputeButton.svelte';
 
 	let { data } = $props();
 
-	let activeTab = $state<'submissions' | 'earnings'>('submissions');
+	let activeTab = $state<'bounties' | 'projects'>('bounties');
 
 	function formatMoney(minor: number | null | undefined, currency: string) {
 		if (minor == null) return '—';
@@ -16,41 +16,38 @@
 	}
 
 	const submissions = $derived(data.submissions);
-	const earnings = $derived(data.earnings);
+	const proposals = $derived(data.proposals);
+	const contractedProjects = $derived(data.contractedProjects);
 
-	const totalEarned = $derived(
-		earnings.filter((e) => e.status === 'COMPLETED').reduce((s, e) => s + e.amount, 0)
-	);
-	const pending = $derived(
-		earnings
-			.filter((e) => e.status === 'PROCESSING' || e.status === 'PENDING')
-			.reduce((s, e) => s + e.amount, 0)
-	);
-	const currency = $derived(earnings[0]?.currency ?? 'SLE');
+	function proposalStatusVariant(s: string) {
+		if (s === 'AWARDED') return 'success' as const;
+		if (s === 'REJECTED' || s === 'WITHDRAWN') return 'secondary' as const;
+		return 'outline' as const;
+	}
 
 	const tabBtn = (active: boolean) =>
-		`rounded-md px-3 py-1.5 text-sm font-medium ${active ? 'bg-zinc-900 text-white' : 'text-zinc-600 hover:bg-zinc-100'}`;
+		`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${active ? 'bg-ink text-cream' : 'text-ink-soft hover:bg-paper'}`;
 </script>
 
 <div class="space-y-6">
 	<header class="space-y-1">
-		<h1 class="text-2xl font-semibold">Your work</h1>
-		<p class="text-sm text-zinc-500">Submissions and earnings across bounties you've entered.</p>
+		<h1 class="fow-display text-ink text-3xl">Your work</h1>
+		<p class="text-ink-soft text-sm">Bounties and projects you've taken on.</p>
 	</header>
 
 	<div class="flex gap-2">
-		<button class={tabBtn(activeTab === 'submissions')} onclick={() => (activeTab = 'submissions')}>
-			Submissions ({submissions.length})
+		<button class={tabBtn(activeTab === 'bounties')} onclick={() => (activeTab = 'bounties')}>
+			Bounties ({submissions.length})
 		</button>
-		<button class={tabBtn(activeTab === 'earnings')} onclick={() => (activeTab = 'earnings')}>
-			Earnings ({formatMoney(totalEarned, currency)})
+		<button class={tabBtn(activeTab === 'projects')} onclick={() => (activeTab = 'projects')}>
+			Projects ({proposals.length})
 		</button>
 	</div>
 
-	{#if activeTab === 'submissions'}
+	{#if activeTab === 'bounties'}
 		{#if submissions.length === 0}
 			<Card>
-				<CardContent class="py-12 text-center text-zinc-500">
+				<CardContent class="text-ink-soft py-12 text-center">
 					You haven't submitted to any bounties yet.
 					<a href="/bounties" class="underline">Browse bounties</a>.
 				</CardContent>
@@ -86,7 +83,7 @@
 							</div>
 						</CardHeader>
 						<CardContent class="space-y-2 text-sm">
-							<div class="flex flex-wrap items-center gap-4 text-zinc-600">
+							<div class="text-ink-soft flex flex-wrap items-center gap-4">
 								<span>Submitted {fmtDate(s.createdAt)}</span>
 								{#if s.ask != null}
 									<span>
@@ -100,14 +97,14 @@
 								{/if}
 							</div>
 							<div>
-								<span class="text-zinc-500">Link:</span>
+								<span class="text-ink-soft">Link:</span>
 								<a href={s.link} target="_blank" rel="noopener noreferrer" class="underline">
 									{s.link}
 								</a>
 							</div>
 							{#if s.feedback}
-								<div class="rounded-md border bg-zinc-50 p-3">
-									<div class="mb-1 text-xs font-medium text-zinc-500 uppercase">
+								<div class="border-bone bg-paper rounded-md border p-3">
+									<div class="text-ink-soft mb-1 font-mono text-xs font-medium uppercase">
 										Sponsor feedback
 									</div>
 									<div>{@html s.feedback}</div>
@@ -128,70 +125,79 @@
 			</div>
 		{/if}
 	{:else}
-		<div class="grid gap-3 sm:grid-cols-2">
-			<Card>
-				<CardContent class="py-4">
-					<div class="text-xs text-zinc-500 uppercase">Total earned</div>
-					<div class="text-2xl font-semibold">{formatMoney(totalEarned, currency)}</div>
-				</CardContent>
-			</Card>
-			<Card>
-				<CardContent class="py-4">
-					<div class="text-xs text-zinc-500 uppercase">In transit</div>
-					<div class="text-2xl font-semibold">{formatMoney(pending, currency)}</div>
-				</CardContent>
-			</Card>
-		</div>
-
-		{#if earnings.length === 0}
-			<Card>
-				<CardContent class="py-12 text-center text-zinc-500">
-					No payouts yet — win a bounty to see your earnings here.
-				</CardContent>
-			</Card>
-		{:else}
-			<Card>
-				<CardContent class="py-2">
-					<table class="w-full text-sm">
-						<thead class="text-left text-xs text-zinc-500 uppercase">
-							<tr>
-								<th class="py-2">Bounty</th>
-								<th class="py-2">Amount</th>
-								<th class="py-2">Status</th>
-								<th class="py-2">Date</th>
-							</tr>
-						</thead>
-						<tbody>
-							{#each earnings as e (e.id)}
-								<tr class="border-t">
-									<td class="py-2">
-										{#if e.submission?.bounty}
-											<a href={`/bounties/${e.submission.bounty.slug}`} class="hover:underline">
-												{e.submission.bounty.title}
-											</a>
-										{:else}
-											—
-										{/if}
-									</td>
-									<td class="py-2">{formatMoney(e.amount, e.currency)}</td>
-									<td class="py-2">
-										<Badge
-											variant={e.status === 'COMPLETED'
-												? 'success'
-												: e.status === 'FAILED'
-													? 'destructive'
-													: 'outline'}
-										>
-											{e.status}
-										</Badge>
-									</td>
-									<td class="py-2">{fmtDate(e.createdAt)}</td>
-								</tr>
-							{/each}
-						</tbody>
-					</table>
-				</CardContent>
-			</Card>
+		{#if contractedProjects.length > 0}
+			<section class="space-y-2">
+				<h2 class="text-ink-soft font-mono text-xs font-semibold tracking-wide uppercase">
+					Active engagements
+				</h2>
+				<div class="grid gap-3 sm:grid-cols-2">
+					{#each contractedProjects as p (p.id)}
+						<Card>
+							<CardHeader>
+								<div class="flex items-center justify-between">
+									<Badge variant={p.status === 'ACTIVE' ? 'success' : 'outline'}>{p.status}</Badge>
+									<span class="text-ink-soft font-mono text-xs tabular-nums">
+										{formatMoney(p.budgetCap, p.currency)}
+									</span>
+								</div>
+								<CardTitle class="line-clamp-2 text-base">{p.title}</CardTitle>
+							</CardHeader>
+							<CardContent>
+								{#if p.status === 'ACTIVE' || p.status === 'COMPLETED'}
+									<Button size="sm" variant="outline" href={`/projects/${p.slug}/workspace`}>
+										Open workspace
+									</Button>
+								{:else}
+									<Button size="sm" variant="outline" href={`/projects/${p.slug}`}>View</Button>
+								{/if}
+							</CardContent>
+						</Card>
+					{/each}
+				</div>
+			</section>
 		{/if}
+
+		<section class="space-y-2">
+			<h2 class="text-ink-soft font-mono text-xs font-semibold tracking-wide uppercase">
+				Proposals
+			</h2>
+			{#if proposals.length === 0}
+				<Card>
+					<CardContent class="text-ink-soft py-12 text-center">
+						No proposals yet. <a href="/projects" class="underline">Browse projects</a>.
+					</CardContent>
+				</Card>
+			{:else}
+				<div class="space-y-3">
+					{#each proposals as p (p.id)}
+						<Card>
+							<CardContent class="flex flex-wrap items-center justify-between gap-3 py-4">
+								<div>
+									<a href={`/projects/${p.project.slug}`} class="font-medium hover:underline">
+										{p.project.title}
+									</a>
+									<p class="text-ink-soft text-xs">
+										Budget {formatMoney(p.project.budgetCap, p.project.currency)}
+										{#if p.proposedTimeline}· {p.proposedTimeline}{/if}
+									</p>
+								</div>
+								<div class="flex items-center gap-3">
+									<Badge variant={proposalStatusVariant(p.status)}>{p.status}</Badge>
+									{#if p.status === 'AWARDED'}
+										<Button
+											size="sm"
+											variant="outline"
+											href={`/projects/${p.project.slug}/workspace`}
+										>
+											Workspace
+										</Button>
+									{/if}
+								</div>
+							</CardContent>
+						</Card>
+					{/each}
+				</div>
+			{/if}
+		</section>
 	{/if}
 </div>
