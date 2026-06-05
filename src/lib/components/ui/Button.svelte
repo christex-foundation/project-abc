@@ -12,24 +12,24 @@
 	export type ButtonSize = 'default' | 'sm' | 'lg' | 'icon';
 
 	const VARIANTS: Record<ButtonVariant, string> = {
-		default: 'bg-zinc-900 text-white hover:bg-zinc-800',
-		destructive: 'bg-red-600 text-white hover:bg-red-700',
-		outline: 'border border-zinc-300 bg-white text-zinc-900 hover:bg-zinc-50',
-		secondary: 'bg-zinc-100 text-zinc-900 hover:bg-zinc-200',
-		ghost: 'text-zinc-900 hover:bg-zinc-100',
-		link: 'text-zinc-900 underline-offset-4 hover:underline'
+		default: 'bg-ink text-cream hover:bg-terracotta',
+		destructive: 'bg-red-700 text-cream hover:bg-red-800',
+		outline: 'border border-bone bg-cream text-ink hover:border-ink',
+		secondary: 'bg-paper text-ink hover:bg-bone',
+		ghost: 'text-ink hover:bg-paper',
+		link: 'text-terracotta underline-offset-4 hover:underline'
 	};
 
 	const SIZES: Record<ButtonSize, string> = {
-		default: 'h-10 px-4 py-2 text-sm',
-		sm: 'h-8 px-3 text-xs',
+		default: 'h-10 px-5 py-2 text-sm',
+		sm: 'h-8 px-3.5 text-xs',
 		lg: 'h-12 px-6 text-base',
 		icon: 'h-10 w-10'
 	};
 
 	export const buttonClass = (variant: ButtonVariant = 'default', size: ButtonSize = 'default') =>
-		`inline-flex items-center justify-center gap-2 rounded-md font-medium transition-colors ` +
-		`focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2 ` +
+		`inline-flex items-center justify-center gap-2 rounded-full font-medium transition-colors ` +
+		`focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-terracotta focus-visible:ring-offset-2 focus-visible:ring-offset-cream ` +
 		`disabled:pointer-events-none disabled:opacity-50 ${VARIANTS[variant]} ${SIZES[size]}`;
 </script>
 

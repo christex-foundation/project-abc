@@ -38,7 +38,7 @@
 	<div class="fixed inset-0 z-50">
 		<button
 			type="button"
-			class="absolute inset-0 bg-zinc-950/40 backdrop-blur-sm"
+			class="bg-ink/40 absolute inset-0 backdrop-blur-sm"
 			aria-label="Close drawer"
 			onclick={onClose}
 		></button>
@@ -47,25 +47,25 @@
 			aria-modal="true"
 			aria-labelledby={title ? 'drawer-title' : undefined}
 			class={cn(
-				'absolute inset-y-0 right-0 flex w-full flex-col bg-white shadow-2xl',
+				'bg-cream absolute inset-y-0 right-0 flex w-full flex-col shadow-[var(--shadow-card-lift)]',
 				'animate-in slide-in-from-right duration-200',
 				widthClass
 			)}
 		>
-			<header class="flex items-start justify-between gap-4 border-b border-zinc-200 px-5 py-4">
+			<header class="border-bone flex items-start justify-between gap-4 border-b px-5 py-4">
 				<div class="min-w-0">
 					{#if title}
-						<h2 id="drawer-title" class="truncate text-base font-semibold text-zinc-900">
+						<h2 id="drawer-title" class="text-ink truncate text-base font-semibold">
 							{title}
 						</h2>
 					{/if}
 					{#if description}
-						<p class="mt-0.5 text-xs text-zinc-500">{description}</p>
+						<p class="text-ink-soft mt-0.5 text-xs">{description}</p>
 					{/if}
 				</div>
 				<button
 					type="button"
-					class="-m-2 rounded-md p-2 text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900"
+					class="text-ink-soft hover:bg-paper hover:text-ink -m-2 rounded-md p-2 transition-colors"
 					onclick={onClose}
 					aria-label="Close"
 				>
@@ -76,7 +76,7 @@
 				{@render children()}
 			</div>
 			{#if footer}
-				<footer class="border-t border-zinc-200 bg-zinc-50/60 px-5 py-3">
+				<footer class="border-bone bg-paper/50 border-t px-5 py-3">
 					{@render footer()}
 				</footer>
 			{/if}

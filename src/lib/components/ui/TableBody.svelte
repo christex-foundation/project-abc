@@ -6,6 +6,6 @@
 	let { class: className, children }: Props = $props();
 </script>
 
-<tbody class={cn('divide-y divide-zinc-100', className)}>
+<tbody class={cn('divide-bone divide-y', className)}>
 	{@render children()}
 </tbody>

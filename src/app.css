@@ -1,8 +1,11 @@
 @import 'tailwindcss';
 
-/* ── Fonts (bundled, no Google CDN — see CLAUDE.md mobile-first rule) ───────── */
-@import '@fontsource-variable/fraunces';
-@import '@fontsource-variable/geist';
+/* ── Fonts (bundled, no Google CDN — see CLAUDE.md mobile-first rule) ─────────
+   Barlow Condensed → display headlines (hero.md). Figtree → body / UI (DESIGN.md).
+   Geist Mono → tags, currency, IDs. Only the weights we use are imported. */
+@import '@fontsource/barlow-condensed/600.css';
+@import '@fontsource/barlow-condensed/700.css';
+@import '@fontsource-variable/figtree';
 @import '@fontsource-variable/geist-mono';
 
 /* ── Design tokens — "Bold African Editorial" ────────────────────────────────
@@ -11,9 +14,10 @@
    Existing zinc-based pages keep working untouched. */
 @theme {
 	--font-sans:
-		'Geist Variable', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
+		'Figtree Variable', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
 		Roboto, sans-serif;
-	--font-display: 'Fraunces Variable', ui-serif, Georgia, 'Times New Roman', serif;
+	--font-display:
+		'Barlow Condensed', 'Figtree Variable', ui-sans-serif, system-ui, -apple-system, sans-serif;
 	--font-mono:
 		'Geist Mono Variable', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
@@ -30,7 +34,23 @@
 	--color-ochre-soft: #fdebc8;
 	--color-clay: #92400e;
 
+	/* Rounded soft-shadow surfaces (DESIGN.md, tinted warm not navy). */
+	--radius-card: 20px;
+	--radius-card-lg: 32px;
+	--shadow-card: 0 12px 48px -24px rgba(26, 26, 26, 0.18);
+	--shadow-card-lift: 0 18px 56px -22px rgba(26, 26, 26, 0.28);
+
 	--ease-out-emphatic: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ── Display headline helper (hero.md condensed voice) ───────────────────────
+   Replaces the repeated inline `font-variation-settings` on Fraunces. Apply with
+   `class="fow-display"` plus a Tailwind text-size utility. Never below ~text-2xl. */
+.fow-display {
+	font-family: var(--font-display);
+	font-weight: 700;
+	line-height: 0.9;
+	letter-spacing: -0.03em;
 }
 
 /* ── Body background defaults to cream on the new shell.
@@ -124,11 +144,23 @@
 		border-color 220ms ease,
 		box-shadow 220ms ease;
 	border-left: 2px solid transparent;
+	box-shadow: var(--shadow-card);
 }
 .fow-card:hover {
 	transform: translateY(-2px);
 	border-left-color: var(--color-terracotta);
-	box-shadow: 0 12px 28px -18px rgba(26, 26, 26, 0.35);
+	box-shadow: var(--shadow-card-lift);
+}
+
+/* Generic hover lift for any rounded soft-shadow surface (no accent border). */
+.fow-lift {
+	transition:
+		transform 220ms var(--ease-out-emphatic),
+		box-shadow 220ms ease;
+}
+.fow-lift:hover {
+	transform: translateY(-2px);
+	box-shadow: var(--shadow-card-lift);
 }
 
 /* Reduced-motion: kill all decorative animations. */
@@ -136,7 +168,8 @@
 	.fow-reveal > [data-reveal-step],
 	.fow-marquee,
 	.fow-pulse,
-	.fow-card {
+	.fow-card,
+	.fow-lift {
 		animation: none !important;
 		transition: none !important;
 		opacity: 1 !important;

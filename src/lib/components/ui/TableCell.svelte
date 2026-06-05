@@ -21,7 +21,7 @@
 	<th
 		{colspan}
 		class={cn(
-			'px-3 py-2.5 text-xs font-medium uppercase tracking-wide text-zinc-500',
+			'text-ink-soft px-3 py-2.5 font-mono text-[11px] font-medium uppercase tracking-wide',
 			alignClass,
 			className
 		)}
@@ -29,7 +29,7 @@
 		{@render children()}
 	</th>
 {:else}
-	<td {colspan} class={cn('px-3 py-2.5 text-zinc-800', alignClass, className)}>
+	<td {colspan} class={cn('text-ink px-3 py-2.5', alignClass, className)}>
 		{@render children()}
 	</td>
 {/if}

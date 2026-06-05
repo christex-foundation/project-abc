@@ -10,6 +10,9 @@
 	let { class: className, children, ...rest }: Props = $props();
 </script>
 
-<div class={cn('rounded-lg border border-zinc-200 bg-white shadow-sm', className)} {...rest}>
+<div
+	class={cn('border-bone rounded-[var(--radius-card)] border bg-white shadow-[var(--shadow-card)]', className)}
+	{...rest}
+>
 	{@render children()}
 </div>
