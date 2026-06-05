@@ -44,8 +44,8 @@
 			<Badge variant="secondary">Project</Badge>
 			<Badge variant="outline">{STATUS_LABEL[p.status] ?? p.status}</Badge>
 		</div>
-		<h1 class="text-3xl font-semibold tracking-tight">{p.title}</h1>
-		<div class="flex items-center gap-3 text-sm text-zinc-600">
+		<h1 class="fow-display text-ink text-4xl sm:text-5xl">{p.title}</h1>
+		<div class="text-ink-soft flex items-center gap-3 text-sm">
 			{#if p.company?.logo}
 				<img src={p.company.logo} alt="" class="h-8 w-8 rounded-full" />
 			{/if}
@@ -87,7 +87,7 @@
 							<li class="flex items-start justify-between gap-3 py-2">
 								<div>
 									<div class="font-medium">{m.position}. {m.title}</div>
-									{#if m.dueInDays}<div class="text-xs text-zinc-500">~{m.dueInDays} days</div>{/if}
+									{#if m.dueInDays}<div class="text-ink-soft text-xs">~{m.dueInDays} days</div>{/if}
 								</div>
 								<span class="font-medium tabular-nums">{formatMoney(m.amount, p.currency)}</span>
 							</li>
@@ -97,11 +97,11 @@
 			</Card>
 
 			<Card>
-				<CardContent class="space-y-2 py-4 text-sm text-zinc-600">
+				<CardContent class="text-ink-soft space-y-2 py-4 text-sm">
 					<p>
-						This is a <strong>project</strong>: the company has set the milestone plan above. You
-						apply with a cover letter; the company picks one contractor, funds escrow, and releases
-						each milestone payment when it's approved.
+						This is a <strong>project</strong>: the company set the milestone plan above. You apply
+						with a cover letter, the company picks one contractor, funds escrow, and releases each
+						milestone payment once it's approved.
 					</p>
 				</CardContent>
 			</Card>
@@ -112,10 +112,10 @@
 				<CardHeader><CardTitle>Budget</CardTitle></CardHeader>
 				<CardContent class="space-y-2 text-sm">
 					<p class="text-xl font-semibold">{formatMoney(p.budgetCap, p.currency)}</p>
-					<p class="text-zinc-500">Total across all milestones, held in escrow.</p>
+					<p class="text-ink-soft">Total across all milestones, held in escrow.</p>
 					{#if p.timeToComplete}
 						<div class="pt-2">
-							<div class="text-xs text-zinc-500">Expected duration</div>
+							<div class="text-ink-soft text-xs">Expected duration</div>
 							<div class="font-medium">{p.timeToComplete}</div>
 						</div>
 					{/if}
@@ -133,7 +133,7 @@
 								</Badge>
 							{/each}
 						</div>
-						<p class="mt-2 text-xs text-zinc-500">* = required</p>
+						<p class="text-ink-soft mt-2 text-xs">* = required</p>
 					</CardContent>
 				</Card>
 			{/if}

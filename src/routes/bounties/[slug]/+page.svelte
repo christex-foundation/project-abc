@@ -66,8 +66,8 @@
 			<Badge variant="outline">{b.status}</Badge>
 			<Badge variant={countdown.ago ? 'destructive' : 'success'}>{countdown.label}</Badge>
 		</div>
-		<h1 class="text-3xl font-semibold tracking-tight">{b.title}</h1>
-		<div class="flex items-center gap-3 text-sm text-zinc-600">
+		<h1 class="fow-display text-ink text-4xl sm:text-5xl">{b.title}</h1>
+		<div class="text-ink-soft flex items-center gap-3 text-sm">
 			{#if b.company?.logo}
 				<img src={b.company.logo} alt="" class="h-8 w-8 rounded-full" />
 			{/if}
@@ -110,11 +110,11 @@
 						<ul class="space-y-2 text-sm">
 							{#each eligibility as q, i (i)}
 								<li class="flex gap-2">
-									<span class="text-zinc-400">{i + 1}.</span>
+									<span class="text-ink-soft">{i + 1}.</span>
 									<span>
 										{q.question}
 										{#if q.optional}
-											<span class="ml-1 text-xs text-zinc-500">(optional)</span>
+											<span class="text-ink-soft ml-1 text-xs">(optional)</span>
 										{/if}
 									</span>
 								</li>
@@ -131,7 +131,7 @@
 				<CardContent class="space-y-3 text-sm">
 					{#if b.compensationType === 'FIXED'}
 						<p class="text-xl font-semibold">{formatMoney(b.totalPrizePool, b.currency)}</p>
-						<p class="text-zinc-500">
+						<p class="text-ink-soft">
 							{b.numberOfWinners} winner{b.numberOfWinners === 1 ? '' : 's'}
 						</p>
 						{#if regularTiers.length > 0}
@@ -146,7 +146,7 @@
 						{/if}
 						{#if bonusTiers.length > 0}
 							<Separator />
-							<p class="text-xs text-zinc-500">Bonus pool (up to {b.maxBonusSpots})</p>
+							<p class="text-ink-soft text-xs">Bonus pool (up to {b.maxBonusSpots})</p>
 							{#each bonusTiers as t (t.id)}
 								<div class="flex justify-between">
 									<span>Bonus{t.label ? ` — ${t.label}` : ''}</span>
@@ -161,10 +161,10 @@
 								b.currency
 							)}
 						</p>
-						<p class="text-zinc-500">Propose your ask within this range.</p>
+						<p class="text-ink-soft">Propose your ask within this range.</p>
 					{:else}
 						<p class="text-xl font-semibold">Freelancer-proposed</p>
-						<p class="text-zinc-500">Suggest your own price in the submission.</p>
+						<p class="text-ink-soft">Suggest your own price in the submission.</p>
 					{/if}
 				</CardContent>
 			</Card>
@@ -173,18 +173,18 @@
 				<CardHeader><CardTitle>Timeline</CardTitle></CardHeader>
 				<CardContent class="space-y-2 text-sm">
 					<div>
-						<div class="text-xs text-zinc-500">Submission deadline</div>
+						<div class="text-ink-soft text-xs">Submission deadline</div>
 						<div class="font-medium">{new Date(b.submissionDeadline).toLocaleString()}</div>
 					</div>
 					{#if b.judgingDeadline}
 						<div>
-							<div class="text-xs text-zinc-500">Judging deadline</div>
+							<div class="text-ink-soft text-xs">Judging deadline</div>
 							<div class="font-medium">{new Date(b.judgingDeadline).toLocaleString()}</div>
 						</div>
 					{/if}
 					{#if b.timeToComplete}
 						<div>
-							<div class="text-xs text-zinc-500">Time to complete</div>
+							<div class="text-ink-soft text-xs">Time to complete</div>
 							<div class="font-medium">{b.timeToComplete}</div>
 						</div>
 					{/if}
@@ -202,7 +202,7 @@
 								</Badge>
 							{/each}
 						</div>
-						<p class="mt-2 text-xs text-zinc-500">* = required</p>
+						<p class="text-ink-soft mt-2 text-xs">* = required</p>
 					</CardContent>
 				</Card>
 			{/if}

@@ -58,12 +58,7 @@
 			<span class="bg-forest h-1.5 w-1.5 rounded-full"></span>
 			Hire & deliver
 		</p>
-		<h1
-			class="font-display text-ink mt-3 text-4xl font-semibold tracking-tight"
-			style="font-variation-settings: 'opsz' 144, 'wght' 600;"
-		>
-			Projects
-		</h1>
+		<h1 class="fow-display text-ink mt-3 text-4xl">Projects</h1>
 		<p class="text-ink-soft mt-1 text-sm">
 			Longer engagements with deliverables, timelines, and milestone payouts.
 		</p>
@@ -77,7 +72,9 @@
 </header>
 
 <section class="grid gap-5 md:grid-cols-[280px_1fr]">
-	<aside class="border-bone bg-cream space-y-4 rounded-2xl border p-4">
+	<aside
+		class="border-bone space-y-4 rounded-[var(--radius-card)] border bg-white p-4 shadow-[var(--shadow-card)]"
+	>
 		<div class="space-y-1">
 			<Label for="search">Search</Label>
 			<Input id="search" bind:value={search} oninput={onSearchInput} placeholder="Keyword…" />
@@ -126,14 +123,11 @@
 		<p class="text-ink-soft text-xs">{data.total} result{data.total === 1 ? '' : 's'}</p>
 
 		{#if data.items.length === 0}
-			<div class="border-bone bg-paper/50 rounded-2xl border border-dashed px-6 py-12 text-center">
-				<p
-					class="font-display text-ink-soft text-2xl"
-					style="font-variation-settings: 'opsz' 144, 'wght' 500;"
-				>
-					No projects match these filters
-				</p>
-				<p class="text-ink-soft mt-2 text-sm">Try clearing some filters or check back soon.</p>
+			<div
+				class="border-bone bg-paper/50 rounded-[var(--radius-card-lg)] border border-dashed px-6 py-12 text-center"
+			>
+				<p class="fow-display text-ink-soft text-3xl">No projects match these filters</p>
+				<p class="text-ink-soft mt-2 text-sm">Try clearing a filter or check back soon.</p>
 			</div>
 		{:else}
 			<div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">

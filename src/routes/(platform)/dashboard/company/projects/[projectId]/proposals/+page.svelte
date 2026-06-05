@@ -61,14 +61,14 @@
 
 <div class="space-y-6">
 	<header class="space-y-1">
-		<a href="/dashboard/company/projects" class="text-sm text-zinc-500 hover:underline">
+		<a href="/dashboard/company/projects" class="text-ink-soft text-sm hover:underline">
 			← Your projects
 		</a>
 		<div class="flex items-center gap-2">
-			<h1 class="text-2xl font-semibold">{project.title}</h1>
+			<h1 class="fow-display text-ink text-3xl">{project.title}</h1>
 			<Badge variant="outline">{project.status}</Badge>
 		</div>
-		<p class="text-sm text-zinc-500">
+		<p class="text-ink-soft text-sm">
 			Budget {formatMoney(project.budgetCap)} · {data.proposals.length} proposal{data.proposals
 				.length === 1
 				? ''
@@ -82,9 +82,9 @@
 			class:border-red-300={!form?.success}
 			class:bg-red-50={!form?.success}
 			class:text-red-700={!form?.success}
-			class:border-emerald-300={form?.success}
-			class:bg-emerald-50={form?.success}
-			class:text-emerald-700={form?.success}
+			class:border-forest={form?.success}
+			class:bg-forest-soft={form?.success}
+			class:text-forest={form?.success}
 		>
 			{form?.success ? 'Project awarded. Fund escrow to begin.' : form.message}
 		</div>
@@ -92,7 +92,7 @@
 
 	{#if !isOpen && project.awardedProposalId}
 		<Card>
-			<CardContent class="py-4 text-sm text-zinc-600">
+			<CardContent class="text-ink-soft py-4 text-sm">
 				This project has been awarded to <strong>{project.contractorNameSnapshot}</strong>.
 				{#if project.status === 'AWARDED'}
 					<a href={`/dashboard/company/projects/${project.id}/fund`} class="underline"
@@ -118,7 +118,7 @@
 				{/each}
 			</ul>
 			{#if project.status === 'AWARDED'}
-				<p class="mt-3 text-xs text-zinc-500">
+				<p class="text-ink-soft mt-3 text-xs">
 					You can still <a href={`/dashboard/company/projects/${project.id}/edit`} class="underline"
 						>adjust milestones</a
 					> until you fund escrow.
@@ -136,7 +136,7 @@
 						{shortlistLoading ? 'Ranking…' : shortlist ? 'Re-rank' : 'Rank applicants'}
 					</Button>
 				</div>
-				<p class="text-sm text-zinc-500">
+				<p class="text-ink-soft text-sm">
 					{#if data.aiEnabled}
 						Get a reasoned ranking of submitted proposals. Suggestions only — you still choose.
 					{:else}
@@ -150,18 +150,18 @@
 						<p class="text-sm text-red-600">{shortlistError}</p>
 					{:else if shortlist}
 						{#if shortlist.rankedBy === 'embedding'}
-							<p class="text-xs text-amber-600">Ranked by similarity only — AI unavailable.</p>
+							<p class="text-clay text-xs">Ranked by similarity only — AI unavailable.</p>
 						{:else if shortlist.rankedBy === 'none'}
-							<p class="text-sm text-zinc-500">Not enough signal to rank these proposals yet.</p>
+							<p class="text-ink-soft text-sm">Not enough signal to rank these proposals yet.</p>
 						{/if}
 						{#each shortlist.items as item (item.proposalId)}
-							<div class="rounded-md border p-3">
+							<div class="border-bone rounded-md border p-3">
 								<div class="flex flex-wrap items-center justify-between gap-2">
 									<div class="flex items-center gap-2">
 										<Badge variant="outline">#{item.rank}</Badge>
 										<span class="font-medium">{item.displayName}</span>
 									</div>
-									<div class="flex items-center gap-2 text-xs text-zinc-500">
+									<div class="text-ink-soft flex items-center gap-2 text-xs">
 										{#if item.matchScore != null}
 											<span>Fit {item.matchScore}/100</span>
 										{/if}
@@ -174,24 +174,24 @@
 									<div class="mt-2 grid gap-2 text-sm sm:grid-cols-3">
 										{#if item.strengths.length}
 											<div>
-												<p class="text-xs font-medium text-emerald-700">Strengths</p>
-												<ul class="list-disc pl-4 text-zinc-600">
+												<p class="text-forest text-xs font-medium">Strengths</p>
+												<ul class="text-ink-soft list-disc pl-4">
 													{#each item.strengths as s, i (i)}<li>{s}</li>{/each}
 												</ul>
 											</div>
 										{/if}
 										{#if item.risks.length}
 											<div>
-												<p class="text-xs font-medium text-amber-700">Risks</p>
-												<ul class="list-disc pl-4 text-zinc-600">
+												<p class="text-clay text-xs font-medium">Risks</p>
+												<ul class="text-ink-soft list-disc pl-4">
 													{#each item.risks as r, i (i)}<li>{r}</li>{/each}
 												</ul>
 											</div>
 										{/if}
 										{#if item.suggestedQuestions.length}
 											<div>
-												<p class="text-xs font-medium text-indigo-700">Ask them</p>
-												<ul class="list-disc pl-4 text-zinc-600">
+												<p class="text-terracotta text-xs font-medium">Ask them</p>
+												<ul class="text-ink-soft list-disc pl-4">
 													{#each item.suggestedQuestions as q, i (i)}<li>{q}</li>{/each}
 												</ul>
 											</div>
@@ -208,7 +208,7 @@
 
 	{#if data.proposals.length === 0}
 		<Card>
-			<CardContent class="py-12 text-center text-zinc-500">No proposals yet.</CardContent>
+			<CardContent class="text-ink-soft py-12 text-center">No proposals yet.</CardContent>
 		</Card>
 	{:else}
 		<div class="space-y-4">
@@ -232,11 +232,11 @@
 							</div>
 						</div>
 						{#if p.freelancer?.headline}
-							<p class="text-sm text-zinc-500">{p.freelancer.headline}</p>
+							<p class="text-ink-soft text-sm">{p.freelancer.headline}</p>
 						{/if}
 						{#if p.freelancer?.user?.id && data.ratings[p.freelancer.user.id]?.count}
 							{@const r = data.ratings[p.freelancer.user.id]}
-							<p class="text-xs text-amber-600">
+							<p class="text-ochre text-xs">
 								★ {r.avg} · {r.count} review{r.count === 1 ? '' : 's'}
 							</p>
 						{/if}
@@ -244,7 +244,7 @@
 					<CardContent class="space-y-3">
 						{#if p.proposedTimeline}
 							<p class="text-sm">
-								<span class="text-zinc-500">Timeline:</span>
+								<span class="text-ink-soft">Timeline:</span>
 								{p.proposedTimeline}
 							</p>
 						{/if}
@@ -258,7 +258,7 @@
 								href={p.freelancer.portfolio}
 								target="_blank"
 								rel="noopener noreferrer"
-								class="text-sm text-indigo-600 underline"
+								class="text-terracotta text-sm underline"
 							>
 								Portfolio
 							</a>
@@ -287,7 +287,7 @@
 		</div>
 
 		{#if isOpen && submitted.length === 0}
-			<p class="text-sm text-zinc-500">No open proposals to award.</p>
+			<p class="text-ink-soft text-sm">No open proposals to award.</p>
 		{/if}
 	{/if}
 </div>

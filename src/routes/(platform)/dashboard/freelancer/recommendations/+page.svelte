@@ -27,8 +27,8 @@
 
 <div class="space-y-6">
 	<header class="space-y-1">
-		<h1 class="text-2xl font-semibold">Recommended for you</h1>
-		<p class="text-sm text-zinc-500">
+		<h1 class="fow-display text-ink text-3xl">Recommended for you</h1>
+		<p class="text-ink-soft text-sm">
 			Bounties matched to your skills and headline.
 			<a href="/dashboard/freelancer/profile" class="underline">Update your profile</a> to refine these.
 		</p>
@@ -37,15 +37,15 @@
 	{#if recs.length === 0}
 		<Card>
 			<CardContent class="space-y-3 py-12 text-center">
-				<div class="text-zinc-700">No recommendations yet.</div>
-				<div class="text-sm text-zinc-500">
+				<div class="text-ink">No recommendations yet.</div>
+				<div class="text-ink-soft text-sm">
 					Complete your profile — add a headline, bio, and at least one skill — and we'll match you
 					to live bounties.
 				</div>
 				<div>
 					<a
 						href="/dashboard/freelancer/profile"
-						class="inline-flex items-center rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800"
+						class="bg-ink text-cream hover:bg-terracotta inline-flex items-center rounded-full px-5 py-2.5 text-sm font-medium transition-colors"
 					>
 						Complete your profile
 					</a>
@@ -66,15 +66,17 @@
 							</CardTitle>
 							<Badge variant={score.tone}>{score.label}</Badge>
 						</div>
-						<div class="text-xs text-zinc-500">
+						<div class="text-ink-soft text-xs">
 							{r.bounty.company?.companyName ?? r.bounty.companyNameSnapshot ?? 'A company'}
 						</div>
 					</CardHeader>
 					<CardContent class="space-y-3 text-sm">
-						<div class="flex flex-wrap items-center gap-4 text-zinc-600">
+						<div class="text-ink-soft flex flex-wrap items-center gap-4">
 							<span>
-								<strong>{formatMoney(r.bounty.totalPrizePool, r.bounty.currency)}</strong>
-								<span class="text-zinc-400">prize pool</span>
+								<strong class="tabular-nums"
+									>{formatMoney(r.bounty.totalPrizePool, r.bounty.currency)}</strong
+								>
+								<span class="text-ink-soft">prize pool</span>
 							</span>
 							<span>
 								<Badge variant="outline">{r.bounty.type}</Badge>

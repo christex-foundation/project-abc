@@ -269,20 +269,26 @@
 
 <div class="space-y-6 px-2 py-4 md:px-0">
 	<header class="flex flex-wrap items-center justify-between gap-3">
-		<div>
-			<a href="/create" class="text-sm text-zinc-500 hover:underline">&larr; Choose type</a>
-			<h1 class="text-2xl font-semibold">Create a bounty</h1>
-			<p class="text-sm text-zinc-500">Step {d.step} of {steps.length} — {steps[d.step - 1]}</p>
+		<div class="space-y-1">
+			<a
+				href="/create"
+				class="text-ink-soft hover:text-terracotta font-mono text-xs tracking-wide uppercase"
+				>&larr; Choose type</a
+			>
+			<h1 class="fow-display text-ink text-3xl">Create a bounty</h1>
+			<p class="text-ink-soft font-mono text-xs tracking-wide uppercase">
+				Step {d.step} of {steps.length} · {steps[d.step - 1]}
+			</p>
 		</div>
 		<ol class="hidden gap-1 md:flex">
 			{#each steps as label, i (i)}
 				<li
-					class={`rounded-full px-2 py-0.5 text-xs ${
+					class={`rounded-full px-2 py-0.5 font-mono text-xs ${
 						d.step === i + 1
-							? 'bg-zinc-900 text-white'
+							? 'bg-terracotta text-cream'
 							: d.step > i + 1
-								? 'bg-emerald-100 text-emerald-900'
-								: 'bg-zinc-100 text-zinc-500'
+								? 'bg-forest-soft text-forest'
+								: 'bg-paper text-ink-soft'
 					}`}
 				>
 					{i + 1}. {label}
@@ -345,29 +351,31 @@
 		<Card>
 			<CardHeader><CardTitle>Skills</CardTitle></CardHeader>
 			<CardContent class="space-y-4">
-				<p class="text-sm text-zinc-500">
+				<p class="text-ink-soft text-sm">
 					Pick the skills relevant to this work. Toggle "required" for the ones a freelancer must
 					have.
 				</p>
 				<div class="space-y-3">
 					{#each data.categories as cat (cat.id)}
 						<details open>
-							<summary class="cursor-pointer text-sm font-medium">{cat.name}</summary>
+							<summary class="text-ink cursor-pointer text-sm font-medium">{cat.name}</summary>
 							<div class="mt-2 grid gap-2 sm:grid-cols-2">
 								{#each cat.skills as s (s.id)}
 									{@const sel = d.skills.find((x) => x.skillId === s.id)}
-									<div class="flex items-center justify-between rounded border px-3 py-2 text-sm">
+									<div
+										class="border-bone text-ink flex items-center justify-between rounded-xl border px-3 py-2 text-sm"
+									>
 										<label class="flex items-center gap-2">
 											<input
 												type="checkbox"
 												checked={!!sel}
 												onchange={() => toggleSkill(s.id)}
-												class="h-4 w-4 rounded border-zinc-300"
+												class="border-bone text-terracotta h-4 w-4 rounded"
 											/>
 											<span>{s.name}</span>
 										</label>
 										{#if sel}
-											<label class="flex items-center gap-1 text-xs text-zinc-500">
+											<label class="text-ink-soft flex items-center gap-1 text-xs">
 												<input
 													type="checkbox"
 													checked={sel.isRequired}
@@ -392,47 +400,53 @@
 			<CardHeader><CardTitle>Compensation</CardTitle></CardHeader>
 			<CardContent class="space-y-4">
 				<div class="space-y-2">
-					<label class="flex cursor-pointer items-start gap-3 rounded border p-3 hover:bg-zinc-50">
+					<label
+						class="border-bone hover:bg-paper flex cursor-pointer items-start gap-3 rounded-xl border p-3"
+					>
 						<input
 							type="radio"
 							name="ct"
 							value="FIXED"
 							bind:group={d.compensationType}
-							class="mt-1"
+							class="accent-terracotta mt-1"
 						/>
 						<div>
-							<div class="font-medium">Fixed</div>
-							<div class="text-sm text-zinc-500">
+							<div class="text-ink font-medium">Fixed</div>
+							<div class="text-ink-soft text-sm">
 								Set prize amounts for each winning position. Total escrowed up front.
 							</div>
 						</div>
 					</label>
-					<label class="flex cursor-pointer items-start gap-3 rounded border p-3 hover:bg-zinc-50">
+					<label
+						class="border-bone hover:bg-paper flex cursor-pointer items-start gap-3 rounded-xl border p-3"
+					>
 						<input
 							type="radio"
 							name="ct"
 							value="RANGE"
 							bind:group={d.compensationType}
-							class="mt-1"
+							class="accent-terracotta mt-1"
 						/>
 						<div>
-							<div class="font-medium">Range</div>
-							<div class="text-sm text-zinc-500">
-								Define min / max; freelancers propose an ask within the range.
+							<div class="text-ink font-medium">Range</div>
+							<div class="text-ink-soft text-sm">
+								Define a min and max; freelancers propose an ask within the range.
 							</div>
 						</div>
 					</label>
-					<label class="flex cursor-pointer items-start gap-3 rounded border p-3 hover:bg-zinc-50">
+					<label
+						class="border-bone hover:bg-paper flex cursor-pointer items-start gap-3 rounded-xl border p-3"
+					>
 						<input
 							type="radio"
 							name="ct"
 							value="VARIABLE"
 							bind:group={d.compensationType}
-							class="mt-1"
+							class="accent-terracotta mt-1"
 						/>
 						<div>
-							<div class="font-medium">Variable</div>
-							<div class="text-sm text-zinc-500">Freelancer proposes the price.</div>
+							<div class="text-ink font-medium">Variable</div>
+							<div class="text-ink-soft text-sm">Freelancer proposes the price.</div>
 						</div>
 					</label>
 				</div>
@@ -470,11 +484,11 @@
 			<CardHeader><CardTitle>Prize tiers</CardTitle></CardHeader>
 			<CardContent class="space-y-3">
 				{#if d.compensationType !== 'FIXED'}
-					<p class="text-sm text-zinc-500">
+					<p class="text-ink-soft text-sm">
 						No tier editing needed for {d.compensationType.toLowerCase()} compensation.
 					</p>
 				{:else}
-					<p class="text-xs text-zinc-500">Amounts in minor units (SLE × 100).</p>
+					<p class="text-ink-soft text-xs">Amounts in minor units (SLE × 100).</p>
 					{#each d.prizeTiers.filter((t) => t.position !== 99) as tier, i (tier.position)}
 						<div class="flex items-center gap-2">
 							<span class="w-16 text-sm">#{tier.position}</span>
@@ -522,9 +536,7 @@
 		<Card>
 			<CardHeader><CardTitle>Eligibility questions</CardTitle></CardHeader>
 			<CardContent class="space-y-3">
-				<p class="text-sm text-zinc-500">
-					Optional questions that submitters will answer during submission.
-				</p>
+				<p class="text-ink-soft text-sm">Optional questions submitters answer when they submit.</p>
 				{#each d.eligibility as q, i (i)}
 					<div class="flex items-start gap-2">
 						<Textarea
@@ -582,7 +594,7 @@
 				<Button onclick={submit} disabled={submitting} class="w-full">
 					{submitting ? 'Saving…' : 'Create draft'}
 				</Button>
-				<p class="text-xs text-zinc-500">Drafts are private until you fund and publish them.</p>
+				<p class="text-ink-soft text-xs">Drafts stay private until you fund and publish them.</p>
 			</CardContent>
 		</Card>
 	{/if}

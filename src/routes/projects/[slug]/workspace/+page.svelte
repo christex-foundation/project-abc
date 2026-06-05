@@ -140,15 +140,16 @@
 
 <div class="space-y-6">
 	<header class="space-y-1">
-		<a href={`/projects/${project.slug}`} class="text-sm text-zinc-500 hover:underline"
-			>← {project.title}</a
+		<a
+			href={`/projects/${project.slug}`}
+			class="text-ink-soft hover:text-terracotta text-sm transition-colors">← {project.title}</a
 		>
 		<div class="flex flex-wrap items-center gap-2">
-			<h1 class="text-2xl font-semibold">Workspace</h1>
+			<h1 class="fow-display text-ink text-3xl">Workspace</h1>
 			<Badge variant="outline">{project.status}</Badge>
 			<Badge variant="secondary">{role}</Badge>
 		</div>
-		<p class="text-sm text-zinc-500">
+		<p class="text-ink-soft text-sm">
 			Contractor: {project.contractorNameSnapshot ?? '—'} · Budget {formatMoney(project.budgetCap)}
 		</p>
 		{#if project.status === 'ACTIVE' && (isOwner || isContractor)}
@@ -159,7 +160,7 @@
 	</header>
 
 	{#if errorMsg}
-		<div class="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">
+		<div class="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
 			{errorMsg}
 		</div>
 	{/if}
@@ -171,15 +172,13 @@
 				{#if data.reviews.length > 0}
 					<div class="space-y-2">
 						{#each data.reviews as r (r.id)}
-							<div class="rounded-md border border-zinc-100 p-3 text-sm">
-								<div class="flex items-center justify-between text-xs text-zinc-500">
+							<div class="border-bone rounded-xl border p-3 text-sm">
+								<div class="text-ink-soft flex items-center justify-between text-xs">
 									<span
 										>{r.raterNameSnapshot ?? 'A user'} ·
 										{r.raterRole === 'COMPANY' ? 'company' : 'contractor'}</span
 									>
-									<span class="text-amber-500"
-										>{'★'.repeat(r.rating)}{'☆'.repeat(5 - r.rating)}</span
-									>
+									<span class="text-ochre">{'★'.repeat(r.rating)}{'☆'.repeat(5 - r.rating)}</span>
 								</div>
 								{#if r.comment}<div class="mt-1"><RichTextView html={r.comment} /></div>{/if}
 							</div>
@@ -196,9 +195,7 @@
 								<button
 									type="button"
 									onclick={() => (reviewRating = n)}
-									class="text-2xl leading-none {n <= reviewRating
-										? 'text-amber-500'
-										: 'text-zinc-300'}"
+									class="text-2xl leading-none {n <= reviewRating ? 'text-ochre' : 'text-bone'}"
 									aria-label={`${n} star${n === 1 ? '' : 's'}`}
 								>
 									★
@@ -211,7 +208,7 @@
 						</Button>
 					</div>
 				{:else if data.myReview}
-					<p class="text-xs text-zinc-500">You've left your review. Thanks!</p>
+					<p class="text-ink-soft text-xs">You've left your review. Thanks!</p>
 				{/if}
 			</CardContent>
 		</Card>
@@ -219,7 +216,7 @@
 
 	{#if data.milestones.length === 0}
 		<Card>
-			<CardContent class="py-12 text-center text-zinc-500">
+			<CardContent class="text-ink-soft py-12 text-center">
 				No milestones yet. They appear once the project is funded.
 			</CardContent>
 		</Card>
@@ -241,7 +238,7 @@
 					</div>
 				</div>
 				{#if m.description}
-					<div class="text-sm text-zinc-600"><RichTextView html={m.description} /></div>
+					<div class="text-ink-soft text-sm"><RichTextView html={m.description} /></div>
 				{/if}
 			</CardHeader>
 			<CardContent class="space-y-4">
@@ -249,8 +246,8 @@
 				{#if m.updates.length > 0 || m.comments.length > 0}
 					<div class="space-y-3">
 						{#each m.updates as u (u.id)}
-							<div class="rounded-md border border-zinc-200 bg-zinc-50 p-3">
-								<div class="mb-1 flex items-center justify-between text-xs text-zinc-500">
+							<div class="border-bone bg-paper rounded-xl border p-3">
+								<div class="text-ink-soft mb-1 flex items-center justify-between text-xs">
 									<span>{u.author?.name ?? u.authorNameSnapshot ?? 'Contractor'} · update</span>
 									<span>{new Date(u.createdAt).toLocaleString()}</span>
 								</div>
@@ -263,7 +260,7 @@
 													href={l.url}
 													target="_blank"
 													rel="noopener noreferrer"
-													class="text-sm text-indigo-600 underline"
+													class="text-terracotta text-sm underline"
 												>
 													{l.label || l.url}
 												</a>
@@ -274,8 +271,8 @@
 							</div>
 						{/each}
 						{#each m.comments as c (c.id)}
-							<div class="rounded-md border border-zinc-100 p-3">
-								<div class="mb-1 flex items-center justify-between text-xs text-zinc-500">
+							<div class="border-bone rounded-xl border p-3">
+								<div class="text-ink-soft mb-1 flex items-center justify-between text-xs">
 									<span
 										>{c.author?.name ?? c.authorNameSnapshot ?? 'User'} ·
 										{c.authorRole === 'COMPANY' ? 'company' : 'contractor'}</span
@@ -298,7 +295,7 @@
 							bind:value={updateNote[m.id]}
 							placeholder="What did you complete? Anything the reviewer should know…"
 						/>
-						<p class="text-xs text-zinc-500">Deliverable links (at least one)</p>
+						<p class="text-ink-soft text-xs">Deliverable links (at least one)</p>
 						{#each updateLinks[m.id] ?? [] as _link, i (i)}
 							<div class="grid gap-2 sm:grid-cols-[1fr_2fr_auto]">
 								<Input bind:value={updateLinks[m.id][i].label} placeholder="Label" />

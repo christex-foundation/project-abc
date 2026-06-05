@@ -50,8 +50,8 @@
 <div class="space-y-6">
 	<header class="flex items-center justify-between gap-3">
 		<div>
-			<h1 class="text-2xl font-semibold">Your bounties</h1>
-			<p class="text-sm text-zinc-500">Drafts, funded escrows, active campaigns.</p>
+			<h1 class="fow-display text-ink text-3xl">Your bounties</h1>
+			<p class="text-ink-soft mt-1 text-sm">Drafts, funded escrows, and active campaigns.</p>
 		</div>
 		<Button href="/bounties/create">+ Create</Button>
 	</header>
@@ -62,9 +62,9 @@
 			class:border-red-300={!form?.success}
 			class:bg-red-50={!form?.success}
 			class:text-red-700={!form?.success}
-			class:border-emerald-300={form?.success}
-			class:bg-emerald-50={form?.success}
-			class:text-emerald-700={form?.success}
+			class:border-forest={form?.success}
+			class:bg-forest-soft={form?.success}
+			class:text-forest={form?.success}
 		>
 			{form.message}
 		</div>
@@ -72,7 +72,7 @@
 
 	{#if data.bounties.length === 0}
 		<Card>
-			<CardContent class="py-12 text-center text-zinc-500">
+			<CardContent class="text-ink-soft py-12 text-center">
 				No bounties yet. <a href="/bounties/create" class="underline">Create your first one</a>.
 			</CardContent>
 		</Card>
@@ -80,7 +80,7 @@
 		{#each statusOrder as s (s)}
 			{#if grouped[s].length > 0}
 				<section class="space-y-2">
-					<h2 class="text-sm font-semibold text-zinc-500 uppercase">{s}</h2>
+					<h2 class="text-ink-soft font-mono text-xs font-semibold tracking-wide uppercase">{s}</h2>
 					<div class="grid gap-3 sm:grid-cols-2">
 						{#each grouped[s] as b (b.id)}
 							<Card>
