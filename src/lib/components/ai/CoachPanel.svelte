@@ -99,25 +99,28 @@
 		</CardHeader>
 		<CardContent class="space-y-3 text-sm">
 			{#if !result}
-				<p class="text-zinc-600">
-					Get AI help on how to approach this work and talk to the company — and the habits that
-					carry over to platforms like Upwork.
+				<p class="text-ink-soft">
+					Get AI help on how to approach this work and talk to the company, plus habits that carry
+					over to platforms like Upwork.
 				</p>
 				{#if error}
-					<p class="text-red-600">{error}</p>
+					<p class="text-red-700">{error}</p>
 				{/if}
 				<Button class="w-full" onclick={coachMe} disabled={loading}>
 					{loading ? LOADING_STEPS[stepIndex] : 'Coach me'}
 				</Button>
 			{:else}
-				<div class="space-y-3">
+				<div class="border-terracotta-soft bg-terracotta-soft/40 space-y-3 rounded-xl border p-3">
+					<p class="text-clay font-mono text-[11px] font-medium tracking-wide uppercase">
+						AI suggestion
+					</p>
 					<div class="space-y-2">
-						<p class="font-semibold text-zinc-900">How to approach it</p>
+						<p class="text-ink font-semibold tracking-tight">How to approach it</p>
 						<ul class="space-y-2">
 							{#each result.approach as a, i (i)}
 								<li class="space-y-0.5">
-									<p class="text-zinc-800">{a.point}</p>
-									<p class="text-xs text-zinc-500">Upwork: {a.whyUpwork}</p>
+									<p class="text-ink">{a.point}</p>
+									<p class="text-ink-soft text-xs">Upwork: {a.whyUpwork}</p>
 								</li>
 							{/each}
 						</ul>
@@ -126,11 +129,11 @@
 					<Separator />
 
 					<div class="space-y-2">
-						<p class="font-semibold text-zinc-900">Talking to the company</p>
-						<p class="whitespace-pre-wrap text-zinc-800">{result.communication.message}</p>
+						<p class="text-ink font-semibold tracking-tight">Talking to the company</p>
+						<p class="text-ink whitespace-pre-wrap">{result.communication.message}</p>
 						{#if result.communication.clarifyingQuestions.length > 0}
-							<p class="text-xs font-medium text-zinc-500">Questions worth asking</p>
-							<ul class="list-disc space-y-1 pl-5 text-zinc-700">
+							<p class="text-ink-soft text-xs font-medium">Questions worth asking</p>
+							<ul class="text-ink-soft list-disc space-y-1 pl-5">
 								{#each result.communication.clarifyingQuestions as q, i (i)}
 									<li>{q}</li>
 								{/each}
@@ -141,14 +144,14 @@
 					{#if kind === 'PROJECT' && result.communication.coverLetter}
 						<Separator />
 						<div class="space-y-2">
-							<p class="font-semibold text-zinc-900">Draft cover letter</p>
-							<p class="whitespace-pre-wrap text-zinc-800">{result.communication.coverLetter}</p>
+							<p class="text-ink font-semibold tracking-tight">Draft cover letter</p>
+							<p class="text-ink whitespace-pre-wrap">{result.communication.coverLetter}</p>
 							<Button class="w-full" onclick={useCoverLetter}>Use this cover letter →</Button>
 						</div>
 					{/if}
 
-					<p class="text-xs text-zinc-500">
-						AI drafts only — review and edit before you submit. Nothing is sent until you submit it
+					<p class="text-ink-soft text-xs">
+						AI drafts only. Review and edit before you submit. Nothing is sent until you submit it
 						yourself.
 					</p>
 					<Button variant="ghost" class="w-full" onclick={() => (result = null)}>Start over</Button>

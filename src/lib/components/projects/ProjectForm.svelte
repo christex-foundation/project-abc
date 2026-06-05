@@ -238,14 +238,14 @@
 <Card>
 	<CardHeader><CardTitle>Milestones</CardTitle></CardHeader>
 	<CardContent class="space-y-4">
-		<p class="text-xs text-zinc-500">
+		<p class="text-ink-soft text-xs">
 			Define the deliverables and payment for each stage. Amounts in minor units (SLE × 100). Each
 			milestone is escrowed up front and released when you approve it.
 		</p>
 		{#each d.milestones as _m, i (i)}
-			<div class="space-y-2 rounded border p-3">
+			<div class="border-bone bg-paper space-y-2 rounded-xl border p-3">
 				<div class="flex items-center justify-between">
-					<span class="text-sm font-medium">Milestone {i + 1}</span>
+					<span class="text-ink text-sm font-medium">Milestone {i + 1}</span>
 					{#if d.milestones.length > 1}
 						<Button size="sm" variant="ghost" onclick={() => removeMilestone(i)}>Remove</Button>
 					{/if}
@@ -275,25 +275,27 @@
 <Card>
 	<CardHeader><CardTitle>Skills</CardTitle></CardHeader>
 	<CardContent class="space-y-3">
-		<p class="text-sm text-zinc-500">Pick relevant skills. Toggle "required" for must-haves.</p>
+		<p class="text-ink-soft text-sm">Pick relevant skills. Toggle "required" for must-haves.</p>
 		{#each categories as cat (cat.id)}
 			<details open>
-				<summary class="cursor-pointer text-sm font-medium">{cat.name}</summary>
+				<summary class="text-ink cursor-pointer text-sm font-medium">{cat.name}</summary>
 				<div class="mt-2 grid gap-2 sm:grid-cols-2">
 					{#each cat.skills as s (s.id)}
 						{@const sel = d.skills.find((x) => x.skillId === s.id)}
-						<div class="flex items-center justify-between rounded border px-3 py-2 text-sm">
+						<div
+							class="border-bone text-ink flex items-center justify-between rounded-xl border px-3 py-2 text-sm"
+						>
 							<label class="flex items-center gap-2">
 								<input
 									type="checkbox"
 									checked={!!sel}
 									onchange={() => toggleSkill(s.id)}
-									class="h-4 w-4 rounded border-zinc-300"
+									class="border-bone text-terracotta h-4 w-4 rounded"
 								/>
 								<span>{s.name}</span>
 							</label>
 							{#if sel}
-								<label class="flex items-center gap-1 text-xs text-zinc-500">
+								<label class="text-ink-soft flex items-center gap-1 text-xs">
 									<input
 										type="checkbox"
 										checked={sel.isRequired}

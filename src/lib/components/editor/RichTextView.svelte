@@ -11,6 +11,11 @@
 	let { html, class: className }: Props = $props();
 </script>
 
-<div class={cn('prose prose-sm max-w-none text-zinc-800', className)}>
+<div
+	class={cn(
+		'prose prose-sm text-ink prose-headings:text-ink prose-strong:text-ink prose-a:text-terracotta prose-a:no-underline hover:prose-a:underline prose-hr:border-bone prose-blockquote:border-bone prose-blockquote:text-ink-soft prose-code:text-ink max-w-none',
+		className
+	)}
+>
 	{@html html ?? ''}
 </div>

@@ -81,40 +81,43 @@
 		</CardHeader>
 		<CardContent class="space-y-3 text-sm">
 			{#if !result}
-				<p class="text-zinc-600">
-					Get AI help making sure your work meets the brief, understanding the client's feedback,
-					and polishing what you post — before you submit for approval.
+				<p class="text-ink-soft">
+					Get AI help making sure your work meets the brief, reading the client's feedback, and
+					polishing what you post before you submit for approval.
 				</p>
 				{#if error}
-					<p class="text-red-600">{error}</p>
+					<p class="text-red-700">{error}</p>
 				{/if}
 				<Button class="w-full" onclick={coachMe} disabled={loading}>
 					{loading ? LOADING_STEPS[stepIndex] : 'Coach me'}
 				</Button>
 			{:else}
-				<div class="space-y-3">
+				<div class="border-terracotta-soft bg-terracotta-soft/40 space-y-3 rounded-xl border p-3">
+					<p class="text-clay font-mono text-[11px] font-medium tracking-wide uppercase">
+						AI suggestion
+					</p>
 					<!-- (1) Gaps vs the brief -->
 					{#if result.gaps.length > 0}
 						<div class="space-y-2">
-							<p class="font-semibold text-zinc-900">Before you submit</p>
+							<p class="text-ink font-semibold tracking-tight">Before you submit</p>
 							<ul class="space-y-2">
 								{#each result.gaps as g, i (i)}
 									<li class="space-y-0.5">
-										<p class="text-zinc-800">{g.point}</p>
-										<p class="text-xs text-zinc-500">Fix: {g.suggestion}</p>
+										<p class="text-ink">{g.point}</p>
+										<p class="text-ink-soft text-xs">Fix: {g.suggestion}</p>
 									</li>
 								{/each}
 							</ul>
 						</div>
 					{:else}
-						<p class="text-zinc-700">Your draft looks complete against the brief. 👍</p>
+						<p class="text-ink-soft">Your draft looks complete against the brief. 👍</p>
 					{/if}
 
 					<!-- Self-check on their own tone/clarity -->
 					{#if result.selfCheck.length > 0}
-						<div class="rounded-md border border-amber-200 bg-amber-50 p-3">
-							<p class="text-xs font-medium text-amber-800">A quick self-check</p>
-							<ul class="mt-1 list-disc space-y-1 pl-5 text-amber-800">
+						<div class="border-ochre-soft bg-ochre-soft rounded-xl border p-3">
+							<p class="text-clay text-xs font-medium">A quick self-check</p>
+							<ul class="text-clay mt-1 list-disc space-y-1 pl-5">
 								{#each result.selfCheck as s, i (i)}
 									<li>{s}</li>
 								{/each}
@@ -126,13 +129,13 @@
 					{#if result.clientNeedsSummary || result.replyDraft}
 						<Separator />
 						<div class="space-y-2">
-							<p class="font-semibold text-zinc-900">What the client is asking for</p>
+							<p class="text-ink font-semibold tracking-tight">What the client is asking for</p>
 							{#if result.clientNeedsSummary}
-								<p class="whitespace-pre-wrap text-zinc-800">{result.clientNeedsSummary}</p>
+								<p class="text-ink whitespace-pre-wrap">{result.clientNeedsSummary}</p>
 							{/if}
 							{#if result.replyDraft}
-								<p class="text-xs font-medium text-zinc-500">Draft reply</p>
-								<p class="whitespace-pre-wrap text-zinc-800">{result.replyDraft}</p>
+								<p class="text-ink-soft text-xs font-medium">Draft reply</p>
+								<p class="text-ink whitespace-pre-wrap">{result.replyDraft}</p>
 								<Button
 									size="sm"
 									variant="secondary"
@@ -148,8 +151,8 @@
 					{#if result.polishedNote}
 						<Separator />
 						<div class="space-y-2">
-							<p class="font-semibold text-zinc-900">Polished update note</p>
-							<p class="whitespace-pre-wrap text-zinc-800">{result.polishedNote}</p>
+							<p class="text-ink font-semibold tracking-tight">Polished update note</p>
+							<p class="text-ink whitespace-pre-wrap">{result.polishedNote}</p>
 							<Button
 								size="sm"
 								variant="secondary"
@@ -160,8 +163,8 @@
 						</div>
 					{/if}
 
-					<p class="text-xs text-zinc-500">
-						AI suggestions only — review and edit before you submit. Nothing is sent until you post
+					<p class="text-ink-soft text-xs">
+						AI suggestions only. Review and edit before you submit. Nothing is sent until you post
 						it yourself.
 					</p>
 					<Button variant="ghost" class="w-full" onclick={() => (result = null)}>Start over</Button>

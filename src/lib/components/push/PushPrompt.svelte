@@ -67,19 +67,19 @@
 	<div
 		role="status"
 		aria-live="polite"
-		class="fixed inset-x-3 bottom-20 z-40 rounded-xl border border-zinc-200 bg-white p-4 shadow-lg md:inset-x-auto md:right-6 md:bottom-6 md:max-w-sm"
+		class="border-bone fixed inset-x-3 bottom-20 z-40 rounded-[var(--radius-card)] border bg-white p-4 shadow-[var(--shadow-card)] md:inset-x-auto md:right-6 md:bottom-6 md:max-w-sm"
 	>
 		<div class="flex items-start gap-3">
 			<div class="mt-0.5 text-2xl" aria-hidden="true">🔔</div>
 			<div class="flex-1">
-				<p class="text-sm font-semibold text-zinc-900">Get instant alerts</p>
-				<p class="mt-1 text-xs text-zinc-600">
-					Be notified when you're shortlisted, winners are announced, or your prize is paid out.
+				<p class="text-ink text-sm font-semibold tracking-tight">Get instant alerts</p>
+				<p class="text-ink-soft mt-1 text-xs">
+					We'll ping you when you're shortlisted, winners are announced, or your prize is paid out.
 				</p>
 				<div class="mt-3 flex gap-2">
 					<button
 						type="button"
-						class="rounded-md bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60"
+						class="bg-ink text-cream hover:bg-terracotta rounded-lg px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-60"
 						onclick={enable}
 						disabled={state === 'busy'}
 					>
@@ -87,7 +87,7 @@
 					</button>
 					<button
 						type="button"
-						class="rounded-md px-3 py-1.5 text-xs font-medium text-zinc-600 hover:bg-zinc-100"
+						class="text-ink-soft hover:bg-paper rounded-lg px-3 py-1.5 text-xs font-medium"
 						onclick={dismiss}
 					>
 						Not now
@@ -100,17 +100,15 @@
 	<div
 		role="status"
 		aria-live="polite"
-		class="fixed inset-x-3 bottom-20 z-40 rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-xs text-zinc-700 shadow-md md:inset-x-auto md:right-6 md:bottom-6 md:max-w-sm"
+		class="border-bone bg-paper text-ink-soft fixed inset-x-3 bottom-20 z-40 rounded-[var(--radius-card)] border p-3 text-xs shadow-[var(--shadow-card)] md:inset-x-auto md:right-6 md:bottom-6 md:max-w-sm"
 	>
 		<p>
 			Notifications are blocked in your browser settings. You can still see updates in your
-			<a href="/notifications" class="underline">notifications feed</a>.
+			<a href="/notifications" class="text-terracotta underline">notifications feed</a>.
 		</p>
 		<div class="mt-2 text-right">
-			<button
-				type="button"
-				class="rounded px-2 py-1 text-zinc-500 hover:bg-zinc-100"
-				onclick={dismiss}>Dismiss</button
+			<button type="button" class="text-ink-soft hover:bg-bone rounded px-2 py-1" onclick={dismiss}
+				>Dismiss</button
 			>
 		</div>
 	</div>

@@ -26,7 +26,7 @@
 <a
 	href={`/projects/${p.slug}`}
 	class={cn(
-		'fow-card group border-bone bg-cream relative flex h-full flex-col gap-4 rounded-2xl border p-5',
+		'fow-card group border-bone bg-cream relative flex h-full flex-col gap-4 rounded-[var(--radius-card)] border p-5',
 		className
 	)}
 >
@@ -53,8 +53,7 @@
 	</header>
 
 	<h3
-		class="font-display text-ink group-hover:text-terracotta line-clamp-2 text-xl leading-tight font-semibold transition-colors"
-		style="font-variation-settings: 'opsz' 36, 'wght' 600;"
+		class="text-ink group-hover:text-terracotta line-clamp-2 text-xl leading-tight font-semibold tracking-tight transition-colors"
 	>
 		{p.title}
 	</h3>
@@ -63,10 +62,7 @@
 		<div class="flex items-end justify-between gap-3">
 			<div>
 				<p class="text-ink-soft text-[10px] tracking-wide uppercase">Budget up to</p>
-				<p
-					class="font-display text-ink text-2xl font-semibold tabular-nums"
-					style="font-variation-settings: 'opsz' 144, 'wght' 600;"
-				>
+				<p class="text-ink text-2xl font-semibold tracking-tight tabular-nums">
 					{formatMoneyCompact(p.budgetCap, 'Le')}
 				</p>
 			</div>

@@ -50,17 +50,15 @@
 
 <div class="space-y-4">
 	{#if withdrawSuccess}
-		<div
-			class="rounded-md border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-800"
-		>
-			Withdrawal initiated — funds will arrive in your mobile money account shortly.
+		<div class="border-forest-soft bg-forest-soft text-forest rounded-xl border px-3 py-2 text-sm">
+			Withdrawal started. Funds will reach your mobile money account shortly.
 		</div>
 	{/if}
 
-	<div class="rounded-md bg-zinc-50 px-3 py-2 text-xs">
-		<p class="font-medium tracking-wide text-zinc-500 uppercase">Sending to</p>
-		<p class="mt-0.5 font-mono text-sm text-zinc-800">+{destination.phone}</p>
-		<p class="text-zinc-600">
+	<div class="bg-paper rounded-xl px-3 py-2 text-xs">
+		<p class="text-ink-soft font-mono font-medium tracking-wide uppercase">Sending to</p>
+		<p class="text-ink mt-0.5 font-mono text-sm">+{destination.phone}</p>
+		<p class="text-ink-soft">
 			{destination.holderName} · {destination.providerName}
 		</p>
 	</div>
