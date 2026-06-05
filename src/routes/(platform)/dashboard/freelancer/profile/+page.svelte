@@ -14,6 +14,9 @@
 		Textarea
 	} from '$lib/components/ui';
 	import WithdrawalForm from '$lib/components/shared/WithdrawalForm.svelte';
+	import WithdrawalDestination, {
+		type Destination
+	} from '$lib/components/shared/WithdrawalDestination.svelte';
 	import UserAvatar from '$lib/components/shared/UserAvatar.svelte';
 	import ProofOfWorkCard from '$lib/components/freelancer/ProofOfWorkCard.svelte';
 
@@ -55,7 +58,6 @@
 	let activating = $state(false);
 
 	// Verified mobile money withdrawal destination
-	type Destination = { phone: string; holderName: string; providerName: string };
 	let destination = $state<Destination | null>(
 		untrack(() =>
 			data.profile.withdrawalPhone && data.profile.withdrawalVerifiedAt
@@ -67,10 +69,6 @@
 				: null
 		)
 	);
-	let editingDestination = $state(false);
-	let destPhone = $state('');
-	let destSaving = $state(false);
-	let destError = $state<string | null>(null);
 
 	let showWithdraw = $state(false);
 
@@ -100,42 +98,6 @@
 		} finally {
 			activating = false;
 		}
-	}
-
-	async function saveDestination() {
-		const trimmed = destPhone.trim();
-		if (!trimmed) return;
-		destSaving = true;
-		destError = null;
-		try {
-			const res = await fetch('/api/users/me/withdrawal-destination', {
-				method: 'POST',
-				headers: { 'content-type': 'application/json' },
-				body: JSON.stringify({ phone: trimmed })
-			});
-			const body = await res.json();
-			if (!res.ok) {
-				destError = body?.error?.message ?? `Couldn't verify number (${res.status}).`;
-				return;
-			}
-			destination = {
-				phone: body.destination.phone,
-				holderName: body.destination.holderName,
-				providerName: body.destination.providerName
-			};
-			editingDestination = false;
-			destPhone = '';
-		} catch {
-			destError = 'Network error — please try again.';
-		} finally {
-			destSaving = false;
-		}
-	}
-
-	function startEditDestination() {
-		destPhone = destination?.phone ?? '';
-		destError = null;
-		editingDestination = true;
 	}
 
 	function formatMoney(minor: number | null, currency = 'SLE') {
@@ -193,10 +155,10 @@
 
 <div class="space-y-6">
 	<header class="flex items-center gap-4">
-		<UserAvatar src={data.avatar} alt={displayName} size={96} class="border border-zinc-200" />
+		<UserAvatar src={data.avatar} alt={displayName} size={96} class="border-bone border" />
 		<div class="space-y-1">
-			<h1 class="text-2xl font-semibold">Your profile</h1>
-			<p class="text-sm text-zinc-500">
+			<h1 class="fow-display text-ink text-3xl">Your profile</h1>
+			<p class="text-ink-soft text-sm">
 				Skills and headline power your bounty recommendations.
 				<a href="/dashboard/freelancer/recommendations" class="underline">See your matches</a>.
 			</p>
@@ -275,15 +237,17 @@
 		</CardHeader>
 		<CardContent class="space-y-4">
 			{#if !accountId}
-				<p class="text-sm text-zinc-500">Activate your wallet to receive prize payouts.</p>
+				<p class="text-ink-soft text-sm">Activate your wallet to receive prize payouts.</p>
 				<Button onclick={activateWallet} disabled={activating} variant="outline">
 					{activating ? 'Activating…' : 'Activate wallet'}
 				</Button>
 			{:else}
 				<div class="space-y-3">
-					<div class="flex items-center justify-between rounded-md bg-zinc-50 px-3 py-2">
+					<div class="bg-paper flex items-center justify-between rounded-md px-3 py-2">
 						<div class="space-y-0.5">
-							<p class="text-xs font-medium tracking-wide text-zinc-500 uppercase">Balance</p>
+							<p class="text-ink-soft font-mono text-xs font-medium tracking-wide uppercase">
+								Balance
+							</p>
 							<p class="text-sm font-semibold">
 								{accountLoading ? 'Loading…' : formatMoney(balance)}
 							</p>
@@ -300,60 +264,10 @@
 					</div>
 
 					<!-- Withdrawal destination -->
-					<div class="rounded-md border p-3">
-						<div class="mb-2 flex items-center justify-between">
-							<p class="text-xs font-medium tracking-wide text-zinc-500 uppercase">
-								Withdrawal mobile money
-							</p>
-							{#if destination && !editingDestination}
-								<Button variant="ghost" size="sm" onclick={startEditDestination}>
-									Change number
-								</Button>
-							{/if}
-						</div>
-
-						{#if destination && !editingDestination}
-							<div class="space-y-0.5">
-								<p class="font-mono text-sm">+{destination.phone}</p>
-								<p class="text-xs text-zinc-600">
-									{destination.holderName} · {destination.providerName}
-								</p>
-							</div>
-						{:else}
-							<p class="mb-2 text-xs text-zinc-500">
-								Withdrawals always go to this verified number — no need to re-enter it each time.
-							</p>
-							<div class="flex gap-2">
-								<Input
-									type="tel"
-									bind:value={destPhone}
-									placeholder="23276000000"
-									maxlength={20}
-									class="flex-1"
-								/>
-								<Button onclick={saveDestination} disabled={destSaving || !destPhone.trim()}>
-									{destSaving ? 'Verifying…' : 'Verify & save'}
-								</Button>
-								{#if editingDestination && destination}
-									<Button
-										variant="ghost"
-										onclick={() => {
-											editingDestination = false;
-											destError = null;
-										}}
-									>
-										Cancel
-									</Button>
-								{/if}
-							</div>
-							{#if destError}
-								<p class="mt-1.5 text-xs text-red-600">{destError}</p>
-							{/if}
-						{/if}
-					</div>
+					<WithdrawalDestination bind:destination />
 
 					{#if showWithdraw && destination}
-						<div class="rounded-md border p-4">
+						<div class="border-bone rounded-md border p-4">
 							<p class="mb-3 text-sm font-medium">Withdraw to mobile money</p>
 							<WithdrawalForm {destination} />
 						</div>
@@ -375,13 +289,13 @@
 		<CardContent class="space-y-6">
 			{#each data.skillCategories as cat (cat.id)}
 				<div class="space-y-2">
-					<div class="text-sm font-medium text-zinc-700">{cat.name}</div>
+					<div class="text-ink text-sm font-medium">{cat.name}</div>
 					<div class="flex flex-wrap gap-2">
 						{#each cat.skills.filter((s) => s.parentSkillId !== null) as skill (skill.id)}
 							{@const sel = isSelected(skill.id)}
 							{@const current = selected.find((s) => s.skillId === skill.id)}
 							<div
-								class={`flex items-center gap-2 rounded-md border px-2 py-1 text-sm ${sel ? 'border-zinc-900 bg-zinc-50' : 'border-zinc-200'}`}
+								class={`flex items-center gap-2 rounded-md border px-2 py-1 text-sm ${sel ? 'border-ink bg-paper' : 'border-bone'}`}
 							>
 								<button type="button" onclick={() => toggleSkill(skill.id)} class="hover:underline">
 									{skill.name}
@@ -393,7 +307,7 @@
 												type="button"
 												onclick={() => setProficiency(skill.id, level)}
 												aria-label={`Proficiency ${level}`}
-												class={`h-5 w-5 rounded text-xs ${current.proficiencyLevel >= level ? 'bg-zinc-900 text-white' : 'bg-zinc-100 text-zinc-500'}`}
+												class={`h-5 w-5 rounded text-xs ${current.proficiencyLevel >= level ? 'bg-ink text-cream' : 'bg-paper text-ink-soft'}`}
 											>
 												{level}
 											</button>
@@ -405,7 +319,7 @@
 					</div>
 				</div>
 			{/each}
-			<div class="text-xs text-zinc-500">
+			<div class="text-ink-soft text-xs">
 				{selected.length} skill{selected.length === 1 ? '' : 's'} selected.
 			</div>
 		</CardContent>

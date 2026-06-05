@@ -10,6 +10,8 @@
 	} from '$lib/components/ui';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import WithdrawalForm from '$lib/components/shared/WithdrawalForm.svelte';
+	import WithdrawalDestination from '$lib/components/shared/WithdrawalDestination.svelte';
+	import { untrack } from 'svelte';
 
 	let { data } = $props();
 
@@ -24,7 +26,8 @@
 
 	const earnings = $derived(data.earnings);
 	const account = $derived(data.account);
-	const destination = $derived(data.destination);
+	// Local state so inline destination setup updates the page without a reload.
+	let destination = $state(untrack(() => data.destination));
 
 	const totalEarned = $derived(
 		earnings.filter((e) => e.status === 'COMPLETED').reduce((s, e) => s + e.amount, 0)
@@ -82,8 +85,8 @@
 
 <div class="space-y-6">
 	<header class="space-y-1">
-		<h1 class="text-2xl font-semibold">Earnings</h1>
-		<p class="text-sm text-zinc-500">Payout history across every bounty you've won.</p>
+		<h1 class="fow-display text-ink text-3xl">Earnings</h1>
+		<p class="text-ink-soft text-sm">Payout history across every bounty you've won.</p>
 	</header>
 
 	<!-- Wallet balance card -->
@@ -92,12 +95,14 @@
 			<CardContent class="py-4">
 				<div class="flex items-center justify-between">
 					<div>
-						<p class="text-xs font-medium tracking-wide text-zinc-500 uppercase">Wallet balance</p>
-						<p class="text-2xl font-semibold">
+						<p class="text-ink-soft font-mono text-xs font-medium tracking-wide uppercase">
+							Wallet balance
+						</p>
+						<p class="fow-display text-ink text-3xl tabular-nums">
 							{formatMoney(account.balance, currency)}
 						</p>
 						{#if account.uvan}
-							<p class="mt-0.5 font-mono text-xs text-zinc-400">{account.uvan}</p>
+							<p class="text-ink-soft/70 mt-0.5 font-mono text-xs">{account.uvan}</p>
 						{/if}
 					</div>
 					<Button
@@ -110,15 +115,12 @@
 					</Button>
 				</div>
 				{#if !destination}
-					<p class="mt-2 text-xs text-zinc-500">
-						<a href="/dashboard/freelancer/profile" class="underline hover:text-zinc-700">
-							Set up your withdrawal mobile money number
-						</a>
-						on your profile to enable withdrawals.
-					</p>
+					<div class="mt-4">
+						<WithdrawalDestination bind:destination />
+					</div>
 				{/if}
 				{#if showWithdraw && destination}
-					<div class="mt-4 rounded-md border p-4">
+					<div class="border-bone mt-4 rounded-md border p-4">
 						<p class="mb-3 text-sm font-medium">Withdraw to mobile money</p>
 						<WithdrawalForm {destination} />
 					</div>
@@ -126,8 +128,8 @@
 			</CardContent>
 		</Card>
 	{:else}
-		<div class="rounded-md border border-dashed border-zinc-200 px-4 py-3 text-sm text-zinc-500">
-			<a href="/dashboard/freelancer/profile" class="underline hover:text-zinc-700">
+		<div class="border-bone text-ink-soft rounded-md border border-dashed px-4 py-3 text-sm">
+			<a href="/dashboard/freelancer/profile" class="hover:text-ink underline">
 				Activate your wallet
 			</a>
 			on your profile to withdraw earnings to mobile money.
@@ -135,25 +137,33 @@
 	{/if}
 
 	<!-- Earnings stats -->
-	<div class="grid gap-3 sm:grid-cols-3">
+	<div class={failedRows.length > 0 ? 'grid gap-3 sm:grid-cols-3' : 'grid gap-3 sm:grid-cols-2'}>
 		<Card>
 			<CardContent class="py-4">
-				<div class="text-xs text-zinc-500 uppercase">Total earned</div>
-				<div class="text-2xl font-semibold">{formatMoney(totalEarned, currency)}</div>
+				<div class="text-ink-soft font-mono text-xs uppercase">Total earned</div>
+				<div class="fow-display text-ink text-3xl tabular-nums">
+					{formatMoney(totalEarned, currency)}
+				</div>
 			</CardContent>
 		</Card>
 		<Card>
 			<CardContent class="py-4">
-				<div class="text-xs text-zinc-500 uppercase">In transit</div>
-				<div class="text-2xl font-semibold">{formatMoney(inTransit, currency)}</div>
+				<div class="text-ink-soft font-mono text-xs uppercase">In transit</div>
+				<div class="fow-display text-ink text-3xl tabular-nums">
+					{formatMoney(inTransit, currency)}
+				</div>
 			</CardContent>
 		</Card>
-		<Card>
-			<CardContent class="py-4">
-				<div class="text-xs text-zinc-500 uppercase">Failed ({failedRows.length})</div>
-				<div class="text-2xl font-semibold">{formatMoney(failedAmount, currency)}</div>
-			</CardContent>
-		</Card>
+		{#if failedRows.length > 0}
+			<Card>
+				<CardContent class="py-4">
+					<div class="text-ink-soft font-mono text-xs uppercase">Failed ({failedRows.length})</div>
+					<div class="fow-display text-3xl text-red-700 tabular-nums">
+						{formatMoney(failedAmount, currency)}
+					</div>
+				</CardContent>
+			</Card>
+		{/if}
 	</div>
 
 	{#if earnings.length === 0}
@@ -166,11 +176,11 @@
 		<Card>
 			<CardContent class="py-2">
 				<table class="w-full text-sm">
-					<thead class="text-left text-xs text-zinc-500 uppercase">
+					<thead class="text-ink-soft text-left font-mono text-xs uppercase">
 						<tr>
 							<th class="py-2">Bounty</th>
 							<th class="py-2">Type</th>
-							<th class="py-2">Amount</th>
+							<th class="py-2 text-right">Amount</th>
 							<th class="py-2">Method</th>
 							<th class="py-2">Status</th>
 							<th class="py-2">Date</th>
@@ -180,14 +190,14 @@
 						{#each earnings as e (e.id)}
 							{@const t = tranches.get(e.id)}
 							{@const label = methodLabel(e.method)}
-							<tr class="border-t">
+							<tr class="border-bone hover:bg-paper/50 border-t">
 								<td class="py-2">
 									{#if e.submission?.bounty}
 										<a href={`/bounties/${e.submission.bounty.slug}`} class="hover:underline">
 											{e.submission.bounty.title}
 										</a>
 										{#if t}
-											<span class="ml-1 text-xs text-zinc-500">
+											<span class="text-ink-soft ml-1 text-xs">
 												Tranche {t.index}/{t.total}
 											</span>
 										{/if}
@@ -202,7 +212,7 @@
 										—
 									{/if}
 								</td>
-								<td class="py-2">{formatMoney(e.amount, e.currency)}</td>
+								<td class="py-2 text-right tabular-nums">{formatMoney(e.amount, e.currency)}</td>
 								<td class="py-2">
 									{#if label}
 										<Badge variant="outline" class="text-xs">{label}</Badge>

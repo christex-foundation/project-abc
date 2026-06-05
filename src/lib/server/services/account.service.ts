@@ -177,7 +177,7 @@ async function collectBlockers(userId: string, role: UserRole): Promise<Blocker[
 				code: 'ACTIVE_PROJECT_CONTRACT',
 				count: activeContract,
 				message: `You are the contractor on ${activeContract} active project${activeContract === 1 ? '' : 's'} with milestones still in progress.`,
-				link: '/dashboard/freelancer/proposals'
+				link: '/dashboard/freelancer/submissions'
 			});
 		}
 		if (pendingPayment > 0) {

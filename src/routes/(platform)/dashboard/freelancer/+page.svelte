@@ -81,23 +81,20 @@
 		</div>
 		<div class="relative flex flex-wrap items-end justify-between gap-4">
 			<div>
-				<p class="text-ink-soft text-[11px] tracking-wide uppercase">Your studio</p>
-				<h1
-					class="font-display text-ink mt-2 text-4xl font-semibold tracking-tight sm:text-5xl"
-					style="font-variation-settings: 'opsz' 144, 'wght' 600;"
-				>
+				<p class="text-ink-soft font-mono text-[11px] tracking-wide uppercase">Your studio</p>
+				<h1 class="fow-display text-ink mt-2 text-4xl sm:text-5xl">
 					Earnings, work,
 					<span class="text-terracotta italic">and matches.</span>
 				</h1>
 			</div>
 			<div class="flex flex-col items-end gap-2">
 				{#if data.rating?.count}
-					<span class="text-sm font-medium text-amber-600">
+					<span class="text-ochre text-sm font-medium">
 						★ {data.rating.avg} · {data.rating.count} review{data.rating.count === 1 ? '' : 's'}
 					</span>
 				{/if}
 				<div class="flex flex-wrap gap-2">
-					<Button href="/dashboard/freelancer/proposals" variant="outline">My proposals</Button>
+					<Button href="/dashboard/freelancer/submissions" variant="outline">My work</Button>
 					<Button href="/bounties" class="bg-ink text-cream hover:bg-terracotta"
 						>Browse bounties</Button
 					>
@@ -108,42 +105,38 @@
 
 	<!-- Personal stat band -->
 	<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4" data-reveal-step="2">
-		<div class="border-bone bg-forest text-forest-soft rounded-2xl border px-5 py-5">
-			<p class="text-forest-soft/70 text-[11px] tracking-wide uppercase">Total earned</p>
-			<p
-				class="font-display text-cream mt-2 text-3xl font-semibold tabular-nums"
-				style="font-variation-settings: 'opsz' 144, 'wght' 600;"
-			>
+		<div
+			class="border-bone bg-forest text-forest-soft rounded-[var(--radius-card)] border px-5 py-5 shadow-[var(--shadow-card)]"
+		>
+			<p class="text-forest-soft/70 font-mono text-[11px] tracking-wide uppercase">Total earned</p>
+			<p class="fow-display text-cream mt-2 text-3xl tabular-nums">
 				{formatMoneyCompact(totalEarned, 'Le')}
 			</p>
 			<p class="text-forest-soft/70 mt-1 text-xs">{currency} · completed payouts</p>
 		</div>
-		<div class="border-bone bg-cream rounded-2xl border px-5 py-5">
-			<p class="text-ink-soft text-[11px] tracking-wide uppercase">In transit</p>
-			<p
-				class="font-display text-ink mt-2 text-3xl font-semibold tabular-nums"
-				style="font-variation-settings: 'opsz' 144, 'wght' 600;"
-			>
+		<div
+			class="border-bone bg-cream rounded-[var(--radius-card)] border px-5 py-5 shadow-[var(--shadow-card)]"
+		>
+			<p class="text-ink-soft font-mono text-[11px] tracking-wide uppercase">In transit</p>
+			<p class="fow-display text-ink mt-2 text-3xl tabular-nums">
 				{formatMoneyCompact(inTransit, 'Le')}
 			</p>
 			<p class="text-ink-soft mt-1 text-xs">Pending / processing</p>
 		</div>
-		<div class="border-bone bg-cream rounded-2xl border px-5 py-5">
-			<p class="text-ink-soft text-[11px] tracking-wide uppercase">Active submissions</p>
-			<p
-				class="font-display text-ink mt-2 text-3xl font-semibold tabular-nums"
-				style="font-variation-settings: 'opsz' 144, 'wght' 600;"
-			>
+		<div
+			class="border-bone bg-cream rounded-[var(--radius-card)] border px-5 py-5 shadow-[var(--shadow-card)]"
+		>
+			<p class="text-ink-soft font-mono text-[11px] tracking-wide uppercase">Active submissions</p>
+			<p class="fow-display text-ink mt-2 text-3xl tabular-nums">
 				{activeCount}
 			</p>
 			<p class="text-ink-soft mt-1 text-xs">Awaiting judging</p>
 		</div>
-		<div class="border-terracotta bg-terracotta text-cream rounded-2xl border px-5 py-5">
-			<p class="text-cream/75 text-[11px] tracking-wide uppercase">Wins</p>
-			<p
-				class="font-display mt-2 text-3xl font-semibold tabular-nums"
-				style="font-variation-settings: 'opsz' 144, 'wght' 600;"
-			>
+		<div
+			class="border-terracotta bg-terracotta text-cream rounded-[var(--radius-card)] border px-5 py-5 shadow-[var(--shadow-card)]"
+		>
+			<p class="text-cream/75 font-mono text-[11px] tracking-wide uppercase">Wins</p>
+			<p class="fow-display mt-2 text-3xl tabular-nums">
 				{winsCount}
 			</p>
 			<p class="text-cream/75 mt-1 text-xs">All time</p>
@@ -154,11 +147,8 @@
 		<div class="border-bone bg-ochre-soft rounded-2xl border px-5 py-5" data-reveal-step="3">
 			<div class="flex flex-wrap items-end justify-between gap-3">
 				<div>
-					<p class="text-clay text-[11px] tracking-wide uppercase">Credits this month</p>
-					<p
-						class="font-display text-ink mt-2 text-4xl font-semibold tabular-nums"
-						style="font-variation-settings: 'opsz' 144, 'wght' 600;"
-					>
+					<p class="text-clay font-mono text-[11px] tracking-wide uppercase">Credits this month</p>
+					<p class="fow-display text-ink mt-2 text-4xl tabular-nums">
 						{credits.balance}
 						<span class="text-ink-soft text-xl">/ {credits.monthlyAllocation}</span>
 					</p>
@@ -193,13 +183,13 @@
 				</p>
 
 				<div class="flex items-baseline gap-2">
-					<span class="font-display text-ink text-3xl font-semibold">{referrals.remaining}</span>
+					<span class="fow-display text-ink text-3xl tabular-nums">{referrals.remaining}</span>
 					<span class="text-ink-soft text-sm">/ {referrals.cap} invites left</span>
 					<a href="/legal/referrals" class="text-ink-soft ml-auto text-xs underline">Read terms</a>
 				</div>
 
 				<div>
-					<div class="text-ink-soft text-[11px] tracking-wide uppercase">Your code</div>
+					<div class="text-ink-soft font-mono text-[11px] tracking-wide uppercase">Your code</div>
 					<div class="mt-1 flex items-center gap-2">
 						<code
 							class="bg-paper text-ink rounded-lg px-3 py-1.5 font-mono text-sm font-semibold tracking-wider"
@@ -217,7 +207,7 @@
 				</div>
 
 				<div>
-					<div class="text-ink-soft text-[11px] tracking-wide uppercase">Share link</div>
+					<div class="text-ink-soft font-mono text-[11px] tracking-wide uppercase">Share link</div>
 					<div class="mt-1 flex items-center gap-2">
 						<input
 							readonly
