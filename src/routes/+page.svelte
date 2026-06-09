@@ -150,9 +150,7 @@
 					class="border-bone bg-paper/50 rounded-[var(--radius-card-lg)] border border-dashed px-6 py-12 text-center"
 				>
 					<p class="fow-display text-ink-soft text-3xl">No bounties open yet</p>
-					<p class="text-ink-soft mt-2 text-sm">
-						Check back soon. New bounties go up every week.
-					</p>
+					<p class="text-ink-soft mt-2 text-sm">Check back soon. New bounties go up every week.</p>
 				</div>
 			{:else}
 				<div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
