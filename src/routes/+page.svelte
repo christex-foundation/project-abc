@@ -90,7 +90,7 @@
 					<span class="fow-pulse bg-terracotta h-1.5 w-1.5 rounded-full"></span>
 					Open now in Salone
 				</p>
-				<h1 class="fow-display text-ink mt-4 text-6xl sm:text-7xl lg:text-8xl">
+				<h1 class="fow-display text-ink mt-4 text-4xl sm:text-7xl lg:text-8xl">
 					The work <span class="text-terracotta">that pays</span>.
 				</h1>
 				<p class="text-ink-soft mt-5 max-w-md text-base sm:text-lg">
@@ -179,7 +179,7 @@
 				<p class="text-ink-soft font-mono text-[12px] tracking-wide uppercase">
 					Salone · pan-West Africa
 				</p>
-				<h1 class="fow-display text-ink mt-4 text-6xl sm:text-7xl lg:text-8xl">
+				<h1 class="fow-display text-ink mt-4 text-4xl sm:text-7xl lg:text-8xl">
 					Work <span class="text-terracotta">that pays</span>, in Sierra Leone.
 				</h1>
 				<p class="text-ink-soft mt-5 max-w-md text-base sm:text-lg">
