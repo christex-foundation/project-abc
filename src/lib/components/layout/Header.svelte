@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { AuthedUser } from '$lib/server/auth-helpers';
+	import logoMark from '$lib/assets/logo-mark.svg';
 
 	type Props = { user: AuthedUser | null; isAdminHost: boolean; adminUrl?: string };
 	let { user, isAdminHost, adminUrl = '' }: Props = $props();
@@ -11,11 +12,11 @@
 -->
 <header class="border-bone bg-cream border-b">
 	<div class="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
-		<a
-			href={isAdminHost ? '/admin' : '/'}
-			class="font-display text-ink text-3xl font-bold tracking-tight lowercase"
-		>
-			fow<span class="text-terracotta">.</span>{isAdminHost ? ' · admin' : ''}
+		<a href={isAdminHost ? '/admin' : '/'} class="flex items-center gap-2">
+			<img src={logoMark} alt="" class="h-8 w-8" />
+			<span class="font-display text-ink text-3xl font-bold tracking-tight lowercase">
+				fow<span class="text-terracotta">.</span>{isAdminHost ? ' · admin' : ''}
+			</span>
 		</a>
 		<nav class="flex items-center gap-3 text-sm">
 			{#if !isAdminHost}

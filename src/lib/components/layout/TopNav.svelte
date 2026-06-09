@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { AuthedUser } from '$lib/server/auth-helpers';
 	import { page } from '$app/state';
+	import logoMark from '$lib/assets/logo-mark.svg';
 	import { cn, formatMoneyCompact } from '$lib/utils';
 	import UserAvatar from '$lib/components/shared/UserAvatar.svelte';
 	import { DropdownMenu, DropdownItem, DropdownSeparator } from '$lib/components/ui/dropdown-menu';
@@ -51,8 +52,11 @@
 <header class="border-bone bg-cream/85 sticky top-0 z-30 border-b backdrop-blur">
 	<div class="mx-auto flex h-16 max-w-6xl items-center gap-3 px-4 sm:gap-5">
 		<!-- Wordmark -->
-		<a href="/" class="font-display text-ink text-3xl font-bold tracking-tight lowercase">
-			fow<span class="text-terracotta">.</span>
+		<a href="/" class="flex items-center gap-2">
+			<img src={logoMark} alt="" class="h-8 w-8" />
+			<span class="font-display text-ink text-3xl font-bold tracking-tight lowercase">
+				fow<span class="text-terracotta">.</span>
+			</span>
 		</a>
 
 		<!-- Primary tabs (desktop only) -->
