@@ -137,6 +137,11 @@
 	animation: fow-pulse-soft 1.6s ease-in-out infinite;
 }
 
+/* Loading placeholder block (Skeleton.svelte) shown while streamed data arrives. */
+.fow-skeleton {
+	animation: fow-pulse-soft 1.6s ease-in-out infinite;
+}
+
 /* Lift + accent reveal on bounty / project cards. */
 .fow-card {
 	transition:
@@ -168,6 +173,7 @@
 	.fow-reveal > [data-reveal-step],
 	.fow-marquee,
 	.fow-pulse,
+	.fow-skeleton,
 	.fow-card,
 	.fow-lift {
 		animation: none !important;
