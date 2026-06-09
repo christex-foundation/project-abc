@@ -69,7 +69,7 @@
 				{/if}
 			</div>
 			{#if profile}
-				<dl class="mt-3 grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+				<dl class="mt-3 grid grid-cols-1 gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
 					<dt class="text-zinc-500">Name</dt>
 					<dd>{profile.companyName || '—'}</dd>
 					{#if profile.industry}

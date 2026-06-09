@@ -266,7 +266,7 @@
 				<Checkbox bind:checked={referralEnabled} />
 				Enabled
 			</label>
-			<div class="mt-3 grid grid-cols-3 gap-3">
+			<div class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
 				<div>
 					<Label for="maxRef">Max referrals</Label>
 					<Input id="maxRef" type="number" min="0" max="1000" bind:value={maxReferrals} />
