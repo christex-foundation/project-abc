@@ -39,7 +39,15 @@
 	openGraph={{
 		type: 'website',
 		siteName: 'FOW — Future of Work',
-		locale: 'en_SL'
+		locale: 'en_SL',
+		images: [
+			{
+				url: `${page.url.origin}/og.png`,
+				width: 1200,
+				height: 630,
+				alt: 'Future of Work — Sierra Leone’s first digital job platform'
+			}
+		]
 	}}
 	robots={data.isAdminHost ? 'noindex, nofollow' : undefined}
 />
