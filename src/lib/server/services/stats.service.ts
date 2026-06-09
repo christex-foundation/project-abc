@@ -26,6 +26,7 @@ export type WinnerEvent = {
 export type PublicStats = {
 	liveBounties: number;
 	liveProjects: number;
+	liveBountyValueMinor: number;
 	totalPaidMinor: number;
 	currency: string;
 	winnersToday: number;
@@ -34,13 +35,15 @@ export type PublicStats = {
 
 export async function getPublicStats(opts: { winnersLimit?: number } = {}): Promise<PublicStats> {
 	const limit = opts.winnersLimit ?? 20;
-	const [liveBounties, liveProjects, totals, winnersToday, rawWinners] = await Promise.all([
-		statsRepo.countLiveBounties('BOUNTY'),
-		statsRepo.countLiveBounties('PROJECT'),
-		statsRepo.sumTotalPayouts(),
-		statsRepo.countWinnersToday(),
-		statsRepo.recentWinners(limit)
-	]);
+	const [liveBounties, liveProjects, liveBountyValue, totals, winnersToday, rawWinners] =
+		await Promise.all([
+			statsRepo.countLiveBounties('BOUNTY'),
+			statsRepo.countLiveBounties('PROJECT'),
+			statsRepo.sumLiveBountyValue('BOUNTY'),
+			statsRepo.sumTotalPayouts(),
+			statsRepo.countWinnersToday(),
+			statsRepo.recentWinners(limit)
+		]);
 
 	const winners: WinnerEvent[] = rawWinners
 		.filter((w) => w.bountyTitle != null) // skip orphaned rows whose bounty is gone
@@ -58,9 +61,24 @@ export async function getPublicStats(opts: { winnersLimit?: number } = {}): Prom
 	return {
 		liveBounties,
 		liveProjects,
+		liveBountyValueMinor: liveBountyValue.amount,
 		totalPaidMinor: totals.amount,
 		currency: totals.currency,
 		winnersToday,
 		winners
 	};
+}
+
+export type OpenBountyPot = { valueMinor: number; count: number; currency: string };
+
+/**
+ * The bounty prize money currently up for grabs, platform-wide, with the count
+ * of live bounties it spans. Feeds the /bounties header stat.
+ */
+export async function getOpenBountyPot(): Promise<OpenBountyPot> {
+	const [value, count] = await Promise.all([
+		statsRepo.sumLiveBountyValue('BOUNTY'),
+		statsRepo.countLiveBounties('BOUNTY')
+	]);
+	return { valueMinor: value.amount, count, currency: value.currency };
 }

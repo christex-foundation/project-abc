@@ -3,6 +3,7 @@
 	import { page } from '$app/state';
 	import { untrack } from 'svelte';
 	import { MetaTags } from 'svelte-meta-tags';
+	import { formatMoneyCompact } from '$lib/utils';
 	import { Button, Input, Label, Select } from '$lib/components/ui';
 	import BountyCard from '$lib/components/feed/BountyCard.svelte';
 
@@ -72,6 +73,23 @@
 		<h1 class="fow-display text-ink mt-3 text-4xl">Bounties</h1>
 		<p class="text-ink-soft mt-1 text-sm">
 			Submit a link, compete for the prize. Winners get paid via mobile money.
+		</p>
+	</div>
+
+	<div
+		class="border-bone bg-paper rounded-[var(--radius-card)] border px-5 py-4 text-right shadow-[var(--shadow-card)]"
+	>
+		<p
+			class="text-ink-soft flex items-center justify-end gap-1.5 font-mono text-[11px] font-medium tracking-wide uppercase"
+		>
+			<span class="fow-pulse bg-terracotta inline-block h-1.5 w-1.5 rounded-full"></span>
+			Up for grabs
+		</p>
+		<p class="fow-display text-ink mt-1.5 text-4xl tabular-nums">
+			{formatMoneyCompact(data.pot.valueMinor)}
+		</p>
+		<p class="text-ink-soft mt-0.5 text-xs">
+			across {data.pot.count} open {data.pot.count === 1 ? 'bounty' : 'bounties'}
 		</p>
 	</div>
 </header>

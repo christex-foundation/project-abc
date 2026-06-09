@@ -115,7 +115,7 @@
 		<section data-reveal-step="2">
 			<StatPanel
 				liveBounties={home.stats.liveBounties}
-				liveProjects={home.stats.liveProjects}
+				liveBountyValueMinor={home.stats.liveBountyValueMinor}
 				totalPaidMinor={home.stats.totalPaidMinor}
 				winnersToday={home.stats.winnersToday}
 				currencyDisplay="Le"

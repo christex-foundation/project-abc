@@ -4,7 +4,7 @@
 
 	type Props = {
 		liveBounties: number;
-		liveProjects: number;
+		liveBountyValueMinor: number;
 		totalPaidMinor: number;
 		winnersToday: number;
 		currencyDisplay?: string;
@@ -12,13 +12,11 @@
 
 	let {
 		liveBounties,
-		liveProjects,
+		liveBountyValueMinor,
 		totalPaidMinor,
 		winnersToday,
 		currencyDisplay = 'Le'
 	}: Props = $props();
-
-	const liveTotal = $derived(liveBounties + liveProjects);
 </script>
 
 <div class="grid gap-3 sm:grid-cols-3">
@@ -29,13 +27,16 @@
 			class="text-ink-soft flex items-center gap-1.5 font-mono text-[11px] font-medium tracking-wide uppercase"
 		>
 			<span class="fow-pulse bg-terracotta inline-block h-1.5 w-1.5 rounded-full"></span>
-			Live now
+			Up for grabs
 		</p>
 		<p class="fow-display text-ink mt-3 text-6xl tabular-nums">
-			<CountUp value={liveTotal} />
+			<CountUp
+				value={liveBountyValueMinor}
+				formatter={(n) => formatMoneyCompact(n, currencyDisplay)}
+			/>
 		</p>
 		<p class="text-ink-soft mt-1 text-xs">
-			{liveBounties} bounties · {liveProjects} projects
+			across {liveBounties} open {liveBounties === 1 ? 'bounty' : 'bounties'}
 		</p>
 	</article>
 

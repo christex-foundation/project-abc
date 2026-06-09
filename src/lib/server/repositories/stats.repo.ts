@@ -17,6 +17,25 @@ export async function countLiveBounties(type?: BountyType): Promise<number> {
 }
 
 /**
+ * Sum of `totalPrizePool` (minor units) across live bounties — the prize money
+ * currently up for grabs. Mirrors `countLiveBounties`'s status filter so the
+ * value and the count always describe the same set.
+ */
+export async function sumLiveBountyValue(
+	type?: BountyType
+): Promise<{ amount: number; currency: string }> {
+	const agg = await prisma.bounty.aggregate({
+		where: {
+			status: { in: [BountyStatus.ACTIVE, BountyStatus.JUDGING] },
+			...(type ? { type } : {})
+		},
+		_sum: { totalPrizePool: true }
+	});
+	// All money on the platform is in SLE per CLAUDE.md.
+	return { amount: agg._sum.totalPrizePool ?? 0, currency: 'SLE' };
+}
+
+/**
  * Sum of COMPLETED `PRIZE_PAYOUT` rows across the platform, in minor units.
  * Returns 0 when there are no completed payouts yet (e.g. a fresh DB).
  */
