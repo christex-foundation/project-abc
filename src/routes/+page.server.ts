@@ -29,11 +29,19 @@ export const load: PageServerLoad = async ({ locals }) => {
 		bountyService.listBounties({ type: 'PROJECT', page: 1, pageSize: 6 })
 	]);
 
+	// Spotlight a random open bounty for the "be the first" empty state. Picked
+	// server-side so SSR and hydration agree on the same pick.
+	const featuredBounty =
+		bountyFeed.items.length > 0
+			? bountyFeed.items[Math.floor(Math.random() * bountyFeed.items.length)]
+			: null;
+
 	return {
 		home: {
 			stats,
 			bountyFeed,
-			projectFeed
+			projectFeed,
+			featuredBounty
 		}
 	};
 };

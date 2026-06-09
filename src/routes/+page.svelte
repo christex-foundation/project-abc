@@ -128,7 +128,7 @@
 
 		<!-- TICKER -->
 		<section data-reveal-step="4" aria-label="Recent winners">
-			<EarnersTicker winners={home.stats.winners} />
+			<EarnersTicker winners={home.stats.winners} featured={home.featuredBounty} />
 		</section>
 
 		<!-- CATEGORY CHIPS + FEED SWITCH -->

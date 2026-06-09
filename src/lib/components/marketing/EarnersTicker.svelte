@@ -1,9 +1,15 @@
 <script lang="ts">
 	import type { WinnerEvent } from '$lib/server/services/stats.service';
 	import { formatMoneyCompact, formatRelative } from '$lib/utils';
+	import ArrowUpRight from '@lucide/svelte/icons/arrow-up-right';
 
-	type Props = { winners: WinnerEvent[] };
-	let { winners }: Props = $props();
+	type Props = {
+		winners: WinnerEvent[];
+		// A live bounty to spotlight when there are no winners yet, turning the
+		// empty rail into a "be the first" prompt instead of a dead end.
+		featured?: { slug: string; title: string } | null;
+	};
+	let { winners, featured = null }: Props = $props();
 
 	// Duplicate the items so the CSS marquee can loop seamlessly by translating
 	// the strip by -50%.
@@ -11,13 +17,31 @@
 </script>
 
 {#if winners.length === 0}
-	<!-- Empty state: keep the rail so the layout doesn't jump after seeds land -->
-	<div class="border-bone bg-paper/50 rounded-2xl border border-dashed px-5 py-4 text-center">
-		<p class="text-ink-soft text-xs tracking-wide uppercase">No paid winners yet</p>
-		<p class="text-ink-soft mt-1 text-sm">
-			Be among the first. Browse open bounties and submit your link.
-		</p>
-	</div>
+	<!-- No winners yet: invite the first one instead of showing a dead rail.
+	     Spotlights a live bounty when we have one to point at. -->
+	<a
+		href={featured ? `/bounties/${featured.slug}` : '/bounties'}
+		class="border-ochre bg-ochre-soft/50 hover:border-ochre group flex flex-col items-center gap-3 rounded-2xl border px-6 py-5 text-center transition-colors sm:flex-row sm:justify-between sm:text-left"
+	>
+		<div>
+			<p class="fow-display text-ink text-2xl">Be the first name on the board</p>
+			<p class="text-ink-soft mt-1 text-sm">
+				{#if featured}
+					No one's cashed out yet — start with <span class="text-ink font-medium"
+						>“{featured.title}”</span
+					> and submit your link.
+				{:else}
+					No one's cashed out yet. Pick an open bounty, submit your link, and claim the first win.
+				{/if}
+			</p>
+		</div>
+		<span
+			class="bg-ink text-cream group-hover:bg-terracotta inline-flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-colors"
+		>
+			{featured ? 'Start this bounty' : 'Browse bounties'}
+			<ArrowUpRight class="h-4 w-4" />
+		</span>
+	</a>
 {:else}
 	<div
 		class="group border-bone bg-ink text-cream relative overflow-hidden rounded-2xl border py-3"
