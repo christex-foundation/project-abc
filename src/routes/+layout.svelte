@@ -7,9 +7,31 @@
 	import { MetaTags } from 'svelte-meta-tags';
 	import { page } from '$app/state';
 	import { env } from '$env/dynamic/public';
-	import { Toaster } from 'svelte-sonner';
+	import { Toaster, toast } from 'svelte-sonner';
 
 	let { data, children } = $props();
+
+	// Passive connectivity indicator — a thin banner while offline, plus a toast on
+	// each transition. Crucial on the flaky mobile networks FOW targets so a failed
+	// action reads as "you're offline" rather than "the app is broken".
+	let online = $state(true);
+	$effect(() => {
+		online = navigator.onLine;
+		const goOffline = () => {
+			online = false;
+			toast.error("You're offline", { description: 'Changes may not save until you reconnect.' });
+		};
+		const goOnline = () => {
+			online = true;
+			toast.success('Back online');
+		};
+		window.addEventListener('offline', goOffline);
+		window.addEventListener('online', goOnline);
+		return () => {
+			window.removeEventListener('offline', goOffline);
+			window.removeEventListener('online', goOnline);
+		};
+	});
 
 	// Admin lives on a separate subdomain (CLAUDE.md hard rule) and uses its own
 	// chrome — suppress the public shell on admin paths.
@@ -63,6 +85,15 @@
 			{@render children()}
 		</main>
 		<BottomNav user={data.user} />
+	</div>
+{/if}
+
+{#if !online}
+	<div
+		role="status"
+		class="bg-ink text-cream fixed inset-x-0 top-0 z-50 px-4 py-1.5 text-center text-xs font-medium"
+	>
+		You're offline — changes may not save until you reconnect.
 	</div>
 {/if}
 
