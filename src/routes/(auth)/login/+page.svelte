@@ -1,6 +1,9 @@
 <script lang="ts">
 	import { authClient } from '$lib/client/auth-client';
 	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
+
+	const justRegistered = $derived(page.url.searchParams.get('registered') !== null);
 
 	let email = $state('');
 	let password = $state('');
@@ -23,6 +26,12 @@
 
 <h1 class="fow-display text-ink text-3xl">Welcome back</h1>
 <p class="text-ink-soft mt-2 text-sm">Sign in to pick up where you left off.</p>
+
+{#if justRegistered}
+	<p class="mt-4 rounded-xl bg-green-50 px-3 py-2 text-sm text-green-700">
+		Account created — sign in to continue.
+	</p>
+{/if}
 
 <form class="mt-6 space-y-4" onsubmit={submit}>
 	<label class="text-ink block text-sm font-medium">

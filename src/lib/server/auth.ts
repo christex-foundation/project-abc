@@ -28,7 +28,11 @@ export const auth = betterAuth({
 
 	emailAndPassword: {
 		enabled: true,
-		requireEmailVerification: true,
+		// Email verification is not required — accounts are usable immediately
+		// after sign-up. The `emailVerification` block below stays in place so
+		// any manual/email-change verification path still works, but no link is
+		// sent on sign-up (sendOnSignUp: false).
+		requireEmailVerification: false,
 		minPasswordLength: 8,
 		sendResetPassword: async ({ user, url }) => {
 			await sendEmail({
@@ -40,7 +44,7 @@ export const auth = betterAuth({
 	},
 
 	emailVerification: {
-		sendOnSignUp: true,
+		sendOnSignUp: false,
 		autoSignInAfterVerification: true,
 		sendVerificationEmail: async ({ user, url }) => {
 			await sendEmail({
