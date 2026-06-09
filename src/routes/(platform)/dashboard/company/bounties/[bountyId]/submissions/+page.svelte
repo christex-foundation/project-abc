@@ -181,14 +181,24 @@
 						<div class="space-y-1 text-sm">
 							<div>
 								<span class="font-medium">Link:</span>
-								<a href={s.link} target="_blank" rel="noopener noreferrer" class="underline">
+								<a
+									href={s.link}
+									target="_blank"
+									rel="noopener noreferrer"
+									class="break-all underline"
+								>
 									{s.link}
 								</a>
 							</div>
 							{#if s.tweet}
 								<div>
 									<span class="font-medium">Tweet:</span>
-									<a href={s.tweet} target="_blank" rel="noopener noreferrer" class="underline">
+									<a
+										href={s.tweet}
+										target="_blank"
+										rel="noopener noreferrer"
+										class="break-all underline"
+									>
 										{s.tweet}
 									</a>
 								</div>
