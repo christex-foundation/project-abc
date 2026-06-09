@@ -14,6 +14,8 @@ const isProd = process.env.NODE_ENV === 'production';
 const trustedOrigins = [
 	'https://fow.sl',
 	'https://admin.fow.sl',
+	'https://learn2earn.mocti.gov.sl',
+	'https://admin.learn2earn.mocti.gov.sl',
 	'https://learn2earn.christex.foundation',
 	'https://admin.learn2earn.christex.foundation',
 	'http://localhost:5173',
