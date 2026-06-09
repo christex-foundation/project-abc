@@ -5,7 +5,6 @@
 	import { MetaTags } from 'svelte-meta-tags';
 	import { Button, Input, Label, Select } from '$lib/components/ui';
 	import BountyCard from '$lib/components/feed/BountyCard.svelte';
-	import FeedSwitch from '$lib/components/feed/FeedSwitch.svelte';
 
 	let { data } = $props();
 
@@ -53,21 +52,6 @@
 			? selectedSkillIds.filter((x) => x !== id)
 			: [...selectedSkillIds, id];
 	}
-
-	function setMode(v: 'BOUNTY' | 'PROJECT') {
-		if (v === 'PROJECT') {
-			// Switching to projects takes the user to /projects (carrying search
-			// & deadline only — type-specific filters live per-page).
-			const params = new URLSearchParams();
-			if (search) params.set('search', search);
-			if (beforeDeadline) params.set('beforeDeadline', beforeDeadline);
-			goto(`/projects${params.toString() ? `?${params.toString()}` : ''}`);
-			return;
-		}
-		// Already on the bounties page — clear the project filter if set.
-		type = '';
-		applyFilters();
-	}
 </script>
 
 <MetaTags
@@ -90,7 +74,6 @@
 			Submit a link, compete for the prize. Winners get paid via mobile money.
 		</p>
 	</div>
-	<FeedSwitch value="BOUNTY" onChange={setMode} bountyCount={data.total} />
 </header>
 
 <section class="grid gap-5 md:grid-cols-[280px_1fr]">
@@ -107,7 +90,6 @@
 			<Select id="type" bind:value={type} onchange={applyFilters}>
 				<option value="">All</option>
 				<option value="BOUNTY">Bounty</option>
-				<option value="PROJECT">Project</option>
 			</Select>
 		</div>
 

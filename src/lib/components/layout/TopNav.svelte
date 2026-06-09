@@ -29,7 +29,6 @@
 
 	const pathname = $derived(page.url.pathname);
 	const isBountiesActive = $derived(pathname === '/' || pathname.startsWith('/bounties'));
-	const isProjectsActive = $derived(pathname.startsWith('/projects'));
 	const isDashboardActive = $derived(pathname.startsWith('/dashboard'));
 
 	const profileHref = $derived(
@@ -59,9 +58,6 @@
 		<nav class="ml-2 hidden items-center gap-1 md:flex">
 			<a href="/bounties" class={cn('fow-tab', isBountiesActive && 'fow-tab--active')}>
 				Bounties
-			</a>
-			<a href="/projects" class={cn('fow-tab', isProjectsActive && 'fow-tab--active')}>
-				Projects
 			</a>
 			<a href={dashboardHref} class={cn('fow-tab', isDashboardActive && 'fow-tab--active')}>
 				Dashboard

@@ -7,6 +7,10 @@ export const load: PageServerLoad = async ({ url }) => {
 	const skillIdsAll = url.searchParams.getAll('skillIds');
 	const result = await bountyService.listBounties({
 		...params,
+		// /bounties is the bounty-only feed; legacy PROJECT-type rows live in the
+		// separate Projects domain and must never surface here, including the
+		// unfiltered ("All") default.
+		type: 'BOUNTY',
 		...(skillIdsAll.length ? { skillIds: skillIdsAll } : {})
 	});
 	const skills = await skillService.listSkills();

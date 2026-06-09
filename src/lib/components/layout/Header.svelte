@@ -20,7 +20,6 @@
 		<nav class="flex items-center gap-3 text-sm">
 			{#if !isAdminHost}
 				<a href="/bounties" class="text-ink-soft hover:text-ink transition-colors">Bounties</a>
-				<a href="/projects" class="text-ink-soft hover:text-ink transition-colors">Projects</a>
 			{/if}
 			{#if user}
 				{#if !isAdminHost && user.role === 'ADMIN' && adminUrl}
