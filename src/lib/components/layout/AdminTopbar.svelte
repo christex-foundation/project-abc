@@ -2,6 +2,7 @@
 	import { page } from '$app/state';
 	import AlertOctagon from '@lucide/svelte/icons/alert-octagon';
 	import LogOut from '@lucide/svelte/icons/log-out';
+	import Menu from '@lucide/svelte/icons/menu';
 	import type { AuthedUser } from '$lib/server/auth-helpers';
 
 	type Props = {
@@ -10,9 +11,11 @@
 			maintenanceMode?: boolean;
 			maintenanceMessage?: string;
 		};
+		// Opens the mobile nav drawer (shown only below md).
+		onMenuClick?: () => void;
 	};
 
-	let { user, featureFlags }: Props = $props();
+	let { user, featureFlags, onMenuClick }: Props = $props();
 
 	type Crumb = { label: string; href: string };
 
@@ -48,7 +51,15 @@
 			{/if}
 		</div>
 	{/if}
-	<div class="flex items-center justify-between gap-4 px-6 py-3">
+	<div class="flex items-center justify-between gap-4 px-4 py-3 md:px-6">
+		<button
+			type="button"
+			onclick={onMenuClick}
+			aria-label="Open navigation menu"
+			class="-ml-1 rounded-md p-2 text-zinc-600 transition-colors hover:bg-zinc-100 hover:text-zinc-900 md:hidden"
+		>
+			<Menu class="h-5 w-5" />
+		</button>
 		<nav aria-label="Breadcrumb" class="flex min-w-0 items-center gap-1 text-xs text-zinc-500">
 			{#each crumbs as crumb, i (crumb.href)}
 				{#if i > 0}
