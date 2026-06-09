@@ -88,6 +88,11 @@ export async function getAggregate(userId: string) {
 	return reviewRepo.aggregateForUser(userId);
 }
 
+/** Batched variant of {@link getAggregate} — one query for many users. */
+export async function getAggregates(userIds: string[]) {
+	return reviewRepo.aggregateForUsers(userIds);
+}
+
 /** Reviews on a project (both directions) for the workspace. */
 export async function listForProject(projectId: string) {
 	return reviewRepo.findForProject(projectId);

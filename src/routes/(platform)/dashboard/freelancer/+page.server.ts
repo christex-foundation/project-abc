@@ -12,37 +12,29 @@ export const load: PageServerLoad = async ({ locals, parent }) => {
 	await parent();
 	const caller = requireAuth(locals);
 	requireRole(caller, 'FREELANCER');
-	const [
-		submissions,
-		earnings,
-		recommendations,
-		notifications,
-		credits,
-		creditTransactions,
-		referrals,
-		profile
-	] = await Promise.all([
+
+	// Critical, above-the-fold data — awaited so the page paints with real numbers
+	// (stat band, credits panel) on first byte.
+	const [submissions, earnings, credits, profile] = await Promise.all([
 		submissionService.listForFreelancer(caller),
 		submissionService.earningsForFreelancer(caller),
-		matchingService.recommendBounties(caller, 4),
-		notificationService.listForCaller(caller, { limit: 5 }),
 		creditService.getBalanceForCaller(caller),
-		creditService.listTransactionsForCaller(caller, { limit: 5 }),
-		referralService.getMyReferralStatus(caller),
 		freelancerService.getMyProfile(caller)
 	]);
-	const rating = await reviewService.getAggregate(caller.id);
 	const isProfileComplete =
 		!!profile.headline?.trim() && !!profile.bio?.trim() && profile.skills.length > 0;
+
+	// Secondary data — returned as unawaited promises so SvelteKit streams it in
+	// after first paint. On 3G the page is interactive while these resolve.
 	return {
 		submissions,
 		earnings,
-		recommendations,
-		notifications,
 		credits,
-		creditTransactions,
-		referrals,
-		rating,
-		isProfileComplete
+		isProfileComplete,
+		recommendations: matchingService.recommendBounties(caller, 4),
+		notifications: notificationService.listForCaller(caller, { limit: 5 }),
+		creditTransactions: creditService.listTransactionsForCaller(caller, { limit: 5 }),
+		referrals: referralService.getMyReferralStatus(caller),
+		rating: reviewService.getAggregate(caller.id)
 	};
 };

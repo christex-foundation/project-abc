@@ -15,13 +15,11 @@ export const load: PageServerLoad = async ({ params, locals, parent }) => {
 		const project = await projectService.getProject(caller, params.projectId);
 		const proposals = await proposalService.listForProject(caller, project.id);
 		// Aggregate rating per applicant (by their user id), for reputation at a glance.
-		const ratings: Record<string, { avg: number | null; count: number }> = {};
-		await Promise.all(
-			proposals.map(async (p) => {
-				const uid = p.freelancer?.user?.id;
-				if (uid && !ratings[uid]) ratings[uid] = await reviewService.getAggregate(uid);
-			})
-		);
+		// Batched into a single query to avoid an N+1 across proposals.
+		const applicantIds = [
+			...new Set(proposals.map((p) => p.freelancer?.user?.id).filter((id): id is string => !!id))
+		];
+		const ratings = await reviewService.getAggregates(applicantIds);
 		// Label only — the actual ranking is fetched on demand from the AI shortlist
 		// endpoint, which itself degrades to embedding order when AI is off.
 		return { project, proposals, ratings, aiEnabled: await isAiEnabled() };
