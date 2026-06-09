@@ -4,6 +4,7 @@
 	import RichTextView from '$lib/components/editor/RichTextView.svelte';
 	import CoachPanel from '$lib/components/ai/CoachPanel.svelte';
 	import { Button, Card, CardContent, CardHeader, CardTitle, Badge } from '$lib/components/ui';
+	import { cloudinaryThumb } from '$lib/utils';
 
 	let { data } = $props();
 	const p = $derived(data.project);
@@ -47,7 +48,15 @@
 		<h1 class="fow-display text-ink text-4xl sm:text-5xl">{p.title}</h1>
 		<div class="text-ink-soft flex items-center gap-3 text-sm">
 			{#if p.company?.logo}
-				<img src={p.company.logo} alt="" class="h-8 w-8 rounded-full" />
+				<img
+					src={cloudinaryThumb(p.company.logo, 64)}
+					alt=""
+					width="32"
+					height="32"
+					loading="lazy"
+					decoding="async"
+					class="h-8 w-8 rounded-full object-cover"
+				/>
 			{/if}
 			<span>{p.company?.companyName ?? p.companyNameSnapshot ?? 'Anonymous sponsor'}</span>
 			{#if p.company?.website}

@@ -12,6 +12,7 @@
 		Badge,
 		Separator
 	} from '$lib/components/ui';
+	import { cloudinaryThumb } from '$lib/utils';
 
 	let { data } = $props();
 	const b = $derived(data.bounty);
@@ -69,7 +70,15 @@
 		<h1 class="fow-display text-ink text-4xl sm:text-5xl">{b.title}</h1>
 		<div class="text-ink-soft flex items-center gap-3 text-sm">
 			{#if b.company?.logo}
-				<img src={b.company.logo} alt="" class="h-8 w-8 rounded-full" />
+				<img
+					src={cloudinaryThumb(b.company.logo, 64)}
+					alt=""
+					width="32"
+					height="32"
+					loading="lazy"
+					decoding="async"
+					class="h-8 w-8 rounded-full object-cover"
+				/>
 			{/if}
 			<span>{b.company?.companyName ?? b.companyNameSnapshot ?? 'Anonymous sponsor'}</span>
 			{#if b.company?.website}
