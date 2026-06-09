@@ -122,7 +122,7 @@
 	}
 
 	const btn =
-		'inline-flex h-8 min-w-8 items-center justify-center rounded px-2 text-xs font-medium ' +
+		'inline-flex h-9 min-w-9 items-center justify-center rounded px-2 text-xs font-medium ' +
 		'text-ink-soft hover:bg-paper hover:text-ink disabled:opacity-50';
 </script>
 

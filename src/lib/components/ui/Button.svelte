@@ -22,7 +22,7 @@
 
 	const SIZES: Record<ButtonSize, string> = {
 		default: 'h-10 px-5 py-2 text-sm',
-		sm: 'h-8 px-3.5 text-xs',
+		sm: 'h-9 px-3.5 text-xs',
 		lg: 'h-12 px-6 text-base',
 		icon: 'h-10 w-10'
 	};
