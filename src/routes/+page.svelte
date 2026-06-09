@@ -6,19 +6,16 @@
 	import StatPanel from '$lib/components/marketing/StatPanel.svelte';
 	import EarnersTicker from '$lib/components/marketing/EarnersTicker.svelte';
 	import CategoryChips from '$lib/components/marketing/CategoryChips.svelte';
-	import FeedSwitch from '$lib/components/feed/FeedSwitch.svelte';
 	import BountyCard from '$lib/components/feed/BountyCard.svelte';
 	import ArrowUpRight from '@lucide/svelte/icons/arrow-up-right';
 
 	let { data } = $props();
 
-	let feedMode = $state<'BOUNTY' | 'PROJECT'>('BOUNTY');
 	let activeCategory = $state<string | null>(null);
 
 	const home = $derived(data.home);
 	const marketing = $derived(data.marketing);
-	const activeFeed = $derived(feedMode === 'BOUNTY' ? home?.bountyFeed : home?.projectFeed);
-	const seeAllHref = $derived(feedMode === 'BOUNTY' ? '/bounties' : '/projects');
+	const activeFeed = $derived(home?.bountyFeed);
 
 	function pickCategory(cat: { label: string; skillIds: string[] } | null) {
 		if (!cat) {
@@ -29,8 +26,7 @@
 		// Categories in the curated chip set don't yet have explicit skill IDs.
 		// We just hand off to the list page; future iterations can hydrate
 		// skillIds from a settings doc and pre-apply the filter.
-		const target = feedMode === 'BOUNTY' ? '/bounties' : '/projects';
-		goto(target);
+		goto('/bounties');
 	}
 </script>
 
@@ -109,12 +105,6 @@
 						Browse bounties
 						<ArrowUpRight class="h-4 w-4" />
 					</a>
-					<a
-						href="/projects"
-						class="border-bone bg-cream text-ink hover:border-ink inline-flex items-center gap-2 rounded-full border px-5 py-2.5 text-sm font-medium transition-colors"
-					>
-						See projects
-					</a>
 				</div>
 			</div>
 
@@ -125,7 +115,7 @@
 		<section data-reveal-step="2">
 			<StatPanel
 				liveBounties={home.stats.liveBounties}
-				liveProjects={home.stats.liveProjects}
+				liveBountyValueMinor={home.stats.liveBountyValueMinor}
 				totalPaidMinor={home.stats.totalPaidMinor}
 				winnersToday={home.stats.winnersToday}
 				currencyDisplay="Le"
@@ -138,24 +128,16 @@
 
 		<!-- TICKER -->
 		<section data-reveal-step="4" aria-label="Recent winners">
-			<EarnersTicker winners={home.stats.winners} />
+			<EarnersTicker winners={home.stats.winners} featured={home.featuredBounty} />
 		</section>
 
 		<!-- CATEGORY CHIPS + FEED SWITCH -->
 		<section data-reveal-step="5" class="space-y-5">
-			<div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-				<div>
-					<h2 class="fow-display text-ink text-4xl">Find your next win</h2>
-					<p class="text-ink-soft mt-1 text-sm">
-						{home.stats.liveBounties} bounties · {home.stats.liveProjects} projects open right now
-					</p>
-				</div>
-				<FeedSwitch
-					value={feedMode}
-					onChange={(v) => (feedMode = v)}
-					bountyCount={home.stats.liveBounties}
-					projectCount={home.stats.liveProjects}
-				/>
+			<div>
+				<h2 class="fow-display text-ink text-4xl">Find your next win</h2>
+				<p class="text-ink-soft mt-1 text-sm">
+					{home.stats.liveBounties} bounties open right now
+				</p>
 			</div>
 
 			<CategoryChips activeLabel={activeCategory} onSelect={pickCategory} />
@@ -167,11 +149,9 @@
 				<div
 					class="border-bone bg-paper/50 rounded-[var(--radius-card-lg)] border border-dashed px-6 py-12 text-center"
 				>
-					<p class="fow-display text-ink-soft text-3xl">
-						No {feedMode === 'BOUNTY' ? 'bounties' : 'projects'} open yet
-					</p>
+					<p class="fow-display text-ink-soft text-3xl">No bounties open yet</p>
 					<p class="text-ink-soft mt-2 text-sm">
-						Check back soon. New {feedMode === 'BOUNTY' ? 'bounties' : 'projects'} go up every week.
+						Check back soon. New bounties go up every week.
 					</p>
 				</div>
 			{:else}
@@ -182,10 +162,10 @@
 				</div>
 				<div class="flex justify-center pt-2">
 					<a
-						href={seeAllHref}
+						href="/bounties"
 						class="border-bone bg-cream text-ink hover:border-ink inline-flex items-center gap-2 rounded-full border px-5 py-2.5 text-sm font-medium transition-colors"
 					>
-						See all {feedMode === 'BOUNTY' ? 'bounties' : 'projects'} ({activeFeed.total})
+						See all bounties ({activeFeed.total})
 						<ArrowUpRight class="h-4 w-4" />
 					</a>
 				</div>
