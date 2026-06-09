@@ -2,7 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { browser } from '$app/environment';
 	import { onMount, untrack } from 'svelte';
-	import RichTextEditor from '$lib/components/editor/RichTextEditor.svelte';
+	import RichTextEditor from '$lib/components/editor/LazyRichTextEditor.svelte';
 	import { useLocalDraft } from '$lib/hooks/useLocalDraft';
 	import {
 		Button,
