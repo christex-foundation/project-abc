@@ -24,7 +24,7 @@ export const actions: Actions = {
 			if (e instanceof AppError) return fail(e.httpStatus, { error: e.message });
 			throw e;
 		}
-		throw redirect(303, '/verify-email');
+		throw redirect(303, '/login?registered=1');
 	},
 	company: async ({ request }) => {
 		const data = Object.fromEntries(await request.formData());
@@ -38,6 +38,6 @@ export const actions: Actions = {
 			if (e instanceof AppError) return fail(e.httpStatus, { error: e.message });
 			throw e;
 		}
-		throw redirect(303, '/verify-email');
+		throw redirect(303, '/login?registered=1');
 	}
 };

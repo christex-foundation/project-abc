@@ -9,27 +9,38 @@ import * as referralService from './referral.service';
 
 type CompanySelfRegister = { enabled?: boolean } | null;
 
+/**
+ * Create the Better Auth email/password account, translating its errors into
+ * AppErrors the register actions can surface. With email verification disabled
+ * (see auth.ts), signUpEmail throws on a duplicate email instead of returning a
+ * synthetic un-persisted user, so we map that to a friendly CONFLICT.
+ */
+async function signUpEmail(input: { email: string; password: string; name: string }) {
+	let result;
+	try {
+		result = await auth.api.signUpEmail({
+			body: { email: input.email, password: input.password, name: input.name }
+		});
+	} catch (e) {
+		const message = e instanceof Error ? e.message : '';
+		if (/already exists|already registered/i.test(message)) {
+			throw new AppError('CONFLICT', 'An account with this email already exists.');
+		}
+		throw new AppError('BAD_REQUEST', 'Sign-up failed.');
+	}
+	if (!result?.user?.id) {
+		throw new AppError('BAD_REQUEST', 'Sign-up failed.');
+	}
+	return result as typeof result & { user: { id: string } };
+}
+
 export async function registerFreelancer(input: {
 	email: string;
 	password: string;
 	name: string;
 	referralCode?: string;
 }) {
-	const result = await auth.api.signUpEmail({
-		body: { email: input.email, password: input.password, name: input.name }
-	});
-	if (!result?.user?.id) {
-		throw new AppError('BAD_REQUEST', 'Sign-up failed.');
-	}
-	// Better Auth returns a synthetic, un-persisted user when the email already
-	// exists and requireEmailVerification is true (anti-enumeration). Short-circuit
-	// silently so the route still redirects to /verify-email without leaking that
-	// the address is taken — and without P2025'ing on the phantom id.
-	const persisted = await prisma.user.findUnique({
-		where: { id: result.user.id },
-		select: { id: true }
-	});
-	if (!persisted) return { userId: result.user.id };
+	const result = await signUpEmail(input);
 	await prisma.user.update({
 		where: { id: result.user.id },
 		data: { role: UserRole.FREELANCER, isActive: true }
@@ -62,19 +73,7 @@ export async function registerCompany(input: {
 		throw new AppError('FORBIDDEN', 'Companies join FOW by invitation only. Contact your admin.');
 	}
 
-	const result = await auth.api.signUpEmail({
-		body: { email: input.email, password: input.password, name: input.name }
-	});
-	if (!result?.user?.id) {
-		throw new AppError('BAD_REQUEST', 'Sign-up failed.');
-	}
-	// See registerFreelancer: Better Auth returns an un-persisted synthetic user
-	// for duplicate emails when requireEmailVerification is true.
-	const persisted = await prisma.user.findUnique({
-		where: { id: result.user.id },
-		select: { id: true }
-	});
-	if (!persisted) return { userId: result.user.id };
+	const result = await signUpEmail(input);
 	await prisma.user.update({
 		where: { id: result.user.id },
 		data: { role: UserRole.COMPANY, isActive: true }
