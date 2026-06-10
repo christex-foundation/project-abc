@@ -69,7 +69,7 @@
 {#if isAdminPath}
 	{@render children()}
 {:else}
-	<div class="bg-cream text-ink min-h-screen font-sans">
+	<div class="bg-cream text-ink min-h-screen overflow-x-clip font-sans">
 		{#if showTopNav && data.user}
 			<TopNav
 				user={data.user}
