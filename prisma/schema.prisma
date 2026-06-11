@@ -36,6 +36,42 @@ enum BountyType {
   PROJECT
 }
 
+// Sierra Leone administrative geography. Used for provincial targeting of
+// bounties and for freelancer location. Province targeting is enforced at
+// submission time; District is captured on the freelancer for display and
+// finer future matching.
+enum Province {
+  EASTERN
+  NORTHERN
+  NORTH_WEST
+  SOUTHERN
+  WESTERN_AREA
+}
+
+enum District {
+  // Eastern
+  KAILAHUN
+  KENEMA
+  KONO
+  // Northern
+  BOMBALI
+  FALABA
+  KOINADUGU
+  TONKOLILI
+  // North West
+  KAMBIA
+  KARENE
+  PORT_LOKO
+  // Southern
+  BO
+  BONTHE
+  MOYAMBA
+  PUJEHUN
+  // Western Area
+  WESTERN_AREA_URBAN
+  WESTERN_AREA_RURAL
+}
+
 enum CompensationType {
   FIXED
   RANGE
@@ -265,6 +301,10 @@ model FreelancerProfile {
   portfolio                String?
   experienceLevel          String?
   whatsappNumber           String?
+  // Location (Sierra Leone). `district` always belongs to `province`; enforced
+  // in the validator. Both nullable until the freelancer fills them in.
+  province                 Province?
+  district                 District?
   bankDetails              Json?
   aiEmbedding              Float[]
   monimeFinancialAccountId String? // Monime financial account UUID
@@ -413,6 +453,14 @@ model Bounty {
 
   // Eligibility
   eligibility Json?
+
+  // Access control
+  //   - targetProvinces: empty = open nationwide; otherwise only freelancers
+  //     whose profile province is in this list may submit (enforced server-side).
+  //   - accessPinHash: null = open; otherwise a salted scrypt hash of the PIN
+  //     that gates viewing the bounty's details and submitting to it.
+  targetProvinces Province[] @default([])
+  accessPinHash   String?
 
   // Timeline
   timeToComplete     String?
