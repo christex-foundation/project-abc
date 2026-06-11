@@ -1,7 +1,14 @@
 import { z } from 'zod';
+import { PROVINCE_VALUES } from '$lib/constants/geo';
 
 export const BountyType = z.enum(['BOUNTY', 'PROJECT']);
 export const CompensationType = z.enum(['FIXED', 'RANGE', 'VARIABLE']);
+
+/** 4–8 alphanumeric characters. Compared case-sensitively at unlock time. */
+export const accessPinSchema = z
+	.string()
+	.trim()
+	.regex(/^[A-Za-z0-9]{4,8}$/, 'PIN must be 4–8 letters or numbers.');
 
 const prizeTierSchema = z.object({
 	position: z.number().int().min(1).max(99),
@@ -45,7 +52,14 @@ const bountyBaseShape = {
 
 	timeToComplete: z.string().max(120).nullish(),
 	submissionDeadline: dateLike,
-	judgingDeadline: dateLike.nullish()
+	judgingDeadline: dateLike.nullish(),
+
+	// Access control. `targetProvinces` empty = open nationwide. `accessPin` is
+	// the raw PIN; the service hashes it before storage and never reads it back
+	// (on update, omit the key to leave the existing PIN unchanged, or send null
+	// / '' to clear it).
+	targetProvinces: z.array(z.enum(PROVINCE_VALUES)).max(5).default([]),
+	accessPin: accessPinSchema.or(z.literal('')).nullish()
 };
 
 const bountyBaseObject = z.object(bountyBaseShape);
