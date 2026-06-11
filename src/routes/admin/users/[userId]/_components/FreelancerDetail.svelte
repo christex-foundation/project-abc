@@ -72,7 +72,7 @@
 		<Card class="p-5">
 			<h2 class="text-sm font-semibold text-zinc-900">Profile</h2>
 			{#if profile}
-				<dl class="mt-3 grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+				<dl class="mt-3 grid grid-cols-1 gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
 					<dt class="text-zinc-500">Display name</dt>
 					<dd>{profile.displayName}</dd>
 					{#if profile.headline}
@@ -90,7 +90,7 @@
 								href={profile.portfolio}
 								target="_blank"
 								rel="noopener"
-								class="text-indigo-600 hover:underline"
+								class="break-all text-indigo-600 hover:underline"
 							>
 								{profile.portfolio}
 							</a>

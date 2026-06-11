@@ -177,7 +177,9 @@ export async function listForAdmin(filter: {
 	search?: string;
 	status?: BountyStatus;
 	type?: BountyType;
-}): Promise<AdminBountyRow[]> {
+	take?: number;
+	skip?: number;
+}): Promise<{ items: AdminBountyRow[]; total: number }> {
 	const where: Prisma.BountyWhereInput = {};
 	if (filter.status) where.status = filter.status;
 	if (filter.type) where.type = filter.type;
@@ -187,26 +189,33 @@ export async function listForAdmin(filter: {
 			{ slug: { contains: filter.search, mode: 'insensitive' } }
 		];
 	}
-	return prisma.bounty.findMany({
-		where,
-		select: {
-			id: true,
-			slug: true,
-			title: true,
-			status: true,
-			type: true,
-			currency: true,
-			totalPrizePool: true,
-			escrowFundedAmount: true,
-			creditsExempt: true,
-			submissionDeadline: true,
-			createdAt: true,
-			company: { select: { id: true, companyName: true } },
-			_count: { select: { submissions: true } }
-		},
-		orderBy: { createdAt: 'desc' },
-		take: 100
-	});
+	const take = filter.take ?? 50;
+	const skip = filter.skip ?? 0;
+	const [items, total] = await Promise.all([
+		prisma.bounty.findMany({
+			where,
+			select: {
+				id: true,
+				slug: true,
+				title: true,
+				status: true,
+				type: true,
+				currency: true,
+				totalPrizePool: true,
+				escrowFundedAmount: true,
+				creditsExempt: true,
+				submissionDeadline: true,
+				createdAt: true,
+				company: { select: { id: true, companyName: true } },
+				_count: { select: { submissions: true } }
+			},
+			orderBy: { createdAt: 'desc' },
+			take,
+			skip
+		}),
+		prisma.bounty.count({ where })
+	]);
+	return { items, total };
 }
 
 export async function listActiveBountySlugs(): Promise<string[]> {

@@ -14,10 +14,20 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			? (roleParam as UserRole)
 			: undefined;
 	const isActive = activeParam === 'true' ? true : activeParam === 'false' ? false : undefined;
-	const { items, total } = await admin.listUsers(caller, { search, role, isActive });
+	const pageSize = 50;
+	const page = Math.max(1, Number(url.searchParams.get('page') ?? 1) || 1);
+	const { items, total } = await admin.listUsers(caller, {
+		search,
+		role,
+		isActive,
+		take: pageSize,
+		skip: (page - 1) * pageSize
+	});
 	return {
 		users: items,
 		total,
+		page,
+		pageSize,
 		search: search ?? '',
 		role: role ?? '',
 		isActive: activeParam ?? ''

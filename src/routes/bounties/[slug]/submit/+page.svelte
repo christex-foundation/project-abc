@@ -11,7 +11,7 @@
 		Textarea,
 		Badge
 	} from '$lib/components/ui';
-	import RichTextEditor from '$lib/components/editor/RichTextEditor.svelte';
+	import RichTextEditor from '$lib/components/editor/LazyRichTextEditor.svelte';
 	import { trackSubmit } from '$lib/client/forms';
 	import { untrack } from 'svelte';
 

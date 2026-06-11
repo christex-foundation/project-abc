@@ -137,6 +137,37 @@
 	animation: fow-pulse-soft 1.6s ease-in-out infinite;
 }
 
+/* Loading placeholder block (Skeleton.svelte) shown while streamed data arrives. */
+.fow-skeleton {
+	animation: fow-pulse-soft 1.6s ease-in-out infinite;
+}
+
+/*
+ * Horizontal scroll affordance for wide tables on narrow screens: a soft shadow
+ * at each edge that reveals only when there's more content to scroll toward.
+ * White "cover" layers (background-attachment: local) sit over the shadow layers
+ * (attachment: scroll) at the start/end of the scroll range.
+ */
+.fow-scroll-x {
+	background-image:
+		linear-gradient(to right, white 30%, rgba(255, 255, 255, 0)),
+		linear-gradient(to left, white 30%, rgba(255, 255, 255, 0)),
+		linear-gradient(to right, rgba(26, 26, 26, 0.14), rgba(26, 26, 26, 0)),
+		linear-gradient(to left, rgba(26, 26, 26, 0.14), rgba(26, 26, 26, 0));
+	background-position:
+		left center,
+		right center,
+		left center,
+		right center;
+	background-repeat: no-repeat;
+	background-size:
+		36px 100%,
+		36px 100%,
+		14px 100%,
+		14px 100%;
+	background-attachment: local, local, scroll, scroll;
+}
+
 /* Lift + accent reveal on bounty / project cards. */
 .fow-card {
 	transition:
@@ -168,6 +199,7 @@
 	.fow-reveal > [data-reveal-step],
 	.fow-marquee,
 	.fow-pulse,
+	.fow-skeleton,
 	.fow-card,
 	.fow-lift {
 		animation: none !important;

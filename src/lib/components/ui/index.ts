@@ -22,6 +22,8 @@ export { default as Modal } from './Modal.svelte';
 export { default as StatusBadge } from './StatusBadge.svelte';
 export { default as PageHeader } from './PageHeader.svelte';
 export { default as StatCard } from './StatCard.svelte';
+export { default as Skeleton } from './Skeleton.svelte';
+export { default as Pagination } from './Pagination.svelte';
 export { toneFor, TONE_CLASSES, type StatusTone } from './status-tone';
 export {
 	DropdownMenu,

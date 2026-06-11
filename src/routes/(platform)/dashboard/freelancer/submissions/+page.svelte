@@ -98,7 +98,12 @@
 							</div>
 							<div>
 								<span class="text-ink-soft">Link:</span>
-								<a href={s.link} target="_blank" rel="noopener noreferrer" class="underline">
+								<a
+									href={s.link}
+									target="_blank"
+									rel="noopener noreferrer"
+									class="break-all underline"
+								>
 									{s.link}
 								</a>
 							</div>

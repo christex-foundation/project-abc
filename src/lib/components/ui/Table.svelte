@@ -12,7 +12,7 @@
 
 <div
 	class={cn(
-		'border-bone overflow-x-auto rounded-[var(--radius-card)] border bg-white shadow-[var(--shadow-card)]',
+		'fow-scroll-x border-bone overflow-x-auto rounded-[var(--radius-card)] border bg-white shadow-[var(--shadow-card)]',
 		className
 	)}
 >

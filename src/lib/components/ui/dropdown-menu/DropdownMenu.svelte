@@ -68,7 +68,7 @@
 		<div
 			role="menu"
 			class={cn(
-				'fow-dropdown absolute z-40 mt-2 min-w-[14rem] origin-top rounded-xl border border-bone bg-cream p-1.5 shadow-[0_18px_40px_-22px_rgba(26,26,26,0.45)]',
+				'fow-dropdown absolute z-40 mt-2 min-w-[14rem] max-w-[calc(100vw-1.5rem)] origin-top rounded-xl border border-bone bg-cream p-1.5 shadow-[0_18px_40px_-22px_rgba(26,26,26,0.45)]',
 				align === 'end' ? 'right-0' : 'left-0',
 				className
 			)}

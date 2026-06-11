@@ -59,3 +59,30 @@ export async function aggregateForUser(
 	const avg = res._avg.rating;
 	return { avg: avg != null ? Math.round(avg * 10) / 10 : null, count: res._count._all };
 }
+
+/**
+ * Aggregate ratings for many users (as ratees) in a single query. Returns a map
+ * keyed by user id; users with no reviews default to `{ avg: null, count: 0 }`.
+ */
+export async function aggregateForUsers(
+	userIds: string[]
+): Promise<Record<string, { avg: number | null; count: number }>> {
+	const out: Record<string, { avg: number | null; count: number }> = {};
+	for (const id of userIds) out[id] = { avg: null, count: 0 };
+	if (userIds.length === 0) return out;
+	const rows = await prisma.review.groupBy({
+		by: ['rateeUserId'],
+		where: { rateeUserId: { in: userIds } },
+		_avg: { rating: true },
+		_count: { _all: true }
+	});
+	for (const r of rows) {
+		if (!r.rateeUserId) continue;
+		const avg = r._avg.rating;
+		out[r.rateeUserId] = {
+			avg: avg != null ? Math.round(avg * 10) / 10 : null,
+			count: r._count._all
+		};
+	}
+	return out;
+}

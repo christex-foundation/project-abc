@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
-	import RichTextEditor from '$lib/components/editor/RichTextEditor.svelte';
+	import RichTextEditor from '$lib/components/editor/LazyRichTextEditor.svelte';
 	import { useLocalDraft } from '$lib/hooks/useLocalDraft';
 	import {
 		Button,

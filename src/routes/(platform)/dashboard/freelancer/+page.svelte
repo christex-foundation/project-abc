@@ -1,5 +1,13 @@
 <script lang="ts">
-	import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui';
+	import {
+		Badge,
+		Button,
+		Card,
+		CardContent,
+		CardHeader,
+		CardTitle,
+		Skeleton
+	} from '$lib/components/ui';
 	import KenteRule from '$lib/components/marketing/KenteRule.svelte';
 	import { formatMoneyCompact, formatRelative } from '$lib/utils';
 
@@ -19,8 +27,6 @@
 
 	const submissions = $derived(data.submissions);
 	const earnings = $derived(data.earnings);
-	const recommendations = $derived(data.recommendations);
-	const notifications = $derived(data.notifications);
 	const isProfileComplete = $derived(data.isProfileComplete);
 
 	const totalEarned = $derived(
@@ -36,8 +42,6 @@
 	const winsCount = $derived(submissions.filter((s) => s.isWinner).length);
 	const recentSubmissions = $derived(submissions.slice(0, 5));
 	const credits = $derived(data.credits);
-	const creditTransactions = $derived(data.creditTransactions);
-	const referrals = $derived(data.referrals);
 
 	const REASON_LABEL: Record<string, string> = {
 		MONTHLY_RESET: 'Monthly reset',
@@ -88,11 +92,13 @@
 				</h1>
 			</div>
 			<div class="flex flex-col items-end gap-2">
-				{#if data.rating?.count}
-					<span class="text-ochre text-sm font-medium">
-						★ {data.rating.avg} · {data.rating.count} review{data.rating.count === 1 ? '' : 's'}
-					</span>
-				{/if}
+				{#await data.rating then rating}
+					{#if rating?.count}
+						<span class="text-ochre text-sm font-medium">
+							★ {rating.avg} · {rating.count} review{rating.count === 1 ? '' : 's'}
+						</span>
+					{/if}
+				{/await}
 				<div class="flex flex-wrap gap-2">
 					<Button href="/dashboard/freelancer/submissions" variant="outline">My work</Button>
 					<Button href="/bounties" class="bg-ink text-cream hover:bg-terracotta"
@@ -171,128 +177,139 @@
 		<KenteRule />
 	</div>
 
-	{#if referrals?.enabled}
-		<Card data-reveal-step="5">
-			<CardHeader>
-				<CardTitle class="text-base">Get one credit for every friend you invite</CardTitle>
-			</CardHeader>
-			<CardContent class="space-y-4">
-				<p class="text-ink-soft text-sm">
-					You get {referrals.creditsPerFirstSubmission} credit when a friend you invited makes a non-spam
-					submission. You also get {referrals.creditsPerWin} bonus credits every time they win.
-				</p>
+	{#await data.referrals then referrals}
+		{#if referrals?.enabled}
+			<Card data-reveal-step="5">
+				<CardHeader>
+					<CardTitle class="text-base">Get one credit for every friend you invite</CardTitle>
+				</CardHeader>
+				<CardContent class="space-y-4">
+					<p class="text-ink-soft text-sm">
+						You get {referrals.creditsPerFirstSubmission} credit when a friend you invited makes a non-spam
+						submission. You also get {referrals.creditsPerWin} bonus credits every time they win.
+					</p>
 
-				<div class="flex items-baseline gap-2">
-					<span class="fow-display text-ink text-3xl tabular-nums">{referrals.remaining}</span>
-					<span class="text-ink-soft text-sm">/ {referrals.cap} invites left</span>
-					<a href="/legal/referrals" class="text-ink-soft ml-auto text-xs underline">Read terms</a>
-				</div>
-
-				<div>
-					<div class="text-ink-soft font-mono text-[11px] tracking-wide uppercase">Your code</div>
-					<div class="mt-1 flex items-center gap-2">
-						<code
-							class="bg-paper text-ink rounded-lg px-3 py-1.5 font-mono text-sm font-semibold tracking-wider"
+					<div class="flex items-baseline gap-2">
+						<span class="fow-display text-ink text-3xl tabular-nums">{referrals.remaining}</span>
+						<span class="text-ink-soft text-sm">/ {referrals.cap} invites left</span>
+						<a href="/legal/referrals" class="text-ink-soft ml-auto text-xs underline">Read terms</a
 						>
-							{referrals.code}
-						</code>
-						<button
-							type="button"
-							onclick={() => copy(referrals!.code, 'code')}
-							class="text-ink-soft hover:text-ink text-xs underline transition-colors"
-						>
-							{copiedCode ? 'Copied!' : 'Copy'}
-						</button>
 					</div>
-				</div>
 
-				<div>
-					<div class="text-ink-soft font-mono text-[11px] tracking-wide uppercase">Share link</div>
-					<div class="mt-1 flex items-center gap-2">
-						<input
-							readonly
-							value={referrals.link}
-							class="border-bone bg-paper min-w-0 flex-1 rounded-lg border px-2 py-1 font-mono text-xs"
-						/>
-						<button
-							type="button"
-							onclick={() => copy(referrals!.link, 'link')}
-							class="text-ink-soft hover:text-ink text-xs underline transition-colors"
-						>
-							{copiedLink ? 'Copied!' : 'Copy'}
-						</button>
-					</div>
-				</div>
-
-				{#if referrals.referrals.length > 0}
-					<details class="text-sm">
-						<summary class="text-ink-soft cursor-pointer">
-							Friends you've invited ({referrals.referrals.length})
-						</summary>
-						<ul class="mt-2 space-y-1">
-							{#each referrals.referrals as r (r.id)}
-								<li
-									class="border-bone flex items-center justify-between border-b py-1.5 text-xs last:border-0"
-								>
-									<span class="truncate">{r.displayName}</span>
-									<span class="flex shrink-0 items-center gap-1.5">
-										{#if !r.emailVerified}
-											<Badge variant="outline">Pending verification</Badge>
-										{:else if r.hasSubmitted}
-											<Badge variant="success">Submitted</Badge>
-										{:else}
-											<Badge variant="secondary">Signed up</Badge>
-										{/if}
-										{#if r.winCount > 0}
-											<Badge variant="success">{r.winCount} win{r.winCount === 1 ? '' : 's'}</Badge>
-										{/if}
-									</span>
-								</li>
-							{/each}
-						</ul>
-					</details>
-				{/if}
-			</CardContent>
-		</Card>
-	{/if}
-
-	{#if credits && creditTransactions.length > 0}
-		<Card data-reveal-step="6">
-			<CardHeader>
-				<CardTitle class="text-base">Recent credit activity</CardTitle>
-			</CardHeader>
-			<CardContent class="space-y-2">
-				{#each creditTransactions as t (t.id)}
-					<div
-						class="border-bone flex items-center justify-between gap-2 border-b py-2 text-sm last:border-0"
-					>
-						<div class="min-w-0 flex-1">
-							<div class="text-sm">
-								{REASON_LABEL[t.reason] ?? t.reason}
-								{#if t.submission?.bounty?.title}
-									<span class="text-ink-soft">— {t.submission.bounty.title}</span>
-								{/if}
-							</div>
-							{#if t.notes}
-								<div class="text-ink-soft text-xs">{t.notes}</div>
-							{/if}
-						</div>
-						<div class="flex shrink-0 items-center gap-2 text-xs">
-							<span
-								class={t.delta > 0
-									? 'text-forest font-medium'
-									: t.delta < 0
-										? 'font-medium text-red-700'
-										: 'text-ink-soft'}
+					<div>
+						<div class="text-ink-soft font-mono text-[11px] tracking-wide uppercase">Your code</div>
+						<div class="mt-1 flex items-center gap-2">
+							<code
+								class="bg-paper text-ink rounded-lg px-3 py-1.5 font-mono text-sm font-semibold tracking-wider"
 							>
-								{t.delta > 0 ? '+' : ''}{t.delta}
-							</span>
-							<span class="text-ink-soft/60">→ {t.balanceAfter}</span>
+								{referrals.code}
+							</code>
+							<button
+								type="button"
+								onclick={() => copy(referrals!.code, 'code')}
+								class="text-ink-soft hover:text-ink text-xs underline transition-colors"
+							>
+								{copiedCode ? 'Copied!' : 'Copy'}
+							</button>
 						</div>
 					</div>
-				{/each}
-			</CardContent>
-		</Card>
+
+					<div>
+						<div class="text-ink-soft font-mono text-[11px] tracking-wide uppercase">
+							Share link
+						</div>
+						<div class="mt-1 flex items-center gap-2">
+							<input
+								readonly
+								value={referrals.link}
+								class="border-bone bg-paper min-w-0 flex-1 rounded-lg border px-2 py-1 font-mono text-xs"
+							/>
+							<button
+								type="button"
+								onclick={() => copy(referrals!.link, 'link')}
+								class="text-ink-soft hover:text-ink text-xs underline transition-colors"
+							>
+								{copiedLink ? 'Copied!' : 'Copy'}
+							</button>
+						</div>
+					</div>
+
+					{#if referrals.referrals.length > 0}
+						<details class="text-sm">
+							<summary class="text-ink-soft cursor-pointer">
+								Friends you've invited ({referrals.referrals.length})
+							</summary>
+							<ul class="mt-2 space-y-1">
+								{#each referrals.referrals as r (r.id)}
+									<li
+										class="border-bone flex items-center justify-between border-b py-1.5 text-xs last:border-0"
+									>
+										<span class="truncate">{r.displayName}</span>
+										<span class="flex shrink-0 items-center gap-1.5">
+											{#if !r.emailVerified}
+												<Badge variant="outline">Pending verification</Badge>
+											{:else if r.hasSubmitted}
+												<Badge variant="success">Submitted</Badge>
+											{:else}
+												<Badge variant="secondary">Signed up</Badge>
+											{/if}
+											{#if r.winCount > 0}
+												<Badge variant="success"
+													>{r.winCount} win{r.winCount === 1 ? '' : 's'}</Badge
+												>
+											{/if}
+										</span>
+									</li>
+								{/each}
+							</ul>
+						</details>
+					{/if}
+				</CardContent>
+			</Card>
+		{/if}
+	{/await}
+
+	{#if credits}
+		{#await data.creditTransactions then creditTransactions}
+			{#if creditTransactions.length > 0}
+				<Card data-reveal-step="6">
+					<CardHeader>
+						<CardTitle class="text-base">Recent credit activity</CardTitle>
+					</CardHeader>
+					<CardContent class="space-y-2">
+						{#each creditTransactions as t (t.id)}
+							<div
+								class="border-bone flex items-center justify-between gap-2 border-b py-2 text-sm last:border-0"
+							>
+								<div class="min-w-0 flex-1">
+									<div class="text-sm">
+										{REASON_LABEL[t.reason] ?? t.reason}
+										{#if t.submission?.bounty?.title}
+											<span class="text-ink-soft">— {t.submission.bounty.title}</span>
+										{/if}
+									</div>
+									{#if t.notes}
+										<div class="text-ink-soft text-xs">{t.notes}</div>
+									{/if}
+								</div>
+								<div class="flex shrink-0 items-center gap-2 text-xs">
+									<span
+										class={t.delta > 0
+											? 'text-forest font-medium'
+											: t.delta < 0
+												? 'font-medium text-red-700'
+												: 'text-ink-soft'}
+									>
+										{t.delta > 0 ? '+' : ''}{t.delta}
+									</span>
+									<span class="text-ink-soft/60">→ {t.balanceAfter}</span>
+								</div>
+							</div>
+						{/each}
+					</CardContent>
+				</Card>
+			{/if}
+		{/await}
 	{/if}
 
 	<Card data-reveal-step="7">
@@ -308,43 +325,50 @@
 			</div>
 		</CardHeader>
 		<CardContent>
-			{#if recommendations.length === 0 && !isProfileComplete}
-				<div class="space-y-3 py-4 text-center">
-					<div class="text-ink-soft text-sm">
-						Complete your profile — add a headline, bio, and at least one skill — and we'll match
-						you to live bounties.
-					</div>
-					<Button href="/dashboard/freelancer/profile" size="sm">Complete your profile</Button>
-				</div>
-			{:else if recommendations.length === 0}
-				<div class="space-y-3 py-4 text-center">
-					<div class="text-ink-soft text-sm">
-						We're matching you to live bounties — check back soon, or browse all open bounties.
-					</div>
-					<Button href="/bounties" size="sm">Browse bounties</Button>
-				</div>
-			{:else}
+			{#await data.recommendations}
 				<div class="grid gap-3 md:grid-cols-2">
-					{#each recommendations as r (r.bounty.id)}
-						<a
-							href={`/bounties/${r.bounty.slug}`}
-							class="fow-card border-bone bg-cream block rounded-xl border p-3"
-						>
-							<div class="flex items-start justify-between gap-2">
-								<span class="text-ink text-sm font-medium">{r.bounty.title}</span>
-								<Badge variant="outline">{Math.round(r.matchScore * 100)}%</Badge>
-							</div>
-							<div class="text-ink-soft mt-2 flex flex-wrap items-center gap-2 text-xs">
-								<Badge variant="outline">{r.bounty.type}</Badge>
-								<span class="font-mono tabular-nums">
-									{formatMoneyMajor(r.bounty.totalPrizePool, r.bounty.currency)}
-								</span>
-								<span>Closes {daysUntil(r.bounty.submissionDeadline)}</span>
-							</div>
-						</a>
-					{/each}
+					<Skeleton class="h-20" />
+					<Skeleton class="h-20" />
 				</div>
-			{/if}
+			{:then recommendations}
+				{#if recommendations.length === 0 && !isProfileComplete}
+					<div class="space-y-3 py-4 text-center">
+						<div class="text-ink-soft text-sm">
+							Complete your profile — add a headline, bio, and at least one skill — and we'll match
+							you to live bounties.
+						</div>
+						<Button href="/dashboard/freelancer/profile" size="sm">Complete your profile</Button>
+					</div>
+				{:else if recommendations.length === 0}
+					<div class="space-y-3 py-4 text-center">
+						<div class="text-ink-soft text-sm">
+							We're matching you to live bounties — check back soon, or browse all open bounties.
+						</div>
+						<Button href="/bounties" size="sm">Browse bounties</Button>
+					</div>
+				{:else}
+					<div class="grid gap-3 md:grid-cols-2">
+						{#each recommendations as r (r.bounty.id)}
+							<a
+								href={`/bounties/${r.bounty.slug}`}
+								class="fow-card border-bone bg-cream block rounded-xl border p-3"
+							>
+								<div class="flex items-start justify-between gap-2">
+									<span class="text-ink text-sm font-medium">{r.bounty.title}</span>
+									<Badge variant="outline">{Math.round(r.matchScore * 100)}%</Badge>
+								</div>
+								<div class="text-ink-soft mt-2 flex flex-wrap items-center gap-2 text-xs">
+									<Badge variant="outline">{r.bounty.type}</Badge>
+									<span class="font-mono tabular-nums">
+										{formatMoneyMajor(r.bounty.totalPrizePool, r.bounty.currency)}
+									</span>
+									<span>Closes {daysUntil(r.bounty.submissionDeadline)}</span>
+								</div>
+							</a>
+						{/each}
+					</div>
+				{/if}
+			{/await}
 		</CardContent>
 	</Card>
 
@@ -410,26 +434,31 @@
 			</div>
 		</CardHeader>
 		<CardContent class="space-y-2">
-			{#if notifications.length === 0}
-				<div class="text-ink-soft py-4 text-center text-sm">No recent activity yet.</div>
-			{:else}
-				{#each notifications as n (n.id)}
-					<a
-						href={n.link ?? '/notifications'}
-						class="border-bone hover:bg-paper block border-b py-2 last:border-0"
-					>
-						<div class="flex items-start justify-between gap-2">
-							<div class="min-w-0 flex-1">
-								<div class="text-ink text-sm font-medium">{n.title}</div>
-								{#if n.message}
-									<div class="text-ink-soft truncate text-xs">{n.message}</div>
-								{/if}
+			{#await data.notifications}
+				<Skeleton class="h-12" />
+				<Skeleton class="h-12" />
+			{:then notifications}
+				{#if notifications.length === 0}
+					<div class="text-ink-soft py-4 text-center text-sm">No recent activity yet.</div>
+				{:else}
+					{#each notifications as n (n.id)}
+						<a
+							href={n.link ?? '/notifications'}
+							class="border-bone hover:bg-paper block border-b py-2 last:border-0"
+						>
+							<div class="flex items-start justify-between gap-2">
+								<div class="min-w-0 flex-1">
+									<div class="text-ink text-sm font-medium">{n.title}</div>
+									{#if n.message}
+										<div class="text-ink-soft truncate text-xs">{n.message}</div>
+									{/if}
+								</div>
+								<span class="text-ink-soft/60 shrink-0 text-xs">{formatRelative(n.createdAt)}</span>
 							</div>
-							<span class="text-ink-soft/60 shrink-0 text-xs">{formatRelative(n.createdAt)}</span>
-						</div>
-					</a>
-				{/each}
-			{/if}
+						</a>
+					{/each}
+				{/if}
+			{/await}
 		</CardContent>
 	</Card>
 </div>

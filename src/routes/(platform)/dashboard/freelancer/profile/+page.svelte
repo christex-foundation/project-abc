@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount, untrack } from 'svelte';
+	import { apiFetch } from '$lib/client/net';
 	import {
 		Badge,
 		Button,
@@ -72,29 +73,45 @@
 
 	let showWithdraw = $state(false);
 
-	onMount(async () => {
+	async function loadBalance() {
 		if (!accountId) return;
 		accountLoading = true;
 		try {
-			const res = await fetch('/api/users/me/financial-account');
+			// Background load — stay quiet on network failure (the balance just
+			// shows "—"); the user can pull-to-refresh / reload.
+			const res = await apiFetch('/api/users/me/financial-account', undefined, {
+				toastOnError: false
+			});
 			if (res.ok) {
 				const body = await res.json();
 				balance = body.balance;
 			}
+		} catch {
+			// Offline / timeout — leave balance as-is.
 		} finally {
 			accountLoading = false;
 		}
-	});
+	}
+
+	onMount(loadBalance);
 
 	async function activateWallet() {
 		activating = true;
 		try {
-			const res = await fetch('/api/users/me/financial-account', { method: 'POST' });
+			const res = await apiFetch(
+				'/api/users/me/financial-account',
+				{ method: 'POST' },
+				{
+					retry: activateWallet
+				}
+			);
 			if (res.ok) {
 				const body = await res.json();
 				accountId = body.accountId;
 				balance = body.balance;
 			}
+		} catch {
+			// Network failure already surfaced via toast by apiFetch.
 		} finally {
 			activating = false;
 		}

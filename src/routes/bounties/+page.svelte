@@ -4,54 +4,66 @@
 	import { untrack } from 'svelte';
 	import { MetaTags } from 'svelte-meta-tags';
 	import { formatMoneyCompact } from '$lib/utils';
-	import { Button, Input, Label, Select } from '$lib/components/ui';
+	import { Badge, Button, Drawer } from '$lib/components/ui';
 	import BountyCard from '$lib/components/feed/BountyCard.svelte';
+	import BountyFilters, { type BountyFilterState } from '$lib/components/feed/BountyFilters.svelte';
+	import SlidersHorizontal from '@lucide/svelte/icons/sliders-horizontal';
 
 	let { data } = $props();
 
 	// Filter state seeds once from server-rendered query params; user edits
 	// drive subsequent updates via `goto`.
-	let search = $state(untrack(() => data.filters.search));
-	let type = $state(untrack(() => data.filters.type));
-	let compensationType = $state(untrack(() => data.filters.compensationType));
-	let minPrize = $state(untrack(() => data.filters.minPrize));
-	let maxPrize = $state(untrack(() => data.filters.maxPrize));
-	let beforeDeadline = $state(untrack(() => data.filters.beforeDeadline));
-	let selectedSkillIds = $state<string[]>(untrack(() => [...data.filters.skillIds]));
+	let filters = $state<BountyFilterState>({
+		search: untrack(() => data.filters.search),
+		type: untrack(() => data.filters.type),
+		compensationType: untrack(() => data.filters.compensationType),
+		minPrize: untrack(() => data.filters.minPrize),
+		maxPrize: untrack(() => data.filters.maxPrize),
+		beforeDeadline: untrack(() => data.filters.beforeDeadline),
+		skillIds: untrack(() => [...data.filters.skillIds])
+	});
+
+	let filtersOpen = $state(false);
+
+	let activeCount = $derived(
+		(filters.search ? 1 : 0) +
+			(filters.type ? 1 : 0) +
+			(filters.compensationType ? 1 : 0) +
+			(filters.minPrize ? 1 : 0) +
+			(filters.maxPrize ? 1 : 0) +
+			(filters.beforeDeadline ? 1 : 0) +
+			filters.skillIds.length
+	);
 
 	function applyFilters() {
 		const params = new URLSearchParams();
-		if (search) params.set('search', search);
-		if (type) params.set('type', type);
-		if (compensationType) params.set('compensationType', compensationType);
-		if (minPrize) params.set('minPrize', String(minPrize));
-		if (maxPrize) params.set('maxPrize', String(maxPrize));
-		if (beforeDeadline) params.set('beforeDeadline', beforeDeadline);
-		selectedSkillIds.forEach((id) => params.append('skillIds', id));
+		if (filters.search) params.set('search', filters.search);
+		if (filters.type) params.set('type', filters.type);
+		if (filters.compensationType) params.set('compensationType', filters.compensationType);
+		if (filters.minPrize) params.set('minPrize', String(filters.minPrize));
+		if (filters.maxPrize) params.set('maxPrize', String(filters.maxPrize));
+		if (filters.beforeDeadline) params.set('beforeDeadline', filters.beforeDeadline);
+		filters.skillIds.forEach((id) => params.append('skillIds', id));
 		goto(`/bounties?${params.toString()}`, { replaceState: false, keepFocus: true });
 	}
 
 	function clearFilters() {
-		search = '';
-		type = '';
-		compensationType = '';
-		minPrize = '';
-		maxPrize = '';
-		beforeDeadline = '';
-		selectedSkillIds = [];
+		filters = {
+			search: '',
+			type: '',
+			compensationType: '',
+			minPrize: '',
+			maxPrize: '',
+			beforeDeadline: '',
+			skillIds: []
+		};
+		filtersOpen = false;
 		goto('/bounties');
 	}
 
-	let searchTimer: ReturnType<typeof setTimeout> | null = null;
-	function onSearchInput() {
-		if (searchTimer) clearTimeout(searchTimer);
-		searchTimer = setTimeout(applyFilters, 300);
-	}
-
-	function toggleSkill(id: string) {
-		selectedSkillIds = selectedSkillIds.includes(id)
-			? selectedSkillIds.filter((x) => x !== id)
-			: [...selectedSkillIds, id];
+	function showResults() {
+		applyFilters();
+		filtersOpen = false;
 	}
 </script>
 
@@ -96,77 +108,28 @@
 
 <section class="grid gap-5 md:grid-cols-[280px_1fr]">
 	<aside
-		class="border-bone space-y-4 rounded-[var(--radius-card)] border bg-white p-4 shadow-[var(--shadow-card)]"
+		class="border-bone hidden space-y-4 rounded-[var(--radius-card)] border bg-white p-4 shadow-[var(--shadow-card)] md:block"
 	>
-		<div class="space-y-1">
-			<Label for="search">Search</Label>
-			<Input id="search" bind:value={search} oninput={onSearchInput} placeholder="Keyword…" />
-		</div>
-
-		<div class="space-y-1">
-			<Label for="type">Type</Label>
-			<Select id="type" bind:value={type} onchange={applyFilters}>
-				<option value="">All</option>
-				<option value="BOUNTY">Bounty</option>
-			</Select>
-		</div>
-
-		<div class="space-y-1">
-			<Label for="compType">Compensation</Label>
-			<Select id="compType" bind:value={compensationType} onchange={applyFilters}>
-				<option value="">All</option>
-				<option value="FIXED">Fixed prize</option>
-				<option value="RANGE">Range</option>
-				<option value="VARIABLE">Freelancer-proposed</option>
-			</Select>
-		</div>
-
-		<div class="grid grid-cols-2 gap-2">
-			<div class="space-y-1">
-				<Label for="minP">Min (SLE)</Label>
-				<Input id="minP" type="number" bind:value={minPrize} onchange={applyFilters} />
-			</div>
-			<div class="space-y-1">
-				<Label for="maxP">Max (SLE)</Label>
-				<Input id="maxP" type="number" bind:value={maxPrize} onchange={applyFilters} />
-			</div>
-		</div>
-
-		<div class="space-y-1">
-			<Label for="deadline">Closes before</Label>
-			<Input id="deadline" type="date" bind:value={beforeDeadline} onchange={applyFilters} />
-		</div>
-
-		<div class="space-y-2">
-			<p class="text-sm font-medium">Skills</p>
-			<div class="max-h-64 space-y-2 overflow-y-auto pr-1">
-				{#each data.categories as cat (cat.id)}
-					<details>
-						<summary class="text-ink-soft cursor-pointer text-sm">{cat.name}</summary>
-						<ul class="mt-1 space-y-1 pl-3">
-							{#each cat.skills as s (s.id)}
-								<li class="flex items-center gap-2 text-sm">
-									<input
-										type="checkbox"
-										checked={selectedSkillIds.includes(s.id)}
-										onchange={() => toggleSkill(s.id)}
-										class="border-bone h-4 w-4 rounded"
-									/>
-									<span>{s.name}</span>
-								</li>
-							{/each}
-						</ul>
-					</details>
-				{/each}
-			</div>
-			<Button variant="secondary" size="sm" onclick={applyFilters}>Apply skills</Button>
-		</div>
-
+		<BountyFilters bind:filters categories={data.categories} instant onApply={applyFilters} />
 		<Button variant="ghost" size="sm" onclick={clearFilters}>Clear filters</Button>
 	</aside>
 
 	<div class="space-y-4">
-		<p class="text-ink-soft text-xs">{data.total} result{data.total === 1 ? '' : 's'}</p>
+		<!-- Mobile filter trigger: sidebar is hidden < md, so filters live in a drawer. -->
+		<div class="flex items-center justify-between gap-3 md:hidden">
+			<Button variant="outline" size="sm" onclick={() => (filtersOpen = true)}>
+				<SlidersHorizontal class="h-4 w-4" />
+				Filters
+				{#if activeCount}
+					<Badge variant="default" class="ml-0.5 px-1.5 py-0">{activeCount}</Badge>
+				{/if}
+			</Button>
+			<p class="text-ink-soft text-xs">{data.total} result{data.total === 1 ? '' : 's'}</p>
+		</div>
+
+		<p class="text-ink-soft hidden text-xs md:block">
+			{data.total} result{data.total === 1 ? '' : 's'}
+		</p>
 
 		{#if data.items.length === 0}
 			<div
@@ -184,3 +147,17 @@
 		{/if}
 	</div>
 </section>
+
+<!-- Mobile filter drawer: edits stage locally and apply on "Show results". -->
+<Drawer bind:open={filtersOpen} onClose={() => (filtersOpen = false)} title="Filters" width="sm">
+	<BountyFilters bind:filters categories={data.categories} onApply={showResults} />
+
+	{#snippet footer()}
+		<div class="flex items-center justify-between gap-3">
+			<Button variant="ghost" size="sm" onclick={clearFilters}>Clear all</Button>
+			<Button variant="default" size="default" class="flex-1" onclick={showResults}>
+				Show results
+			</Button>
+		</div>
+	{/snippet}
+</Drawer>

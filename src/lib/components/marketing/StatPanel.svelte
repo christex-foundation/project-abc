@@ -29,7 +29,7 @@
 			<span class="fow-pulse bg-terracotta inline-block h-1.5 w-1.5 rounded-full"></span>
 			Up for grabs
 		</p>
-		<p class="fow-display text-ink mt-3 text-6xl tabular-nums">
+		<p class="fow-display text-ink mt-3 text-4xl tabular-nums sm:text-6xl">
 			<CountUp
 				value={liveBountyValueMinor}
 				formatter={(n) => formatMoneyCompact(n, currencyDisplay)}
@@ -47,7 +47,7 @@
 			<p class="text-forest-soft/80 font-mono text-[11px] font-medium tracking-wide uppercase">
 				Paid to freelancers
 			</p>
-			<p class="fow-display text-cream mt-3 text-6xl tabular-nums">
+			<p class="fow-display text-cream mt-3 text-4xl tabular-nums sm:text-6xl">
 				<CountUp value={totalPaidMinor} formatter={(n) => formatMoneyCompact(n, currencyDisplay)} />
 			</p>
 			<p class="text-forest-soft/80 mt-1 text-xs">All-time, completed payouts</p>
@@ -61,7 +61,7 @@
 			<p class="text-cream/80 font-mono text-[11px] font-medium tracking-wide uppercase">
 				Won in 24h
 			</p>
-			<p class="fow-display text-cream mt-3 text-6xl tabular-nums">
+			<p class="fow-display text-cream mt-3 text-4xl tabular-nums sm:text-6xl">
 				<CountUp value={winnersToday} />
 			</p>
 			<p class="text-cream/75 mt-1 text-xs">Freelancers paid today</p>

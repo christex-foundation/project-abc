@@ -9,6 +9,17 @@ export function cn(...inputs: ClassValue[]) {
 	return clsx(inputs);
 }
 
+/**
+ * Return a small, auto-format/quality thumbnail variant of a Cloudinary image
+ * URL (for logos/avatars) so mobile clients fetch a tiny, well-compressed image.
+ * Non-Cloudinary URLs (or already-transformed ones we can't safely touch) are
+ * returned unchanged.
+ */
+export function cloudinaryThumb(url: string | null | undefined, size = 64): string {
+	if (!url || !url.includes('res.cloudinary.com/') || !url.includes('/upload/')) return url ?? '';
+	return url.replace('/upload/', `/upload/c_fill,f_auto,q_auto,dpr_auto,w_${size},h_${size}/`);
+}
+
 // Money is stored in minor units (CLAUDE.md hard rule). Format for display.
 export function formatMoney(minor: number, currency = 'SLE'): string {
 	const major = minor / 100;

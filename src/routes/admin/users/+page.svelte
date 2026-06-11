@@ -16,7 +16,8 @@
 		TableBody,
 		TableRow,
 		TableCell,
-		Drawer
+		Drawer,
+		Pagination
 	} from '$lib/components/ui';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import Search from '@lucide/svelte/icons/search';
@@ -272,6 +273,7 @@
 			{/each}
 		</TableBody>
 	</Table>
+	<Pagination page={data.page} pageSize={data.pageSize} total={data.total} />
 {/if}
 
 <Drawer
