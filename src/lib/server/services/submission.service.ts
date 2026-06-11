@@ -8,6 +8,9 @@ import {
 import { AppError } from '../http';
 import { requireRole, type AuthedUser } from '../auth-helpers';
 import { sanitizeRichText } from '../sanitize';
+import { provincesLabel } from '$lib/constants/geo';
+import type { BountyForSponsor } from '../repositories/bounty.repo';
+import type { FreelancerProfile } from '@prisma/client';
 import { prisma } from '../db';
 import * as submissionRepo from '../repositories/submission.repo';
 import * as bountyRepo from '../repositories/bounty.repo';
@@ -94,7 +97,62 @@ function validateEligibility(
 	}
 }
 
-export async function create(caller: AuthedUser, bountyId: string, raw: unknown) {
+/**
+ * Enforce the two access gates a bounty can carry:
+ *  - PIN lock: the visitor must have unlocked the bounty (proven the PIN). The
+ *    `unlocked` flag is resolved by the route from the signed unlock cookie.
+ *  - Provincial targeting: when `targetProvinces` is non-empty, the freelancer's
+ *    profile province must be set and be one of them.
+ */
+function enforceAccessGates(
+	bounty: Pick<BountyForSponsor, 'accessPinHash' | 'targetProvinces'>,
+	freelancer: Pick<FreelancerProfile, 'province'>,
+	unlocked: boolean
+) {
+	if (bounty.accessPinHash && !unlocked) {
+		throw new AppError('FORBIDDEN', 'Enter the access PIN to submit to this bounty.');
+	}
+	if (bounty.targetProvinces.length > 0) {
+		if (!freelancer.province) {
+			throw new AppError(
+				'FORBIDDEN',
+				`This bounty is open to ${provincesLabel(bounty.targetProvinces)} only. Set your province in your profile to submit.`
+			);
+		}
+		if (!bounty.targetProvinces.includes(freelancer.province)) {
+			throw new AppError(
+				'FORBIDDEN',
+				`This bounty is open to freelancers in ${provincesLabel(bounty.targetProvinces)} only.`
+			);
+		}
+	}
+}
+
+/**
+ * Pre-flight check used by the submit page load so an ineligible freelancer is
+ * told why before filling in the form. `create` re-checks server-side.
+ */
+export async function assertCanSubmit(
+	caller: AuthedUser,
+	bountyId: string,
+	opts: { unlocked?: boolean } = {}
+) {
+	requireRole(caller, 'FREELANCER');
+	const freelancer = await freelancerRepo.findByUserId(caller.id);
+	if (!freelancer) {
+		throw new AppError('CONFLICT', 'Complete your freelancer profile before submitting.');
+	}
+	const bounty = await bountyRepo.findBountyById(bountyId);
+	if (!bounty) throw new AppError('NOT_FOUND', 'Bounty not found.');
+	enforceAccessGates(bounty, freelancer, opts.unlocked ?? false);
+}
+
+export async function create(
+	caller: AuthedUser,
+	bountyId: string,
+	raw: unknown,
+	opts: { unlocked?: boolean } = {}
+) {
 	requireRole(caller, 'FREELANCER');
 	const parsed = createSubmissionInput.parse(raw);
 
@@ -108,6 +166,7 @@ export async function create(caller: AuthedUser, bountyId: string, raw: unknown)
 	if (bounty.status !== BountyStatus.ACTIVE) {
 		throw new AppError('CONFLICT', 'This bounty is not accepting submissions.');
 	}
+	enforceAccessGates(bounty, freelancer, opts.unlocked ?? false);
 	if (bounty.submissionDeadline.getTime() <= Date.now()) {
 		throw new AppError('CONFLICT', 'The submission deadline has passed.');
 	}

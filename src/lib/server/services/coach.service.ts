@@ -46,7 +46,11 @@ function stripHtml(input: string | null | undefined): string {
 		.trim();
 }
 
-export async function coachWork(caller: AuthedUser, raw: unknown): Promise<CoachResult> {
+export async function coachWork(
+	caller: AuthedUser,
+	raw: unknown,
+	opts: { unlockedIds?: string[] } = {}
+): Promise<CoachResult> {
 	// Guard order mirrors scoping.service: role → flag → rate-limit → input.
 	requireRole(caller, 'FREELANCER');
 	if (!(await isAiEnabled())) {
@@ -66,7 +70,12 @@ export async function coachWork(caller: AuthedUser, raw: unknown): Promise<Coach
 	let title: string;
 	let brief: string;
 	if (input.bountyId) {
-		const b = await bountyService.getBounty(caller, input.bountyId);
+		// Pass through the visitor's unlocks so coaching works on a PIN-locked
+		// bounty the freelancer has legitimately unlocked (still NOT_FOUND / blanked
+		// otherwise — no content leaks without the PIN).
+		const b = await bountyService.getBounty(caller, input.bountyId, {
+			unlockedIds: opts.unlockedIds
+		});
 		title = b.title;
 		brief = buildBountyBrief(b);
 	} else {
