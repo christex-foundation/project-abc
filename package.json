@@ -63,6 +63,7 @@
 		"@prosekit/extensions": "^0.17.3",
 		"@prosekit/svelte": "^0.9.5",
 		"@sveltejs/adapter-vercel": "^6.3.3",
+		"@vercel/analytics": "^2.0.1",
 		"@vite-pwa/sveltekit": "^1.1.0",
 		"better-auth": "^1.6.11",
 		"clsx": "^2.1.1",
