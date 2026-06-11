@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { MetaTags } from 'svelte-meta-tags';
+	import { enhance } from '$app/forms';
 	import { page } from '$app/state';
 	import RichTextView from '$lib/components/editor/RichTextView.svelte';
 	import CoachPanel from '$lib/components/ai/CoachPanel.svelte';
@@ -10,11 +11,15 @@
 		CardHeader,
 		CardTitle,
 		Badge,
+		Input,
+		Label,
 		Separator
 	} from '$lib/components/ui';
 	import { cloudinaryThumb } from '$lib/utils';
+	import { PROVINCE_LABEL } from '$lib/constants/geo';
+	import Lock from '@lucide/svelte/icons/lock';
 
-	let { data } = $props();
+	let { data, form } = $props();
 	const b = $derived(data.bounty);
 
 	function formatMoney(minor: number, currency: string) {
@@ -62,10 +67,16 @@
 
 <article class="space-y-6">
 	<header class="space-y-3">
-		<div class="flex items-center gap-2">
+		<div class="flex flex-wrap items-center gap-2">
 			<Badge variant={b.type === 'PROJECT' ? 'secondary' : 'default'}>{b.type}</Badge>
 			<Badge variant="outline">{b.status}</Badge>
 			<Badge variant={countdown.ago ? 'destructive' : 'success'}>{countdown.label}</Badge>
+			{#if b.isPinLocked}
+				<Badge variant="secondary"><Lock class="mr-1 h-3 w-3" />PIN required</Badge>
+			{/if}
+			{#each b.targetProvinces as p (p)}
+				<Badge variant="outline">{PROVINCE_LABEL[p]}</Badge>
+			{/each}
 		</div>
 		<h1 class="fow-display text-ink text-4xl sm:text-5xl">{b.title}</h1>
 		<div class="text-ink-soft flex items-center gap-3 text-sm">
@@ -89,151 +100,185 @@
 		</div>
 	</header>
 
-	<div class="grid gap-6 lg:grid-cols-[1fr_320px]">
-		<div class="space-y-6">
-			<Card>
-				<CardHeader><CardTitle>Description</CardTitle></CardHeader>
-				<CardContent>
-					<RichTextView html={b.description} />
-				</CardContent>
-			</Card>
-
-			{#if b.requirements}
+	{#if b.locked}
+		<Card class="mx-auto max-w-md">
+			<CardHeader>
+				<CardTitle class="flex items-center gap-2">
+					<Lock class="h-5 w-5" /> This bounty is PIN-protected
+				</CardTitle>
+			</CardHeader>
+			<CardContent class="space-y-4">
+				<p class="text-ink-soft text-sm">
+					The sponsor shared an access PIN with eligible freelancers. Enter it to view the full
+					brief and submit.
+				</p>
+				<form method="POST" action="?/unlock" use:enhance class="space-y-3">
+					<div class="space-y-1">
+						<Label for="pin">Access PIN</Label>
+						<Input
+							id="pin"
+							name="pin"
+							inputmode="text"
+							autocomplete="off"
+							maxlength={8}
+							placeholder="••••"
+							required
+						/>
+					</div>
+					{#if form?.unlockError}
+						<p class="text-sm text-red-600">{form.unlockError}</p>
+					{/if}
+					<Button type="submit" class="w-full">Unlock bounty</Button>
+				</form>
+			</CardContent>
+		</Card>
+	{:else}
+		<div class="grid gap-6 lg:grid-cols-[1fr_320px]">
+			<div class="space-y-6">
 				<Card>
-					<CardHeader><CardTitle>Requirements</CardTitle></CardHeader>
-					<CardContent><RichTextView html={b.requirements} /></CardContent>
-				</Card>
-			{/if}
-
-			{#if b.deliverables}
-				<Card>
-					<CardHeader><CardTitle>Deliverables</CardTitle></CardHeader>
-					<CardContent><RichTextView html={b.deliverables} /></CardContent>
-				</Card>
-			{/if}
-
-			{#if eligibility.length > 0}
-				<Card>
-					<CardHeader><CardTitle>Eligibility questions</CardTitle></CardHeader>
+					<CardHeader><CardTitle>Description</CardTitle></CardHeader>
 					<CardContent>
-						<ul class="space-y-2 text-sm">
-							{#each eligibility as q, i (i)}
-								<li class="flex gap-2">
-									<span class="text-ink-soft">{i + 1}.</span>
-									<span>
-										{q.question}
-										{#if q.optional}
-											<span class="text-ink-soft ml-1 text-xs">(optional)</span>
-										{/if}
-									</span>
-								</li>
-							{/each}
-						</ul>
+						<RichTextView html={b.description} />
 					</CardContent>
 				</Card>
-			{/if}
-		</div>
 
-		<aside class="space-y-4">
-			<Card>
-				<CardHeader><CardTitle>Compensation</CardTitle></CardHeader>
-				<CardContent class="space-y-3 text-sm">
-					{#if b.compensationType === 'FIXED'}
-						<p class="text-xl font-semibold">{formatMoney(b.totalPrizePool, b.currency)}</p>
-						<p class="text-ink-soft">
-							{b.numberOfWinners} winner{b.numberOfWinners === 1 ? '' : 's'}
-						</p>
-						{#if regularTiers.length > 0}
-							<div class="space-y-1">
-								{#each regularTiers as t (t.id)}
+				{#if b.requirements}
+					<Card>
+						<CardHeader><CardTitle>Requirements</CardTitle></CardHeader>
+						<CardContent><RichTextView html={b.requirements} /></CardContent>
+					</Card>
+				{/if}
+
+				{#if b.deliverables}
+					<Card>
+						<CardHeader><CardTitle>Deliverables</CardTitle></CardHeader>
+						<CardContent><RichTextView html={b.deliverables} /></CardContent>
+					</Card>
+				{/if}
+
+				{#if eligibility.length > 0}
+					<Card>
+						<CardHeader><CardTitle>Eligibility questions</CardTitle></CardHeader>
+						<CardContent>
+							<ul class="space-y-2 text-sm">
+								{#each eligibility as q, i (i)}
+									<li class="flex gap-2">
+										<span class="text-ink-soft">{i + 1}.</span>
+										<span>
+											{q.question}
+											{#if q.optional}
+												<span class="text-ink-soft ml-1 text-xs">(optional)</span>
+											{/if}
+										</span>
+									</li>
+								{/each}
+							</ul>
+						</CardContent>
+					</Card>
+				{/if}
+			</div>
+
+			<aside class="space-y-4">
+				<Card>
+					<CardHeader><CardTitle>Compensation</CardTitle></CardHeader>
+					<CardContent class="space-y-3 text-sm">
+						{#if b.compensationType === 'FIXED'}
+							<p class="text-xl font-semibold">{formatMoney(b.totalPrizePool, b.currency)}</p>
+							<p class="text-ink-soft">
+								{b.numberOfWinners} winner{b.numberOfWinners === 1 ? '' : 's'}
+							</p>
+							{#if regularTiers.length > 0}
+								<div class="space-y-1">
+									{#each regularTiers as t (t.id)}
+										<div class="flex justify-between">
+											<span>#{t.position}{t.label ? ` — ${t.label}` : ''}</span>
+											<span class="font-medium">{formatMoney(t.amount, b.currency)}</span>
+										</div>
+									{/each}
+								</div>
+							{/if}
+							{#if bonusTiers.length > 0}
+								<Separator />
+								<p class="text-ink-soft text-xs">Bonus pool (up to {b.maxBonusSpots})</p>
+								{#each bonusTiers as t (t.id)}
 									<div class="flex justify-between">
-										<span>#{t.position}{t.label ? ` — ${t.label}` : ''}</span>
-										<span class="font-medium">{formatMoney(t.amount, b.currency)}</span>
+										<span>Bonus{t.label ? ` — ${t.label}` : ''}</span>
+										<span class="font-medium">{formatMoney(t.amount, b.currency)} ea.</span>
 									</div>
 								{/each}
-							</div>
+							{/if}
+						{:else if b.compensationType === 'RANGE'}
+							<p class="text-xl font-semibold">
+								{formatMoney(b.minRewardAsk ?? 0, b.currency)} – {formatMoney(
+									b.maxRewardAsk ?? 0,
+									b.currency
+								)}
+							</p>
+							<p class="text-ink-soft">Propose your ask within this range.</p>
+						{:else}
+							<p class="text-xl font-semibold">Freelancer-proposed</p>
+							<p class="text-ink-soft">Suggest your own price in the submission.</p>
 						{/if}
-						{#if bonusTiers.length > 0}
-							<Separator />
-							<p class="text-ink-soft text-xs">Bonus pool (up to {b.maxBonusSpots})</p>
-							{#each bonusTiers as t (t.id)}
-								<div class="flex justify-between">
-									<span>Bonus{t.label ? ` — ${t.label}` : ''}</span>
-									<span class="font-medium">{formatMoney(t.amount, b.currency)} ea.</span>
-								</div>
-							{/each}
-						{/if}
-					{:else if b.compensationType === 'RANGE'}
-						<p class="text-xl font-semibold">
-							{formatMoney(b.minRewardAsk ?? 0, b.currency)} – {formatMoney(
-								b.maxRewardAsk ?? 0,
-								b.currency
-							)}
-						</p>
-						<p class="text-ink-soft">Propose your ask within this range.</p>
-					{:else}
-						<p class="text-xl font-semibold">Freelancer-proposed</p>
-						<p class="text-ink-soft">Suggest your own price in the submission.</p>
-					{/if}
-				</CardContent>
-			</Card>
-
-			<Card>
-				<CardHeader><CardTitle>Timeline</CardTitle></CardHeader>
-				<CardContent class="space-y-2 text-sm">
-					<div>
-						<div class="text-ink-soft text-xs">Submission deadline</div>
-						<div class="font-medium">{new Date(b.submissionDeadline).toLocaleString()}</div>
-					</div>
-					{#if b.judgingDeadline}
-						<div>
-							<div class="text-ink-soft text-xs">Judging deadline</div>
-							<div class="font-medium">{new Date(b.judgingDeadline).toLocaleString()}</div>
-						</div>
-					{/if}
-					{#if b.timeToComplete}
-						<div>
-							<div class="text-ink-soft text-xs">Time to complete</div>
-							<div class="font-medium">{b.timeToComplete}</div>
-						</div>
-					{/if}
-				</CardContent>
-			</Card>
-
-			{#if b.skills.length > 0}
-				<Card>
-					<CardHeader><CardTitle>Skills</CardTitle></CardHeader>
-					<CardContent>
-						<div class="flex flex-wrap gap-1">
-							{#each b.skills as s (s.id)}
-								<Badge variant={s.isRequired ? 'default' : 'outline'}>
-									{s.skill.name}{s.isRequired ? ' *' : ''}
-								</Badge>
-							{/each}
-						</div>
-						<p class="text-ink-soft mt-2 text-xs">* = required</p>
 					</CardContent>
 				</Card>
-			{/if}
 
-			{#if page.data.user?.role === 'FREELANCER'}
-				<CoachPanel kind="BOUNTY" bountyId={b.id} slug={b.slug} aiEnabled={data.aiEnabled} />
-			{/if}
+				<Card>
+					<CardHeader><CardTitle>Timeline</CardTitle></CardHeader>
+					<CardContent class="space-y-2 text-sm">
+						<div>
+							<div class="text-ink-soft text-xs">Submission deadline</div>
+							<div class="font-medium">{new Date(b.submissionDeadline).toLocaleString()}</div>
+						</div>
+						{#if b.judgingDeadline}
+							<div>
+								<div class="text-ink-soft text-xs">Judging deadline</div>
+								<div class="font-medium">{new Date(b.judgingDeadline).toLocaleString()}</div>
+							</div>
+						{/if}
+						{#if b.timeToComplete}
+							<div>
+								<div class="text-ink-soft text-xs">Time to complete</div>
+								<div class="font-medium">{b.timeToComplete}</div>
+							</div>
+						{/if}
+					</CardContent>
+				</Card>
 
-			{#if page.data.user?.role === 'FREELANCER' && b.status === 'ACTIVE' && !countdown.ago}
-				<Button class="w-full" href={`/bounties/${b.slug}/submit`}>Submit work</Button>
-			{:else if !page.data.user}
-				<Button
-					class="w-full"
-					href={`/login?next=${encodeURIComponent(`/bounties/${b.slug}/submit`)}`}
-				>
-					Sign in to submit
-				</Button>
-			{:else if b.status !== 'ACTIVE'}
-				<Button class="w-full" disabled>Submissions closed</Button>
-			{:else}
-				<Button class="w-full" disabled>Submissions closed</Button>
-			{/if}
-		</aside>
-	</div>
+				{#if b.skills.length > 0}
+					<Card>
+						<CardHeader><CardTitle>Skills</CardTitle></CardHeader>
+						<CardContent>
+							<div class="flex flex-wrap gap-1">
+								{#each b.skills as s (s.id)}
+									<Badge variant={s.isRequired ? 'default' : 'outline'}>
+										{s.skill.name}{s.isRequired ? ' *' : ''}
+									</Badge>
+								{/each}
+							</div>
+							<p class="text-ink-soft mt-2 text-xs">* = required</p>
+						</CardContent>
+					</Card>
+				{/if}
+
+				{#if page.data.user?.role === 'FREELANCER'}
+					<CoachPanel kind="BOUNTY" bountyId={b.id} slug={b.slug} aiEnabled={data.aiEnabled} />
+				{/if}
+
+				{#if page.data.user?.role === 'FREELANCER' && b.status === 'ACTIVE' && !countdown.ago}
+					<Button class="w-full" href={`/bounties/${b.slug}/submit`}>Submit work</Button>
+				{:else if !page.data.user}
+					<Button
+						class="w-full"
+						href={`/login?next=${encodeURIComponent(`/bounties/${b.slug}/submit`)}`}
+					>
+						Sign in to submit
+					</Button>
+				{:else if b.status !== 'ACTIVE'}
+					<Button class="w-full" disabled>Submissions closed</Button>
+				{:else}
+					<Button class="w-full" disabled>Submissions closed</Button>
+				{/if}
+			</aside>
+		</div>
+	{/if}
 </article>

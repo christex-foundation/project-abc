@@ -4,6 +4,8 @@
 	import { Button, Card, CardHeader, CardTitle, CardContent, Badge } from '$lib/components/ui';
 	import RaiseDisputeButton from '$lib/components/shared/RaiseDisputeButton.svelte';
 	import { trackSubmit } from '$lib/client/forms';
+	import { PROVINCE_LABEL } from '$lib/constants/geo';
+	import Lock from '@lucide/svelte/icons/lock';
 
 	let { data, form } = $props();
 
@@ -90,6 +92,16 @@
 										<Badge variant="outline">{b.type}</Badge>
 									</div>
 									<CardTitle class="line-clamp-2 text-base">{b.title}</CardTitle>
+									{#if b.isPinLocked || b.targetProvinces.length > 0}
+										<div class="flex flex-wrap items-center gap-1 pt-1">
+											{#if b.isPinLocked}
+												<Badge variant="secondary"><Lock class="mr-1 h-3 w-3" />PIN</Badge>
+											{/if}
+											{#each b.targetProvinces as p (p)}
+												<Badge variant="outline">{PROVINCE_LABEL[p]}</Badge>
+											{/each}
+										</div>
+									{/if}
 								</CardHeader>
 								<CardContent class="space-y-3">
 									<div class="flex items-center justify-between">

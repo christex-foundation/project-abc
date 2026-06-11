@@ -2,11 +2,14 @@ import { json } from '@sveltejs/kit';
 import { requireAuth } from '$lib/server/auth-helpers';
 import { respondError } from '$lib/server/http';
 import * as bountyService from '$lib/server/services/bounty.service';
+import { readUnlockedIds } from '$lib/server/access-lock';
 import type { RequestHandler } from './$types';
 
-export const GET: RequestHandler = async ({ params, locals }) => {
+export const GET: RequestHandler = async ({ params, locals, cookies }) => {
 	try {
-		const bounty = await bountyService.getBounty(locals.user, params.bountyId);
+		const bounty = await bountyService.getBounty(locals.user, params.bountyId, {
+			unlockedIds: readUnlockedIds(cookies)
+		});
 		return json({ bounty });
 	} catch (e) {
 		return respondError(e);

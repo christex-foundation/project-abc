@@ -16,6 +16,7 @@
 		Separator
 	} from '$lib/components/ui';
 	import { createBountyInput } from '$lib/validators/bounty';
+	import { PROVINCES, type Province } from '$lib/constants/geo';
 
 	let { data } = $props();
 
@@ -43,6 +44,8 @@
 		timeToComplete: string;
 		submissionDeadline: string;
 		judgingDeadline: string;
+		targetProvinces: Province[];
+		accessPin: string;
 	};
 
 	const initial: Draft = {
@@ -63,14 +66,25 @@
 		eligibility: [],
 		timeToComplete: '',
 		submissionDeadline: '',
-		judgingDeadline: ''
+		judgingDeadline: '',
+		targetProvinces: [],
+		accessPin: ''
 	};
 
-	const steps = ['Info', 'Skills', 'Compensation', 'Prizes', 'Eligibility', 'Timeline', 'Review'];
+	const steps = [
+		'Info',
+		'Skills',
+		'Compensation',
+		'Prizes',
+		'Eligibility',
+		'Timeline',
+		'Region',
+		'Review'
+	];
 
-	// v2: the wizard is bounty-only now; old drafts carried a Type step + project
-	// fields, so use a fresh key to avoid restoring an incompatible shape.
-	const draftStore = useLocalDraft<Draft>('bounty-create-wizard-v2');
+	// v3: added the Region & access step (targetProvinces + accessPin); bump the
+	// key so older drafts without those fields don't restore an incompatible shape.
+	const draftStore = useLocalDraft<Draft>('bounty-create-wizard-v3');
 	let d = $state<Draft>(initial);
 	let restorePrompt = $state(false);
 	// Bumped on restore to force the (uncontrolled, read-once) editors to remount
@@ -139,7 +153,15 @@
 			if (new Date(d.submissionDeadline).getTime() <= Date.now())
 				return 'Deadline must be in the future.';
 		}
+		if (d.step === 7 && d.accessPin.trim() && !/^[A-Za-z0-9]{4,8}$/.test(d.accessPin.trim()))
+			return 'PIN must be 4–8 letters or numbers.';
 		return null;
+	}
+
+	function toggleProvince(p: Province) {
+		d.targetProvinces = d.targetProvinces.includes(p)
+			? d.targetProvinces.filter((x) => x !== p)
+			: [...d.targetProvinces, p];
 	}
 
 	function syncTiers() {
@@ -232,7 +254,9 @@
 				eligibility: d.eligibility,
 				timeToComplete: d.timeToComplete || null,
 				submissionDeadline: new Date(d.submissionDeadline).toISOString(),
-				judgingDeadline: d.judgingDeadline ? new Date(d.judgingDeadline).toISOString() : null
+				judgingDeadline: d.judgingDeadline ? new Date(d.judgingDeadline).toISOString() : null,
+				targetProvinces: d.targetProvinces,
+				accessPin: d.accessPin.trim() || null
 			};
 
 			// Client-side parse for early feedback.
@@ -574,6 +598,52 @@
 
 	{#if d.step === 7}
 		<Card>
+			<CardHeader><CardTitle>Region &amp; access</CardTitle></CardHeader>
+			<CardContent class="space-y-5">
+				<div class="space-y-2">
+					<Label>Provinces</Label>
+					<p class="text-ink-soft text-sm">
+						Leave all unchecked to open this bounty nationwide. Select one or more provinces to
+						restrict who can submit — only freelancers in those provinces will be able to enter.
+					</p>
+					<div class="grid gap-2 sm:grid-cols-2">
+						{#each PROVINCES as p (p.value)}
+							<label
+								class="border-bone hover:bg-paper flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-2 text-sm"
+							>
+								<input
+									type="checkbox"
+									checked={d.targetProvinces.includes(p.value)}
+									onchange={() => toggleProvince(p.value)}
+									class="border-bone text-terracotta h-4 w-4 rounded"
+								/>
+								<span>{p.label}</span>
+							</label>
+						{/each}
+					</div>
+					<p class="text-ink-soft text-xs">
+						{d.targetProvinces.length === 0
+							? 'Open to all of Sierra Leone.'
+							: `Restricted to ${d.targetProvinces.length} province${d.targetProvinces.length === 1 ? '' : 's'}.`}
+					</p>
+				</div>
+
+				<Separator />
+
+				<div class="space-y-2">
+					<Label for="pin">Access PIN (optional)</Label>
+					<p class="text-ink-soft text-sm">
+						Set a PIN to keep this bounty private. The brief and submission stay hidden until a
+						freelancer enters the PIN you share with them. 4–8 letters or numbers.
+					</p>
+					<Input id="pin" bind:value={d.accessPin} maxlength={8} placeholder="e.g. 4827 or apex9" />
+				</div>
+			</CardContent>
+		</Card>
+	{/if}
+
+	{#if d.step === 8}
+		<Card>
 			<CardHeader><CardTitle>Review</CardTitle></CardHeader>
 			<CardContent class="space-y-4 text-sm">
 				<div><span class="font-medium">Title:</span> {d.title}</div>
@@ -589,6 +659,16 @@
 				{/if}
 				<div><span class="font-medium">Skills:</span> {d.skills.length} selected</div>
 				<div><span class="font-medium">Eligibility questions:</span> {d.eligibility.length}</div>
+				<div>
+					<span class="font-medium">Region:</span>
+					{d.targetProvinces.length === 0
+						? 'Nationwide'
+						: d.targetProvinces.map((p) => PROVINCES.find((x) => x.value === p)?.label).join(', ')}
+				</div>
+				<div>
+					<span class="font-medium">Access:</span>
+					{d.accessPin.trim() ? 'PIN-protected' : 'Open'}
+				</div>
 				<div><span class="font-medium">Submission deadline:</span> {d.submissionDeadline}</div>
 				{#if submitError}<p class="text-sm text-red-600">{submitError}</p>{/if}
 				<Button onclick={submit} disabled={submitting} class="w-full">
