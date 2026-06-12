@@ -79,7 +79,9 @@ export async function coachWork(
 		title = b.title;
 		brief = buildBountyBrief(b);
 	} else {
-		const p = await projectService.getProject(caller, input.projectId!);
+		const p = await projectService.getProject(caller, input.projectId!, {
+			unlockedIds: opts.unlockedIds
+		});
 		title = p.title;
 		brief = buildProjectBrief(p);
 	}

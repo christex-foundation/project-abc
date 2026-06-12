@@ -43,7 +43,10 @@ export const load: PageServerLoad = async ({ params, locals, parent }) => {
 				amount: m.amount as number | '',
 				description: m.description ?? '',
 				dueInDays: (m.dueInDays ?? '') as number | ''
-			}))
+			})),
+			targetProvinces: project.targetProvinces,
+			// Never prefilled — the stored PIN hash is never read back.
+			accessPin: ''
 		}
 	};
 };

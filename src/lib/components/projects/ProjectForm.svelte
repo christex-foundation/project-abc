@@ -15,6 +15,7 @@
 		Separator
 	} from '$lib/components/ui';
 	import { createProjectInput } from '$lib/validators/project';
+	import { PROVINCES, type Province } from '$lib/constants/geo';
 
 	type SkillCategory = { id: string; name: string; skills: { id: string; name: string }[] };
 	type SkillSel = { skillId: string; isRequired: boolean };
@@ -33,6 +34,9 @@
 		timeToComplete: string;
 		skills: SkillSel[];
 		milestones: MilestoneRow[];
+		targetProvinces: Province[];
+		/** Always blank in edit mode — the stored PIN hash is never read back. */
+		accessPin: string;
 	};
 
 	type Props = {
@@ -40,6 +44,8 @@
 		/** When set, the form edits an existing project (PATCH) instead of creating. */
 		projectId?: string;
 		initial?: Initial;
+		/** Whether the edited project already has a PIN set (edit mode hint). */
+		isPinLocked?: boolean;
 		/** localStorage draft key; omit to disable draft autosave (edit mode). */
 		draftKey?: string;
 		submitLabel?: string;
@@ -50,6 +56,7 @@
 		categories,
 		projectId,
 		initial,
+		isPinLocked = false,
 		draftKey,
 		submitLabel = 'Create draft',
 		redirectTo = '/dashboard/company/projects'
@@ -63,7 +70,9 @@
 		currency: 'SLE',
 		timeToComplete: '',
 		skills: [],
-		milestones: [{ title: '', amount: '', description: '', dueInDays: '' }]
+		milestones: [{ title: '', amount: '', description: '', dueInDays: '' }],
+		targetProvinces: [],
+		accessPin: ''
 	};
 
 	let d = $state<Initial>(untrack(() => structuredClone(initial ?? blank)));
@@ -108,6 +117,12 @@
 		if (cur !== pristine) draftStore?.save(d);
 	});
 
+	function toggleProvince(p: Province) {
+		d.targetProvinces = d.targetProvinces.includes(p)
+			? d.targetProvinces.filter((x) => x !== p)
+			: [...d.targetProvinces, p];
+	}
+
 	function toggleSkill(id: string) {
 		const idx = d.skills.findIndex((s) => s.skillId === id);
 		if (idx >= 0) d.skills.splice(idx, 1);
@@ -138,7 +153,14 @@
 		submitting = true;
 		submitError = null;
 		try {
-			const payload = {
+			const pin = d.accessPin.trim();
+			if (pin && !/^[A-Za-z0-9]{4,8}$/.test(pin)) {
+				submitError = 'PIN must be 4–8 letters or numbers.';
+				submitting = false;
+				return;
+			}
+
+			const payload: Record<string, unknown> = {
 				title: d.title,
 				description: d.description,
 				requirements: d.requirements || null,
@@ -151,8 +173,18 @@
 					description: m.description || null,
 					amount: Number(m.amount || 0),
 					dueInDays: m.dueInDays === '' ? null : Number(m.dueInDays)
-				}))
+				})),
+				targetProvinces: d.targetProvinces
 			};
+
+			// PIN directive: on create, always send (set or null). On edit, omit the
+			// key when left blank so the existing PIN is preserved; send a value to
+			// change it. (Clearing an existing PIN is not offered in the UI.)
+			if (projectId) {
+				if (pin) payload.accessPin = pin;
+			} else {
+				payload.accessPin = pin || null;
+			}
 
 			const parsed = createProjectInput.safeParse(payload);
 			if (!parsed.success) {
@@ -309,6 +341,56 @@
 				</div>
 			</details>
 		{/each}
+	</CardContent>
+</Card>
+
+<Card>
+	<CardHeader><CardTitle>Region &amp; access</CardTitle></CardHeader>
+	<CardContent class="space-y-5">
+		<div class="space-y-2">
+			<Label>Provinces</Label>
+			<p class="text-ink-soft text-sm">
+				Leave all unchecked to open this project nationwide. Select one or more provinces to
+				restrict who can apply — only freelancers in those provinces will be able to submit a
+				proposal.
+			</p>
+			<div class="grid gap-2 sm:grid-cols-2">
+				{#each PROVINCES as p (p.value)}
+					<label
+						class="border-bone hover:bg-paper flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-2 text-sm"
+					>
+						<input
+							type="checkbox"
+							checked={d.targetProvinces.includes(p.value)}
+							onchange={() => toggleProvince(p.value)}
+							class="border-bone text-terracotta h-4 w-4 rounded"
+						/>
+						<span>{p.label}</span>
+					</label>
+				{/each}
+			</div>
+			<p class="text-ink-soft text-xs">
+				{d.targetProvinces.length === 0
+					? 'Open to all of Sierra Leone.'
+					: `Restricted to ${d.targetProvinces.length} province${d.targetProvinces.length === 1 ? '' : 's'}.`}
+			</p>
+		</div>
+
+		<Separator />
+
+		<div class="space-y-2">
+			<Label for="pin">Access PIN (optional)</Label>
+			<p class="text-ink-soft text-sm">
+				Set a PIN to keep this project private. The brief and proposal form stay hidden until a
+				freelancer enters the PIN you share with them. 4–8 letters or numbers.
+			</p>
+			{#if projectId && isPinLocked}
+				<p class="text-ink-soft text-xs">
+					A PIN is already set. Leave this blank to keep it, or type a new one to change it.
+				</p>
+			{/if}
+			<Input id="pin" bind:value={d.accessPin} maxlength={8} placeholder="e.g. 4827 or apex9" />
+		</div>
 	</CardContent>
 </Card>
 

@@ -607,6 +607,14 @@ model Project {
   status   ProjectStatus @default(DRAFT)
   currency String        @default("SLE")
 
+  // Access control (mirrors Bounty)
+  //   - targetProvinces: empty = open nationwide; otherwise only freelancers
+  //     whose profile province is in this list may submit a proposal.
+  //   - accessPinHash: null = open; otherwise a salted scrypt hash of the PIN
+  //     that gates viewing the project's brief and applying to it.
+  targetProvinces Province[] @default([])
+  accessPinHash   String?
+
   // Budget ceiling shown publicly; a winning proposal's total must be <= this.
   budgetCap Int // minor units
 

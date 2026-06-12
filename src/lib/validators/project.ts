@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { PROVINCE_VALUES } from '$lib/constants/geo';
+import { accessPinSchema } from './bounty';
 
 /**
  * Project = an ongoing one-company-one-contractor engagement. Unlike a bounty,
@@ -34,7 +36,14 @@ const projectBaseShape = {
 	timeToComplete: z.string().max(120).nullish(),
 
 	skills: z.array(projectSkillSchema).default([]),
-	milestones: z.array(projectMilestoneSchema).min(1).max(20)
+	milestones: z.array(projectMilestoneSchema).min(1).max(20),
+
+	// Access control. `targetProvinces` empty = open nationwide. `accessPin` is
+	// the raw PIN; the service hashes it before storage and never reads it back
+	// (on update, omit the key to leave the existing PIN unchanged, or send null
+	// / '' to clear it).
+	targetProvinces: z.array(z.enum(PROVINCE_VALUES)).max(5).default([]),
+	accessPin: accessPinSchema.or(z.literal('')).nullish()
 };
 
 const projectBaseObject = z.object(projectBaseShape);
