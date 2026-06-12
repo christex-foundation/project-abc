@@ -117,6 +117,14 @@
 										<div class="flex gap-2">
 											<Button
 												size="sm"
+												variant="outline"
+												class="flex-1"
+												href={`/dashboard/company/bounties/${b.id}/edit`}
+											>
+												Edit
+											</Button>
+											<Button
+												size="sm"
 												class="flex-1"
 												href={`/dashboard/company/bounties/${b.id}/fund`}
 											>
