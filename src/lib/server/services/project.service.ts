@@ -4,7 +4,7 @@ import { AppError } from '../http';
 import { requireRole, type AuthedUser } from '../auth-helpers';
 import { sanitizeRichText } from '../sanitize';
 import { hashPin, verifyPin } from '../access-lock';
-import { provincesLabel } from '$lib/constants/geo';
+import { provincesLabel, districtsLabel } from '$lib/constants/geo';
 import * as projectRepo from '../repositories/project.repo';
 import type { ProjectForCompany } from '../repositories/project.repo';
 import * as projectSkillRepo from '../repositories/projectSkill.repo';
@@ -118,6 +118,7 @@ export async function createProject(caller: AuthedUser, raw: unknown) {
 				currency: sanitized.currency,
 				budgetCap: total,
 				targetProvinces: sanitized.targetProvinces,
+				targetDistricts: sanitized.targetDistricts,
 				accessPinHash: sanitized.accessPin ? await hashPin(sanitized.accessPin) : null,
 				timeToComplete: sanitized.timeToComplete ?? null,
 				company: { connect: { id: companyProfileId } }
@@ -209,6 +210,7 @@ export async function updateProject(caller: AuthedUser, id: string, raw: unknown
 				currency: sanitized.currency,
 				budgetCap: total,
 				targetProvinces: sanitized.targetProvinces,
+				targetDistricts: sanitized.targetDistricts,
 				...(accessPinHashUpdate !== undefined ? { accessPinHash: accessPinHashUpdate } : {}),
 				timeToComplete: sanitized.timeToComplete ?? null
 			}
@@ -303,16 +305,32 @@ export async function getProject(
  *    `unlocked` flag is resolved by the route from the signed unlock cookie.
  *  - Provincial targeting: when `targetProvinces` is non-empty, the freelancer's
  *    profile province must be set and be one of them.
+ *  - District targeting: when `targetDistricts` is non-empty, it refines the
+ *    provincial lock — the freelancer's district must be one of them (province
+ *    becomes implied, since every targeted district belongs to a targeted province).
  */
 export function enforceAccessGates(
-	project: Pick<ProjectForCompany, 'accessPinHash' | 'targetProvinces'>,
-	freelancer: Pick<FreelancerProfile, 'province'>,
+	project: Pick<ProjectForCompany, 'accessPinHash' | 'targetProvinces' | 'targetDistricts'>,
+	freelancer: Pick<FreelancerProfile, 'province' | 'district'>,
 	unlocked: boolean
 ) {
 	if (project.accessPinHash && !unlocked) {
 		throw new AppError('FORBIDDEN', 'Enter the access PIN to apply to this project.');
 	}
-	if (project.targetProvinces.length > 0) {
+	if (project.targetDistricts.length > 0) {
+		if (!freelancer.district) {
+			throw new AppError(
+				'FORBIDDEN',
+				`This project is open to ${districtsLabel(project.targetDistricts)} only. Set your district in your profile to apply.`
+			);
+		}
+		if (!project.targetDistricts.includes(freelancer.district)) {
+			throw new AppError(
+				'FORBIDDEN',
+				`This project is open to freelancers in ${districtsLabel(project.targetDistricts)} only.`
+			);
+		}
+	} else if (project.targetProvinces.length > 0) {
 		if (!freelancer.province) {
 			throw new AppError(
 				'FORBIDDEN',

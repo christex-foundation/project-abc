@@ -8,7 +8,7 @@ import {
 import { AppError } from '../http';
 import { requireRole, type AuthedUser } from '../auth-helpers';
 import { sanitizeRichText } from '../sanitize';
-import { provincesLabel } from '$lib/constants/geo';
+import { provincesLabel, districtsLabel } from '$lib/constants/geo';
 import type { BountyForSponsor } from '../repositories/bounty.repo';
 import type { FreelancerProfile } from '@prisma/client';
 import { prisma } from '../db';
@@ -105,14 +105,29 @@ function validateEligibility(
  *    profile province must be set and be one of them.
  */
 function enforceAccessGates(
-	bounty: Pick<BountyForSponsor, 'accessPinHash' | 'targetProvinces'>,
-	freelancer: Pick<FreelancerProfile, 'province'>,
+	bounty: Pick<BountyForSponsor, 'accessPinHash' | 'targetProvinces' | 'targetDistricts'>,
+	freelancer: Pick<FreelancerProfile, 'province' | 'district'>,
 	unlocked: boolean
 ) {
 	if (bounty.accessPinHash && !unlocked) {
 		throw new AppError('FORBIDDEN', 'Enter the access PIN to submit to this bounty.');
 	}
-	if (bounty.targetProvinces.length > 0) {
+	// Districts refine provinces: when set, they take over from the province check
+	// (every targeted district belongs to a targeted province by validation).
+	if (bounty.targetDistricts.length > 0) {
+		if (!freelancer.district) {
+			throw new AppError(
+				'FORBIDDEN',
+				`This bounty is open to ${districtsLabel(bounty.targetDistricts)} only. Set your district in your profile to submit.`
+			);
+		}
+		if (!bounty.targetDistricts.includes(freelancer.district)) {
+			throw new AppError(
+				'FORBIDDEN',
+				`This bounty is open to freelancers in ${districtsLabel(bounty.targetDistricts)} only.`
+			);
+		}
+	} else if (bounty.targetProvinces.length > 0) {
 		if (!freelancer.province) {
 			throw new AppError(
 				'FORBIDDEN',

@@ -27,6 +27,7 @@ export const selectForFreelancer = {
 	maxBonusSpots: true,
 	eligibility: true,
 	targetProvinces: true,
+	targetDistricts: true,
 	// Selected so the repo can derive `isPinLocked`; the hash itself is stripped
 	// before any freelancer-facing return (see `toFreelancerView`).
 	accessPinHash: true,

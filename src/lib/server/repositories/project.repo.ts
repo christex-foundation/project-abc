@@ -19,6 +19,7 @@ export const selectPublic = {
 	budgetCap: true,
 	// Public so applicants see which provinces may apply (empty = nationwide).
 	targetProvinces: true,
+	targetDistricts: true,
 	timeToComplete: true,
 	publishedAt: true,
 	awardedAt: true,
