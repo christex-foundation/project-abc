@@ -151,6 +151,7 @@
 			submissionDeadline: b ? toLocalInput(b.submissionDeadline) : '',
 			judgingDeadline: '',
 			targetProvinces: [],
+			targetDistricts: [],
 			accessPin: ''
 		};
 	}

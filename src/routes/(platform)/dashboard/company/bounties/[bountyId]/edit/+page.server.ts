@@ -62,6 +62,7 @@ export const load: PageServerLoad = async ({ params, locals, parent }) => {
 			submissionDeadline: toLocalInput(bounty.submissionDeadline),
 			judgingDeadline: toLocalInput(bounty.judgingDeadline),
 			targetProvinces: bounty.targetProvinces,
+			targetDistricts: bounty.targetDistricts,
 			// Never prefilled — the stored PIN hash is never read back.
 			accessPin: ''
 		}

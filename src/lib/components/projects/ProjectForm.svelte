@@ -15,7 +15,14 @@
 		Separator
 	} from '$lib/components/ui';
 	import { createProjectInput } from '$lib/validators/project';
-	import { PROVINCES, type Province } from '$lib/constants/geo';
+	import {
+		PROVINCES,
+		PROVINCE_LABEL,
+		DISTRICT_LABEL,
+		districtsForProvince,
+		type Province,
+		type District
+	} from '$lib/constants/geo';
 	import { minorToMajor, majorToMinor } from '$lib/utils';
 
 	type SkillCategory = { id: string; name: string; skills: { id: string; name: string }[] };
@@ -36,6 +43,8 @@
 		skills: SkillSel[];
 		milestones: MilestoneRow[];
 		targetProvinces: Province[];
+		/** Districts refine the provincial lock; each must belong to a chosen province. */
+		targetDistricts: District[];
 		/** Always blank in edit mode — the stored PIN hash is never read back. */
 		accessPin: string;
 	};
@@ -73,6 +82,7 @@
 		skills: [],
 		milestones: [{ title: '', amount: '', description: '', dueInDays: '' }],
 		targetProvinces: [],
+		targetDistricts: [],
 		accessPin: ''
 	};
 
@@ -109,7 +119,9 @@
 		// directly and remount the editors, skipping the restore prompt. Drop the
 		// query param so a later refresh falls back to the normal restore flow.
 		if (new URLSearchParams(window.location.search).get('ai') === '1') {
-			d = saved;
+			// AI-built drafts may omit access fields; merge onto `blank` so arrays/PIN
+			// are never undefined.
+			d = { ...blank, ...saved };
 			editorNonce++;
 			history.replaceState({}, '', window.location.pathname);
 			return;
@@ -119,7 +131,7 @@
 
 	function restore() {
 		const saved = draftStore?.load();
-		if (saved) d = saved;
+		if (saved) d = { ...blank, ...saved };
 		restorePrompt = false;
 		editorNonce++;
 	}
@@ -138,6 +150,20 @@
 			? d.targetProvinces.filter((x) => x !== p)
 			: [...d.targetProvinces, p];
 	}
+
+	function toggleDistrict(dist: District) {
+		d.targetDistricts = d.targetDistricts.includes(dist)
+			? d.targetDistricts.filter((x) => x !== dist)
+			: [...d.targetDistricts, dist];
+	}
+
+	// Prune any selected district whose province is no longer checked.
+	$effect(() => {
+		const allowed = new Set(d.targetProvinces.flatMap(districtsForProvince));
+		if (d.targetDistricts.some((x) => !allowed.has(x))) {
+			d.targetDistricts = d.targetDistricts.filter((x) => allowed.has(x));
+		}
+	});
 
 	function toggleSkill(id: string) {
 		const idx = d.skills.findIndex((s) => s.skillId === id);
@@ -196,7 +222,8 @@
 					amount: majorToMinor(Number(m.amount || 0)),
 					dueInDays: m.dueInDays === '' ? null : Number(m.dueInDays)
 				})),
-				targetProvinces: d.targetProvinces
+				targetProvinces: d.targetProvinces,
+				targetDistricts: d.targetDistricts
 			};
 
 			// PIN directive: on create, always send (set or null). On edit, omit the
@@ -403,6 +430,41 @@
 					: `Restricted to ${d.targetProvinces.length} province${d.targetProvinces.length === 1 ? '' : 's'}.`}
 			</p>
 		</div>
+
+		{#if d.targetProvinces.length > 0}
+			<div class="space-y-2">
+				<Label>Districts (optional)</Label>
+				<p class="text-ink-soft text-sm">
+					Optionally narrow to districts within the selected provinces; leave blank to include the
+					whole province. Only freelancers in a chosen district will be able to apply.
+				</p>
+				{#each d.targetProvinces as province (province)}
+					<div class="space-y-2">
+						<p class="text-ink-soft text-xs font-medium">{PROVINCE_LABEL[province]}</p>
+						<div class="grid gap-2 sm:grid-cols-2">
+							{#each districtsForProvince(province) as dist (dist)}
+								<label
+									class="border-bone hover:bg-paper flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-2 text-sm"
+								>
+									<input
+										type="checkbox"
+										checked={d.targetDistricts.includes(dist)}
+										onchange={() => toggleDistrict(dist)}
+										class="border-bone text-terracotta h-4 w-4 rounded"
+									/>
+									<span>{DISTRICT_LABEL[dist]}</span>
+								</label>
+							{/each}
+						</div>
+					</div>
+				{/each}
+				<p class="text-ink-soft text-xs">
+					{d.targetDistricts.length === 0
+						? 'Open to the whole of each selected province.'
+						: `Restricted to ${d.targetDistricts.length} district${d.targetDistricts.length === 1 ? '' : 's'}.`}
+				</p>
+			</div>
+		{/if}
 
 		<Separator />
 

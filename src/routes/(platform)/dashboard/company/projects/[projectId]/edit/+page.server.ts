@@ -45,6 +45,7 @@ export const load: PageServerLoad = async ({ params, locals, parent }) => {
 				dueInDays: (m.dueInDays ?? '') as number | ''
 			})),
 			targetProvinces: project.targetProvinces,
+			targetDistricts: project.targetDistricts,
 			// Never prefilled — the stored PIN hash is never read back.
 			accessPin: ''
 		}
