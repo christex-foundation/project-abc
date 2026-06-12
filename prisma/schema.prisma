@@ -457,9 +457,14 @@ model Bounty {
   // Access control
   //   - targetProvinces: empty = open nationwide; otherwise only freelancers
   //     whose profile province is in this list may submit (enforced server-side).
+  //   - targetDistricts: empty = no district narrowing; otherwise districts refine
+  //     the provincial lock — only freelancers in one of these districts may submit
+  //     (the province check becomes implied). Every district must belong to a
+  //     targeted province.
   //   - accessPinHash: null = open; otherwise a salted scrypt hash of the PIN
   //     that gates viewing the bounty's details and submitting to it.
   targetProvinces Province[] @default([])
+  targetDistricts District[] @default([])
   accessPinHash   String?
 
   // Timeline
@@ -610,9 +615,14 @@ model Project {
   // Access control (mirrors Bounty)
   //   - targetProvinces: empty = open nationwide; otherwise only freelancers
   //     whose profile province is in this list may submit a proposal.
+  //   - targetDistricts: empty = no district narrowing; otherwise districts refine
+  //     the provincial lock — only freelancers in one of these districts may apply
+  //     (the province check becomes implied). Every district must belong to a
+  //     targeted province.
   //   - accessPinHash: null = open; otherwise a salted scrypt hash of the PIN
   //     that gates viewing the project's brief and applying to it.
   targetProvinces Province[] @default([])
+  targetDistricts District[] @default([])
   accessPinHash   String?
 
   // Budget ceiling shown publicly; a winning proposal's total must be <= this.
