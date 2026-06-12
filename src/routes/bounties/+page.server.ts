@@ -1,14 +1,21 @@
 import * as bountyService from '$lib/server/services/bounty.service';
 import * as skillService from '$lib/server/services/skill.service';
 import * as statsService from '$lib/server/services/stats.service';
+import { majorToMinor } from '$lib/utils';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ url }) => {
 	const params = Object.fromEntries(url.searchParams.entries());
 	const skillIdsAll = url.searchParams.getAll('skillIds');
+	// The price filter is entered in major-unit Leones (label "Min/Max (SLE)") but
+	// compared against the minor-unit `totalPrizePool` column — convert on the query
+	// path. The echoed `filters` below keep the raw major value for the input.
+	const toMinorParam = (v: string | undefined) => (v ? String(majorToMinor(Number(v))) : undefined);
 	const [result, skills, pot] = await Promise.all([
 		bountyService.listBounties({
 			...params,
+			...(toMinorParam(params.minPrize) ? { minPrize: toMinorParam(params.minPrize) } : {}),
+			...(toMinorParam(params.maxPrize) ? { maxPrize: toMinorParam(params.maxPrize) } : {}),
 			// /bounties is the bounty-only feed; legacy PROJECT-type rows live in the
 			// separate Projects domain and must never surface here, including the
 			// unfiltered ("All") default.
