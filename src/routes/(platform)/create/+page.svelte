@@ -11,14 +11,15 @@
 		Separator
 	} from '$lib/components/ui';
 	import type { ScopeResult } from '$lib/validators/ai';
+	import { DRAFT_STORAGE_KEYS } from '$lib/constants/draft-keys';
 
 	let { data } = $props();
 
 	// localStorage keys the create forms read via useLocalDraft (which prefixes
 	// `fow:draft:` internally) — we write the prefixed key directly here.
 	const STORAGE = {
-		bounty: 'fow:draft:bounty-create-wizard-v2',
-		project: 'fow:draft:project-create-form'
+		bounty: DRAFT_STORAGE_KEYS.bountyCreate,
+		project: DRAFT_STORAGE_KEYS.projectCreate
 	} as const;
 
 	let need = $state('');
@@ -146,7 +147,9 @@
 			eligibility: [],
 			timeToComplete: '',
 			submissionDeadline: b ? toLocalInput(b.submissionDeadline) : '',
-			judgingDeadline: ''
+			judgingDeadline: '',
+			targetProvinces: [],
+			accessPin: ''
 		};
 	}
 
