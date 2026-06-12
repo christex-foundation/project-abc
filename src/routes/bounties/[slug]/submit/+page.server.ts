@@ -5,6 +5,7 @@ import * as bountyService from '$lib/server/services/bounty.service';
 import * as submissionService from '$lib/server/services/submission.service';
 import * as creditService from '$lib/server/services/credit.service';
 import { isUnlocked, readUnlockedIds } from '$lib/server/access-lock';
+import { majorToMinor } from '$lib/utils';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ params, locals, cookies }) => {
@@ -66,9 +67,14 @@ export const actions: Actions = {
 			link,
 			tweet: tweetRaw || null,
 			otherInfo: otherInfo || null,
-			ask: askRaw ? Number(askRaw) : null,
+			// The ask field is entered in major-unit Leones; store as minor units.
+			ask: askRaw ? majorToMinor(Number(askRaw)) : null,
 			eligibilityAnswers: answers
 		};
+
+		// On validation failure the form repopulates from `values`; echo the ask back
+		// in the major units the user typed, not the converted minor value.
+		const formValues = { ...payload, ask: askRaw || null };
 
 		// Look up the bounty by slug to translate it to the id the service needs.
 		let bounty;
@@ -76,7 +82,7 @@ export const actions: Actions = {
 			bounty = await bountyService.getBounty(caller, params.slug!);
 		} catch (e) {
 			if (e instanceof AppError) {
-				return fail(e.httpStatus, { message: e.message, values: payload });
+				return fail(e.httpStatus, { message: e.message, values: formValues });
 			}
 			throw e;
 		}
@@ -87,10 +93,10 @@ export const actions: Actions = {
 			});
 		} catch (e) {
 			if (e instanceof AppError) {
-				return fail(e.httpStatus, { message: e.message, values: payload });
+				return fail(e.httpStatus, { message: e.message, values: formValues });
 			}
 			console.error('[submit]', e);
-			return fail(500, { message: 'Something went wrong.', values: payload });
+			return fail(500, { message: 'Something went wrong.', values: formValues });
 		}
 
 		throw redirect(303, '/dashboard/freelancer/submissions');

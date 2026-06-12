@@ -16,6 +16,7 @@
 	} from '$lib/components/ui';
 	import { createProjectInput } from '$lib/validators/project';
 	import { PROVINCES, type Province } from '$lib/constants/geo';
+	import { minorToMajor, majorToMinor } from '$lib/utils';
 
 	type SkillCategory = { id: string; name: string; skills: { id: string; name: string }[] };
 	type SkillSel = { skillId: string; isRequired: boolean };
@@ -75,7 +76,22 @@
 		accessPin: ''
 	};
 
-	let d = $state<Initial>(untrack(() => structuredClone(initial ?? blank)));
+	// `initial` (edit mode) arrives in minor units; the form edits milestone amounts
+	// in major-unit Leones, so convert on the way in. Create mode passes `blank`
+	// (empty amounts) which round-trips untouched. Autosaved and AI-seeded drafts
+	// are already stored in major units, so they skip this.
+	function toMajorInitial(init: Initial): Initial {
+		return {
+			...init,
+			milestones: init.milestones.map((m) => ({
+				...m,
+				amount: m.amount === '' ? '' : minorToMajor(m.amount)
+			}))
+		};
+	}
+	const seed: Initial = untrack(() => toMajorInitial(initial ?? blank));
+
+	let d = $state<Initial>(untrack(() => structuredClone(seed)));
 	let restorePrompt = $state(false);
 	// Bumped on restore to force the (uncontrolled, read-once) editors to remount
 	// and re-read their `initialHTML` from the restored draft.
@@ -84,7 +100,7 @@
 	const draftStore = untrack(() => (draftKey ? useLocalDraft<Initial>(draftKey) : null));
 	// Serialised pristine state; autosave is suppressed while `d` matches it so the
 	// effect can't clobber a stored draft before the user has edited (or resumed) it.
-	const pristine = untrack(() => JSON.stringify(initial ?? blank));
+	const pristine = untrack(() => JSON.stringify(seed));
 
 	onMount(() => {
 		const saved = draftStore?.load();
@@ -140,10 +156,15 @@
 		d.milestones = d.milestones.filter((_, idx) => idx !== i);
 	}
 
+	// Major-unit Leones (milestone inputs hold major units).
 	const total = $derived(d.milestones.reduce((s, m) => s + Number(m.amount || 0), 0));
 
-	function formatMoney(minor: number) {
-		return `${d.currency} ${(minor / 100).toLocaleString()}`;
+	// `major` is already in Leones — format, don't divide.
+	function formatMoney(major: number) {
+		return `${d.currency} ${major.toLocaleString(undefined, {
+			minimumFractionDigits: 2,
+			maximumFractionDigits: 2
+		})}`;
 	}
 
 	let submitting = $state(false);
@@ -171,7 +192,8 @@
 				milestones: d.milestones.map((m) => ({
 					title: m.title,
 					description: m.description || null,
-					amount: Number(m.amount || 0),
+					// Inputs hold major-unit Leones; convert to minor units for storage.
+					amount: majorToMinor(Number(m.amount || 0)),
 					dueInDays: m.dueInDays === '' ? null : Number(m.dueInDays)
 				})),
 				targetProvinces: d.targetProvinces
@@ -271,8 +293,8 @@
 	<CardHeader><CardTitle>Milestones</CardTitle></CardHeader>
 	<CardContent class="space-y-4">
 		<p class="text-ink-soft text-xs">
-			Define the deliverables and payment for each stage. Amounts in minor units (SLE × 100). Each
-			milestone is escrowed up front and released when you approve it.
+			Define the deliverables and payment for each stage. Amounts in Leones (SLE). Each milestone is
+			escrowed up front and released when you approve it.
 		</p>
 		{#each d.milestones as _m, i (i)}
 			<div class="border-bone bg-paper space-y-2 rounded-xl border p-3">
@@ -284,7 +306,13 @@
 				</div>
 				<div class="grid gap-2 sm:grid-cols-[1fr_140px_120px]">
 					<Input bind:value={d.milestones[i].title} placeholder="Milestone title" />
-					<Input type="number" bind:value={d.milestones[i].amount} placeholder="Amount" />
+					<Input
+						type="number"
+						min="0"
+						step="0.01"
+						bind:value={d.milestones[i].amount}
+						placeholder="Amount"
+					/>
 					<Input type="number" bind:value={d.milestones[i].dueInDays} placeholder="Days" />
 				</div>
 				<Textarea

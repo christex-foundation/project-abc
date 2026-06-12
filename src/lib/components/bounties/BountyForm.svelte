@@ -17,6 +17,7 @@
 	} from '$lib/components/ui';
 	import { createBountyInput } from '$lib/validators/bounty';
 	import { PROVINCES, type Province } from '$lib/constants/geo';
+	import { minorToMajor, majorToMinor } from '$lib/utils';
 
 	type SkillCategory = { id: string; name: string; skills: { id: string; name: string }[] };
 	type Tier = { position: number; amount: number; label?: string };
@@ -105,7 +106,22 @@
 		'Review'
 	];
 
-	let d = $state<Draft>(untrack(() => ({ ...structuredClone(initial ?? blank), step: 1 })));
+	// `initial` (edit mode) arrives in minor units; the form edits amounts in
+	// major-unit Leones, so convert on the way in. Create mode passes `blank`
+	// (empty strings / []) which round-trips through this untouched. Autosaved and
+	// AI-seeded drafts are already stored in major units, so they skip this.
+	function toMajorInitial(init: Initial): Initial {
+		return {
+			...init,
+			totalPrizePool: init.totalPrizePool === '' ? '' : minorToMajor(init.totalPrizePool),
+			minRewardAsk: init.minRewardAsk === '' ? '' : minorToMajor(init.minRewardAsk),
+			maxRewardAsk: init.maxRewardAsk === '' ? '' : minorToMajor(init.maxRewardAsk),
+			prizeTiers: init.prizeTiers.map((t) => ({ ...t, amount: minorToMajor(t.amount) }))
+		};
+	}
+	const seed: Initial = untrack(() => toMajorInitial(initial ?? blank));
+
+	let d = $state<Draft>(untrack(() => ({ ...structuredClone(seed), step: 1 })));
 	let restorePrompt = $state(false);
 	// Bumped on restore to force the (uncontrolled, read-once) editors to remount
 	// and re-read their `initialHTML` from the restored draft.
@@ -114,7 +130,7 @@
 	const draftStore = untrack(() => (draftKey ? useLocalDraft<Draft>(draftKey) : null));
 	// Serialised pristine state; autosave is suppressed while `d` matches it so the
 	// effect can't clobber a stored draft before the user has edited (or resumed) it.
-	const pristine = untrack(() => JSON.stringify({ ...(initial ?? blank), step: 1 }));
+	const pristine = untrack(() => JSON.stringify({ ...seed, step: 1 }));
 
 	onMount(() => {
 		const saved = draftStore?.load();
@@ -235,7 +251,8 @@
 		d.eligibility = d.eligibility.filter((_, idx) => idx !== i);
 	}
 
-	function totalMinorFromTiers(): number {
+	// Sum of tier amounts, in major-unit Leones (the unit the inputs hold).
+	function totalFromTiers(): number {
 		const regularSum = d.prizeTiers
 			.filter((t) => t.position !== 99)
 			.reduce((s, t) => s + Number(t.amount || 0), 0);
@@ -246,7 +263,7 @@
 	}
 
 	function alignTotal() {
-		if (d.compensationType === 'FIXED') d.totalPrizePool = totalMinorFromTiers();
+		if (d.compensationType === 'FIXED') d.totalPrizePool = totalFromTiers();
 	}
 
 	let submitting = $state(false);
@@ -259,6 +276,21 @@
 		submitError = null;
 		try {
 			const pin = d.accessPin.trim();
+			// Inputs hold major-unit Leones; convert to minor units for storage. Convert
+			// the tiers once, then derive the FIXED total from those SAME minor values so
+			// it always equals the validator's tier-sum check — summing-then-rounding and
+			// rounding-then-summing can otherwise drift by a cent on odd inputs.
+			const minorTiers = d.prizeTiers.map((t) => ({
+				...t,
+				amount: majorToMinor(Number(t.amount || 0))
+			}));
+			const totalPrizePoolMinor =
+				d.compensationType === 'FIXED'
+					? minorTiers.filter((t) => t.position !== 99).reduce((s, t) => s + t.amount, 0) +
+						minorTiers
+							.filter((t) => t.position === 99)
+							.reduce((s, t) => s + t.amount * d.maxBonusSpots, 0)
+					: majorToMinor(Number(d.totalPrizePool || 0));
 			const payload: Record<string, unknown> = {
 				title: d.title,
 				description: d.description,
@@ -267,12 +299,12 @@
 				type: 'BOUNTY' as const,
 				compensationType: d.compensationType,
 				currency: d.currency,
-				totalPrizePool: Number(d.totalPrizePool || 0),
-				minRewardAsk: d.minRewardAsk === '' ? null : Number(d.minRewardAsk),
-				maxRewardAsk: d.maxRewardAsk === '' ? null : Number(d.maxRewardAsk),
+				totalPrizePool: totalPrizePoolMinor,
+				minRewardAsk: d.minRewardAsk === '' ? null : majorToMinor(Number(d.minRewardAsk)),
+				maxRewardAsk: d.maxRewardAsk === '' ? null : majorToMinor(Number(d.maxRewardAsk)),
 				numberOfWinners: d.numberOfWinners,
 				maxBonusSpots: d.maxBonusSpots,
-				prizeTiers: d.prizeTiers,
+				prizeTiers: minorTiers,
 				skills: d.skills,
 				eligibility: d.eligibility,
 				timeToComplete: d.timeToComplete || null,
@@ -319,8 +351,12 @@
 		}
 	}
 
-	function formatMoney(minor: number) {
-		return `${d.currency} ${(minor / 100).toLocaleString()}`;
+	// `major` is already in Leones (inputs hold major units) — format, don't divide.
+	function formatMoney(major: number) {
+		return `${d.currency} ${major.toLocaleString(undefined, {
+			minimumFractionDigits: 2,
+			maximumFractionDigits: 2
+		})}`;
 	}
 </script>
 
@@ -513,12 +549,12 @@
 				{#if d.compensationType === 'RANGE'}
 					<div class="grid grid-cols-2 gap-3">
 						<div class="space-y-1">
-							<Label for="minA">Min ask (SLE, minor)</Label>
-							<Input id="minA" type="number" bind:value={d.minRewardAsk} />
+							<Label for="minA">Min ask (SLE)</Label>
+							<Input id="minA" type="number" min="0" step="0.01" bind:value={d.minRewardAsk} />
 						</div>
 						<div class="space-y-1">
-							<Label for="maxA">Max ask (SLE, minor)</Label>
-							<Input id="maxA" type="number" bind:value={d.maxRewardAsk} />
+							<Label for="maxA">Max ask (SLE)</Label>
+							<Input id="maxA" type="number" min="0" step="0.01" bind:value={d.maxRewardAsk} />
 						</div>
 					</div>
 				{/if}
@@ -535,12 +571,14 @@
 						No tier editing needed for {d.compensationType.toLowerCase()} compensation.
 					</p>
 				{:else}
-					<p class="text-ink-soft text-xs">Amounts in minor units (SLE × 100).</p>
+					<p class="text-ink-soft text-xs">Amounts in Leones (SLE).</p>
 					{#each d.prizeTiers.filter((t) => t.position !== 99) as tier, i (tier.position)}
 						<div class="flex items-center gap-2">
 							<span class="w-16 text-sm">#{tier.position}</span>
 							<Input
 								type="number"
+								min="0"
+								step="0.01"
 								bind:value={d.prizeTiers[d.prizeTiers.indexOf(tier)].amount}
 								oninput={alignTotal}
 							/>
@@ -559,6 +597,8 @@
 								<Badge variant="secondary">Bonus (×{d.maxBonusSpots})</Badge>
 								<Input
 									type="number"
+									min="0"
+									step="0.01"
 									bind:value={d.prizeTiers[d.prizeTiers.indexOf(bt)].amount}
 									oninput={alignTotal}
 								/>
@@ -572,7 +612,7 @@
 					<Separator />
 					<div class="flex items-center justify-between text-sm">
 						<span class="font-medium">Total prize pool</span>
-						<span>{formatMoney(totalMinorFromTiers())}</span>
+						<span>{formatMoney(totalFromTiers())}</span>
 					</div>
 				{/if}
 			</CardContent>
@@ -682,7 +722,7 @@
 				{#if d.compensationType === 'FIXED'}
 					<div>
 						<span class="font-medium">Total pool:</span>
-						{formatMoney(totalMinorFromTiers())}
+						{formatMoney(totalFromTiers())}
 					</div>
 				{/if}
 				<div><span class="font-medium">Skills:</span> {d.skills.length} selected</div>

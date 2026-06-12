@@ -12,6 +12,7 @@
 	} from '$lib/components/ui';
 	import type { ScopeResult } from '$lib/validators/ai';
 	import { DRAFT_STORAGE_KEYS } from '$lib/constants/draft-keys';
+	import { minorToMajor } from '$lib/utils';
 
 	let { data } = $props();
 
@@ -132,7 +133,8 @@
 			skills: s.skills,
 			compensationType: b?.compensationType ?? '',
 			currency: 'SLE',
-			totalPrizePool: b ? b.totalPrizePool : '',
+			// The form edits in major-unit Leones; the AI emits minor units, so convert.
+			totalPrizePool: b ? minorToMajor(b.totalPrizePool) : '',
 			minRewardAsk: '',
 			maxRewardAsk: '',
 			numberOfWinners: b?.numberOfWinners ?? 1,
@@ -140,7 +142,7 @@
 			prizeTiers: b
 				? b.prizeTiers.map((t) => ({
 						position: t.position,
-						amount: t.amount,
+						amount: minorToMajor(t.amount),
 						label: t.label ?? undefined
 					}))
 				: [],
@@ -160,7 +162,8 @@
 			p && p.milestones.length
 				? p.milestones.map((m) => ({
 						title: m.title,
-						amount: m.amount,
+						// Form edits in major-unit Leones; AI emits minor units, so convert.
+						amount: minorToMajor(m.amount),
 						description: m.description ?? '',
 						dueInDays: m.dueInDays ?? ''
 					}))
