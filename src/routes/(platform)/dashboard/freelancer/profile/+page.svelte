@@ -20,6 +20,13 @@
 	} from '$lib/components/shared/WithdrawalDestination.svelte';
 	import UserAvatar from '$lib/components/shared/UserAvatar.svelte';
 	import ProofOfWorkCard from '$lib/components/freelancer/ProofOfWorkCard.svelte';
+	import {
+		PROVINCES,
+		DISTRICT_LABEL,
+		districtsForProvince,
+		type Province,
+		type District
+	} from '$lib/constants/geo';
 
 	let { data } = $props();
 
@@ -35,6 +42,15 @@
 	let portfolio = $state(untrack(() => data.profile.portfolio ?? ''));
 	let experienceLevel = $state(untrack(() => data.profile.experienceLevel ?? ''));
 	let whatsappNumber = $state(untrack(() => data.profile.whatsappNumber ?? ''));
+	let province = $state<Province | ''>(untrack(() => data.profile.province ?? ''));
+	let district = $state<District | ''>(untrack(() => data.profile.district ?? ''));
+
+	const districtOptions = $derived(province ? districtsForProvince(province) : []);
+	// Drop a stale district whenever the province changes to one that no longer
+	// contains it. Runs after `province` is committed, so it can't race the bind.
+	$effect(() => {
+		if (district && !districtOptions.includes(district as District)) district = '';
+	});
 
 	let selected = $state<SelectedSkill[]>(
 		untrack(() =>
@@ -153,6 +169,8 @@
 					portfolio: portfolio || null,
 					experienceLevel: experienceLevel || null,
 					whatsappNumber: whatsappNumber || null,
+					province: province || null,
+					district: district || null,
 					skills: selected
 				})
 			});
@@ -243,6 +261,30 @@
 					/>
 				</div>
 			</div>
+			<div class="grid gap-4 sm:grid-cols-2">
+				<div class="space-y-1">
+					<Label for="province">Province</Label>
+					<Select id="province" bind:value={province}>
+						<option value="">—</option>
+						{#each PROVINCES as p (p.value)}
+							<option value={p.value}>{p.label}</option>
+						{/each}
+					</Select>
+				</div>
+				<div class="space-y-1">
+					<Label for="district">District</Label>
+					<Select id="district" bind:value={district} disabled={!province}>
+						<option value="">—</option>
+						{#each districtOptions as d (d)}
+							<option value={d}>{DISTRICT_LABEL[d]}</option>
+						{/each}
+					</Select>
+				</div>
+			</div>
+			<p class="text-ink-soft text-xs">
+				Your province lets you submit to region-locked bounties. Some sponsors restrict bounties to
+				freelancers in a specific province.
+			</p>
 		</CardContent>
 	</Card>
 

@@ -3,6 +3,8 @@ import { prisma } from '../db';
 import { AppError } from '../http';
 import { requireRole, type AuthedUser } from '../auth-helpers';
 import { sanitizeRichText } from '../sanitize';
+import { hashPin, verifyPin } from '../access-lock';
+import type { BountyForSponsor } from '../repositories/bounty.repo';
 import * as bountyRepo from '../repositories/bounty.repo';
 import * as projectRepo from '../repositories/project.repo';
 import * as prizeTierRepo from '../repositories/prizeTier.repo';
@@ -121,6 +123,9 @@ export async function createBounty(caller: AuthedUser, raw: unknown) {
 				numberOfWinners: sanitized.numberOfWinners,
 				maxBonusSpots: sanitized.maxBonusSpots,
 				eligibility: sanitized.eligibility as unknown as Prisma.InputJsonValue,
+				targetProvinces: sanitized.targetProvinces,
+				targetDistricts: sanitized.targetDistricts,
+				accessPinHash: sanitized.accessPin ? await hashPin(sanitized.accessPin) : null,
 				timeToComplete: sanitized.timeToComplete ?? null,
 				submissionDeadline: sanitized.submissionDeadline,
 				judgingDeadline: sanitized.judgingDeadline ?? null,
@@ -175,6 +180,7 @@ export async function updateBounty(caller: AuthedUser, id: string, raw: unknown)
 		})),
 		skills: existing.skills.map((s) => ({ skillId: s.skill.id, isRequired: s.isRequired })),
 		eligibility: (existing.eligibility ?? []) as unknown,
+		targetProvinces: existing.targetProvinces,
 		timeToComplete: existing.timeToComplete,
 		submissionDeadline: existing.submissionDeadline,
 		judgingDeadline: existing.judgingDeadline,
@@ -183,6 +189,19 @@ export async function updateBounty(caller: AuthedUser, id: string, raw: unknown)
 	const validated = mergedBountyInput.parse(merged) as CreateBountyInput;
 	await ensureSkillsExist(validated.skills.map((s) => s.skillId));
 	const sanitized = sanitizePayloadFields(validated);
+
+	// PIN directive: omit the `accessPin` key to leave the existing PIN untouched;
+	// send a string to set a new one; send null / '' to clear it. We never read
+	// the stored hash back into a plaintext PIN, so this can't round-trip through
+	// the merge above.
+	const rawObj = (raw ?? {}) as Record<string, unknown>;
+	let accessPinHashUpdate: string | null | undefined;
+	if ('accessPin' in rawObj) {
+		accessPinHashUpdate =
+			validated.accessPin == null || validated.accessPin === ''
+				? null
+				: await hashPin(validated.accessPin);
+	}
 
 	await prisma.$transaction(async (tx) => {
 		await tx.bounty.update({
@@ -202,6 +221,9 @@ export async function updateBounty(caller: AuthedUser, id: string, raw: unknown)
 				numberOfWinners: sanitized.numberOfWinners,
 				maxBonusSpots: sanitized.maxBonusSpots,
 				eligibility: sanitized.eligibility as unknown as Prisma.InputJsonValue,
+				targetProvinces: sanitized.targetProvinces,
+				targetDistricts: sanitized.targetDistricts,
+				...(accessPinHashUpdate !== undefined ? { accessPinHash: accessPinHashUpdate } : {}),
 				timeToComplete: sanitized.timeToComplete ?? null,
 				submissionDeadline: sanitized.submissionDeadline,
 				judgingDeadline: sanitized.judgingDeadline ?? null
@@ -237,26 +259,97 @@ export async function listBounties(raw: unknown) {
 	return bountyRepo.listPublicBounties(filters);
 }
 
+/** Owner of the bounty's company, or any admin. */
+async function isOwnerOrAdmin(
+	caller: AuthedUser | null,
+	companyProfileId: string | null
+): Promise<boolean> {
+	if (!caller) return false;
+	if (caller.role === 'ADMIN') return true;
+	if (!companyProfileId) return false;
+	const profile = await companyRepo.findByUserId(caller.id);
+	return !!profile && profile.id === companyProfileId;
+}
+
 /**
- * Get a bounty by id or slug. DRAFT visibility scoped to owner or ADMIN.
+ * Public/freelancer-facing view of a bounty. Strips the raw `accessPinHash`
+ * (exposing only the `isPinLocked` boolean) and, when `locked`, blanks the rich
+ * content so a PIN-gated bounty stays a discoverable teaser (title, sponsor,
+ * prize pool, region, deadline) without leaking its details.
  */
-export async function getBounty(caller: AuthedUser | null, idOrSlug: string) {
+export type BountyView = Omit<BountyForSponsor, 'accessPinHash'> & {
+	isPinLocked: boolean;
+	locked: boolean;
+};
+
+function toView(bounty: BountyForSponsor, locked: boolean): BountyView {
+	const { accessPinHash, ...rest } = bounty;
+	const isPinLocked = !!accessPinHash;
+	if (locked) {
+		return {
+			...rest,
+			description: '',
+			requirements: null,
+			deliverables: null,
+			eligibility: [],
+			prizeTiers: [],
+			skills: [],
+			isPinLocked,
+			locked: true
+		};
+	}
+	return { ...rest, isPinLocked, locked: false };
+}
+
+/**
+ * Get a bounty by id or slug.
+ *  - DRAFT / CANCELLED: visible only to the owner or an ADMIN.
+ *  - PIN-locked: non-owners get a blanked "locked" teaser unless the bounty id
+ *    is in `opts.unlockedIds` (resolved from the signed unlock cookie by the route).
+ */
+export async function getBounty(
+	caller: AuthedUser | null,
+	idOrSlug: string,
+	opts: { unlockedIds?: string[] } = {}
+): Promise<BountyView> {
 	const isCuid = /^c[a-z0-9]{20,}$/i.test(idOrSlug);
 	const bounty = isCuid
 		? await bountyRepo.findBountyById(idOrSlug)
 		: await bountyRepo.findBountyBySlug(idOrSlug);
 	if (!bounty) throw new AppError('NOT_FOUND', 'Bounty not found.');
 
+	const privileged = await isOwnerOrAdmin(caller, bounty.companyProfileId);
+
 	if (bounty.status === BountyStatus.DRAFT || bounty.status === BountyStatus.CANCELLED) {
-		if (!caller) throw new AppError('NOT_FOUND', 'Bounty not found.');
-		if (caller.role === 'ADMIN') return bounty;
-		const profile = await companyRepo.findByUserId(caller.id);
-		if (!profile || profile.id !== bounty.companyProfileId) {
-			throw new AppError('NOT_FOUND', 'Bounty not found.');
-		}
-		return bounty;
+		if (!privileged) throw new AppError('NOT_FOUND', 'Bounty not found.');
+		return toView(bounty, false);
 	}
-	return bounty;
+
+	// PIN gate (owners/admins bypass).
+	if (bounty.accessPinHash && !privileged) {
+		const unlocked = opts.unlockedIds?.includes(bounty.id) ?? false;
+		if (!unlocked) return toView(bounty, true);
+	}
+	return toView(bounty, false);
+}
+
+/**
+ * Verify a PIN for a bounty. Returns the bounty id on success so the route can
+ * record the unlock in the signed cookie. Anyone with the PIN may unlock — no
+ * auth required (submitting still requires a freelancer account separately).
+ */
+export async function unlockBounty(idOrSlug: string, pin: string): Promise<{ bountyId: string }> {
+	const isCuid = /^c[a-z0-9]{20,}$/i.test(idOrSlug);
+	const bounty = isCuid
+		? await bountyRepo.findBountyById(idOrSlug)
+		: await bountyRepo.findBountyBySlug(idOrSlug);
+	if (!bounty) throw new AppError('NOT_FOUND', 'Bounty not found.');
+	// Not locked → trivially "unlocked".
+	if (!bounty.accessPinHash) return { bountyId: bounty.id };
+	if (!pin || !(await verifyPin(pin, bounty.accessPinHash))) {
+		throw new AppError('FORBIDDEN', 'Incorrect PIN.');
+	}
+	return { bountyId: bounty.id };
 }
 
 export async function listForCompany(caller: AuthedUser) {

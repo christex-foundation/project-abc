@@ -1,15 +1,18 @@
-import { error } from '@sveltejs/kit';
+import { error, fail } from '@sveltejs/kit';
 import { AppError } from '$lib/server/http';
 import * as projectService from '$lib/server/services/project.service';
 import * as proposalService from '$lib/server/services/proposal.service';
 import { isAiEnabled } from '$lib/server/ai/ai-flag';
 import { stripHtml } from '$lib/server/seo';
-import type { PageServerLoad } from './$types';
+import { grantUnlock, readUnlockedIds } from '$lib/server/access-lock';
+import type { Actions, PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ params, locals }) => {
+export const load: PageServerLoad = async ({ params, locals, cookies }) => {
 	try {
 		const caller = locals.user ?? null;
-		const project = await projectService.getProject(caller, params.slug);
+		const project = await projectService.getProject(caller, params.slug, {
+			unlockedIds: readUnlockedIds(cookies)
+		});
 
 		// Surface whether the viewer is the owning company (or admin) so the page can
 		// show the owner-only "View proposals" call-to-action. Proposals only exist
@@ -37,5 +40,22 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 			if (e.code === 'FORBIDDEN') throw error(403, e.message);
 		}
 		throw e;
+	}
+};
+
+export const actions: Actions = {
+	// Verify the PIN and, on success, record the unlock in the signed cookie. The
+	// page re-runs `load` afterwards, which now returns the full (unlocked) project.
+	unlock: async ({ request, params, cookies }) => {
+		const form = await request.formData();
+		const pin = String(form.get('pin') ?? '').trim();
+		try {
+			const { projectId } = await projectService.unlockProject(params.slug, pin);
+			grantUnlock(cookies, projectId);
+		} catch (e) {
+			if (e instanceof AppError) return fail(e.httpStatus, { unlockError: e.message });
+			throw e;
+		}
+		return { unlocked: true };
 	}
 };

@@ -23,6 +23,7 @@
 		categories={data.categories}
 		projectId={data.project.id}
 		initial={data.initial}
+		isPinLocked={data.project.isPinLocked}
 		submitLabel="Save changes"
 		redirectTo={data.project.status === 'AWARDED'
 			? `/dashboard/company/projects/${data.project.id}/fund`

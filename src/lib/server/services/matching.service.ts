@@ -8,7 +8,7 @@ import { embedText, cosineSimilarity } from '../ai/embeddings';
 import * as freelancerRepo from '../repositories/freelancer.repo';
 import * as bountyRepo from '../repositories/bounty.repo';
 import * as projectRepo from '../repositories/project.repo';
-import type { BountyForMatching } from '../repositories/bounty.repo';
+import { toFreelancerView, type BountyForFreelancer } from '../repositories/bounty.repo';
 
 function stripHtml(input: string | null | undefined): string {
 	if (!input) return '';
@@ -19,7 +19,7 @@ function stripHtml(input: string | null | undefined): string {
 }
 
 export type RecommendedBounty = {
-	bounty: Omit<BountyForMatching, 'aiEmbedding'>;
+	bounty: BountyForFreelancer;
 	matchScore: number;
 };
 
@@ -157,9 +157,10 @@ export async function recommendBounties(
 	for (const b of bounties) {
 		if (!b.aiEmbedding || b.aiEmbedding.length === 0) continue;
 		const score = cosineSimilarity(profile.aiEmbedding, b.aiEmbedding);
-		// Strip the embedding from the response — no value to the client, just bytes.
+		// Strip the embedding (just bytes) and the PIN hash; collapse to the
+		// freelancer-facing view (adds `isPinLocked`).
 		const { aiEmbedding: _drop, ...rest } = b;
-		scored.push({ bounty: rest, matchScore: score });
+		scored.push({ bounty: toFreelancerView(rest), matchScore: score });
 	}
 	scored.sort((a, b) => b.matchScore - a.matchScore);
 	return scored.slice(0, limit);

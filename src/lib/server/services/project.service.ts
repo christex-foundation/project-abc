@@ -1,9 +1,12 @@
-import { ProjectStatus } from '@prisma/client';
+import { ProjectStatus, type FreelancerProfile } from '@prisma/client';
 import { prisma } from '../db';
 import { AppError } from '../http';
 import { requireRole, type AuthedUser } from '../auth-helpers';
 import { sanitizeRichText } from '../sanitize';
+import { hashPin, verifyPin } from '../access-lock';
+import { provincesLabel, districtsLabel } from '$lib/constants/geo';
 import * as projectRepo from '../repositories/project.repo';
+import type { ProjectForCompany } from '../repositories/project.repo';
 import * as projectSkillRepo from '../repositories/projectSkill.repo';
 import * as milestoneRepo from '../repositories/milestone.repo';
 import * as companyRepo from '../repositories/company.repo';
@@ -114,6 +117,9 @@ export async function createProject(caller: AuthedUser, raw: unknown) {
 				status: ProjectStatus.DRAFT,
 				currency: sanitized.currency,
 				budgetCap: total,
+				targetProvinces: sanitized.targetProvinces,
+				targetDistricts: sanitized.targetDistricts,
+				accessPinHash: sanitized.accessPin ? await hashPin(sanitized.accessPin) : null,
 				timeToComplete: sanitized.timeToComplete ?? null,
 				company: { connect: { id: companyProfileId } }
 			},
@@ -165,6 +171,7 @@ export async function updateProject(caller: AuthedUser, id: string, raw: unknown
 		deliverables: existing.deliverables,
 		currency: existing.currency,
 		timeToComplete: existing.timeToComplete,
+		targetProvinces: existing.targetProvinces,
 		skills: existing.skills.map((s) => ({ skillId: s.skill.id, isRequired: s.isRequired })),
 		milestones: existingMilestones.map((m) => ({
 			title: m.title,
@@ -180,6 +187,18 @@ export async function updateProject(caller: AuthedUser, id: string, raw: unknown
 	const milestones = buildMilestonePlan(validated.milestones);
 	const total = milestones.reduce((s, m) => s + m.amount, 0);
 
+	// PIN directive: omit the `accessPin` key to leave the existing PIN untouched;
+	// send a string to set a new one; send null / '' to clear it. The stored hash
+	// is never read back into plaintext, so it can't round-trip through the merge.
+	const rawObj = (raw ?? {}) as Record<string, unknown>;
+	let accessPinHashUpdate: string | null | undefined;
+	if ('accessPin' in rawObj) {
+		accessPinHashUpdate =
+			validated.accessPin == null || validated.accessPin === ''
+				? null
+				: await hashPin(validated.accessPin);
+	}
+
 	await prisma.$transaction(async (tx) => {
 		await tx.project.update({
 			where: { id },
@@ -190,6 +209,9 @@ export async function updateProject(caller: AuthedUser, id: string, raw: unknown
 				deliverables: sanitized.deliverables ?? null,
 				currency: sanitized.currency,
 				budgetCap: total,
+				targetProvinces: sanitized.targetProvinces,
+				targetDistricts: sanitized.targetDistricts,
+				...(accessPinHashUpdate !== undefined ? { accessPinHash: accessPinHashUpdate } : {}),
 				timeToComplete: sanitized.timeToComplete ?? null
 			}
 		});
@@ -216,24 +238,130 @@ export async function listProjects(raw: unknown) {
 	return projectRepo.listPublicProjects(filters);
 }
 
-/** Get a project by id or slug. DRAFT/CANCELLED visibility scoped to owner/ADMIN. */
-export async function getProject(caller: AuthedUser | null, idOrSlug: string) {
+/**
+ * Public/freelancer-facing view of a project. Strips the raw `accessPinHash`
+ * (exposing only the `isPinLocked` boolean) and, when `locked`, blanks the rich
+ * content so a PIN-gated project stays a discoverable teaser (title, sponsor,
+ * budget, region) without leaking its brief.
+ */
+export type ProjectView = Omit<ProjectForCompany, 'accessPinHash'> & {
+	isPinLocked: boolean;
+	locked: boolean;
+};
+
+function toView(project: ProjectForCompany, locked: boolean): ProjectView {
+	const { accessPinHash, ...rest } = project;
+	const isPinLocked = !!accessPinHash;
+	if (locked) {
+		return {
+			...rest,
+			description: '',
+			requirements: null,
+			deliverables: null,
+			skills: [],
+			milestones: [],
+			isPinLocked,
+			locked: true
+		};
+	}
+	return { ...rest, isPinLocked, locked: false };
+}
+
+/**
+ * Get a project by id or slug.
+ *  - DRAFT / CANCELLED: visible only to the owner or an ADMIN.
+ *  - PIN-locked: non-owners get a blanked "locked" teaser unless the project id
+ *    is in `opts.unlockedIds` (resolved from the signed unlock cookie by the route).
+ */
+export async function getProject(
+	caller: AuthedUser | null,
+	idOrSlug: string,
+	opts: { unlockedIds?: string[] } = {}
+): Promise<ProjectView> {
 	const isCuid = /^c[a-z0-9]{20,}$/i.test(idOrSlug);
 	const project = isCuid
 		? await projectRepo.findProjectById(idOrSlug)
 		: await projectRepo.findProjectBySlug(idOrSlug);
 	if (!project) throw new AppError('NOT_FOUND', 'Project not found.');
 
+	const privileged = await isOwner(caller, project.companyProfileId);
+
 	if (project.status === ProjectStatus.DRAFT || project.status === ProjectStatus.CANCELLED) {
-		if (!caller) throw new AppError('NOT_FOUND', 'Project not found.');
-		if (caller.role === 'ADMIN') return project;
-		const profile = await companyRepo.findByUserId(caller.id);
-		if (!profile || profile.id !== project.companyProfileId) {
-			throw new AppError('NOT_FOUND', 'Project not found.');
-		}
-		return project;
+		if (!privileged) throw new AppError('NOT_FOUND', 'Project not found.');
+		return toView(project, false);
 	}
-	return project;
+
+	// PIN gate (owners/admins bypass).
+	if (project.accessPinHash && !privileged) {
+		const unlocked = opts.unlockedIds?.includes(project.id) ?? false;
+		if (!unlocked) return toView(project, true);
+	}
+	return toView(project, false);
+}
+
+/**
+ * Enforce the two access gates a project can carry, at proposal-submission time:
+ *  - PIN lock: the visitor must have unlocked the project (proven the PIN). The
+ *    `unlocked` flag is resolved by the route from the signed unlock cookie.
+ *  - Provincial targeting: when `targetProvinces` is non-empty, the freelancer's
+ *    profile province must be set and be one of them.
+ *  - District targeting: when `targetDistricts` is non-empty, it refines the
+ *    provincial lock — the freelancer's district must be one of them (province
+ *    becomes implied, since every targeted district belongs to a targeted province).
+ */
+export function enforceAccessGates(
+	project: Pick<ProjectForCompany, 'accessPinHash' | 'targetProvinces' | 'targetDistricts'>,
+	freelancer: Pick<FreelancerProfile, 'province' | 'district'>,
+	unlocked: boolean
+) {
+	if (project.accessPinHash && !unlocked) {
+		throw new AppError('FORBIDDEN', 'Enter the access PIN to apply to this project.');
+	}
+	if (project.targetDistricts.length > 0) {
+		if (!freelancer.district) {
+			throw new AppError(
+				'FORBIDDEN',
+				`This project is open to ${districtsLabel(project.targetDistricts)} only. Set your district in your profile to apply.`
+			);
+		}
+		if (!project.targetDistricts.includes(freelancer.district)) {
+			throw new AppError(
+				'FORBIDDEN',
+				`This project is open to freelancers in ${districtsLabel(project.targetDistricts)} only.`
+			);
+		}
+	} else if (project.targetProvinces.length > 0) {
+		if (!freelancer.province) {
+			throw new AppError(
+				'FORBIDDEN',
+				`This project is open to ${provincesLabel(project.targetProvinces)} only. Set your province in your profile to apply.`
+			);
+		}
+		if (!project.targetProvinces.includes(freelancer.province)) {
+			throw new AppError(
+				'FORBIDDEN',
+				`This project is open to freelancers in ${provincesLabel(project.targetProvinces)} only.`
+			);
+		}
+	}
+}
+
+/**
+ * Verify a PIN for a project. Returns the project id on success so the route can
+ * record the unlock in the signed cookie. Anyone with the PIN may unlock — no
+ * auth required (applying still requires a freelancer account separately).
+ */
+export async function unlockProject(idOrSlug: string, pin: string): Promise<{ projectId: string }> {
+	const isCuid = /^c[a-z0-9]{20,}$/i.test(idOrSlug);
+	const project = isCuid
+		? await projectRepo.findProjectById(idOrSlug)
+		: await projectRepo.findProjectBySlug(idOrSlug);
+	if (!project) throw new AppError('NOT_FOUND', 'Project not found.');
+	if (!project.accessPinHash) return { projectId: project.id };
+	if (!pin || !(await verifyPin(pin, project.accessPinHash))) {
+		throw new AppError('FORBIDDEN', 'Incorrect PIN.');
+	}
+	return { projectId: project.id };
 }
 
 /**

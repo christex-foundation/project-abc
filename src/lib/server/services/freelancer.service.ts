@@ -42,7 +42,10 @@ export async function updateProfile(caller: AuthedUser, raw: unknown) {
 			bio: parsed.bio,
 			portfolio: parsed.portfolio,
 			experienceLevel: parsed.experienceLevel,
-			whatsappNumber: parsed.whatsappNumber
+			whatsappNumber: parsed.whatsappNumber,
+			province: parsed.province,
+			// Clear district whenever province is cleared so the pair stays consistent.
+			district: parsed.province ? parsed.district : null
 		});
 		await freelancerRepo.replaceSkills(tx, profile.id, parsed.skills);
 	});

@@ -7,6 +7,7 @@ import * as winnerService from '$lib/server/services/winner.service';
 import * as submissionRepo from '$lib/server/repositories/submission.repo';
 import * as paymentRepo from '$lib/server/repositories/payment.repo';
 import { PaymentType } from '@prisma/client';
+import { majorToMinor } from '$lib/utils';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ params, locals, parent }) => {
@@ -43,11 +44,13 @@ export const actions: Actions = {
 		const caller = requireAuth(locals);
 		const form = await request.formData();
 		const submissionId = String(form.get('submissionId') ?? '');
-		const amount = Number(form.get('amount') ?? '');
+		// The tranche field is entered in major-unit Leones; convert to minor units.
+		const amountMajor = Number(form.get('amount') ?? '');
+		const amount = majorToMinor(amountMajor);
 		const final = form.get('final') === '1';
 		try {
-			if (!Number.isFinite(amount) || amount <= 0) {
-				throw new AppError('BAD_REQUEST', 'Amount must be a positive integer.');
+			if (!Number.isFinite(amountMajor) || amount <= 0) {
+				throw new AppError('BAD_REQUEST', 'Amount must be a positive amount.');
 			}
 			await winnerService.payProjectTranche(caller, submissionId, amount, final);
 			return { action: 'payTranche', submissionId, success: true };

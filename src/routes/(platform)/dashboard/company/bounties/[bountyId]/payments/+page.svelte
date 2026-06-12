@@ -12,6 +12,7 @@
 		Checkbox
 	} from '$lib/components/ui';
 	import { trackSubmit } from '$lib/client/forms';
+	import { minorToMajor } from '$lib/utils';
 
 	let { data, form } = $props();
 	let submitting = $state(false);
@@ -252,8 +253,16 @@
 						>
 							<input type="hidden" name="submissionId" value={winner.id} />
 							<div>
-								<Label for="amount">Next tranche amount (minor units)</Label>
-								<Input id="amount" name="amount" type="number" min="1" max={remaining} required />
+								<Label for="amount">Next tranche amount ({bounty.currency})</Label>
+								<Input
+									id="amount"
+									name="amount"
+									type="number"
+									min="0.01"
+									step="0.01"
+									max={minorToMajor(remaining)}
+									required
+								/>
 							</div>
 							<label class="flex items-center gap-2 text-sm">
 								<Checkbox name="final" value="1" />

@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { PROVINCE_VALUES, DISTRICT_VALUES, districtBelongsToProvince } from '$lib/constants/geo';
+import { accessPinSchema } from './bounty';
 
 /**
  * Project = an ongoing one-company-one-contractor engagement. Unlike a bounty,
@@ -34,12 +36,42 @@ const projectBaseShape = {
 	timeToComplete: z.string().max(120).nullish(),
 
 	skills: z.array(projectSkillSchema).default([]),
-	milestones: z.array(projectMilestoneSchema).min(1).max(20)
+	milestones: z.array(projectMilestoneSchema).min(1).max(20),
+
+	// Access control. `targetProvinces` empty = open nationwide. `targetDistricts`
+	// refines the provincial lock; every chosen district must belong to a chosen
+	// province (enforced in `refineProject`). `accessPin` is the raw PIN; the
+	// service hashes it before storage and never reads it back (on update, omit the
+	// key to leave the existing PIN unchanged, or send null / '' to clear it).
+	targetProvinces: z.array(z.enum(PROVINCE_VALUES)).max(5).default([]),
+	targetDistricts: z.array(z.enum(DISTRICT_VALUES)).max(16).default([]),
+	accessPin: accessPinSchema.or(z.literal('')).nullish()
 };
 
 const projectBaseObject = z.object(projectBaseShape);
 
-export const createProjectInput = projectBaseObject;
+/**
+ * Cross-field validation. Applied to the create payload and to the merged-update
+ * payload in the service so `PATCH` cannot escape consistency checks.
+ */
+function refineProject<T extends z.ZodObject<typeof projectBaseShape>>(schema: T) {
+	return schema.superRefine((data, ctx) => {
+		// Districts refine provinces: every targeted district must belong to a
+		// targeted province.
+		for (const district of data.targetDistricts) {
+			if (!data.targetProvinces.some((p) => districtBelongsToProvince(district, p))) {
+				ctx.addIssue({
+					code: 'custom',
+					path: ['targetDistricts'],
+					message: 'District does not belong to a selected province.'
+				});
+				break;
+			}
+		}
+	});
+}
+
+export const createProjectInput = refineProject(projectBaseObject);
 export type CreateProjectInput = z.infer<typeof createProjectInput>;
 
 export const updateProjectInput = projectBaseObject.partial();
@@ -49,7 +81,7 @@ export type UpdateProjectInput = z.infer<typeof updateProjectInput>;
  * Re-validate the merged state after applying a partial update in the service,
  * so PATCH cannot escape the base constraints.
  */
-export const mergedProjectInput = projectBaseObject;
+export const mergedProjectInput = refineProject(projectBaseObject);
 
 export const projectListQuery = z.object({
 	skillIds: z

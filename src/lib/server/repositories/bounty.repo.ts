@@ -26,6 +26,11 @@ export const selectForFreelancer = {
 	numberOfWinners: true,
 	maxBonusSpots: true,
 	eligibility: true,
+	targetProvinces: true,
+	targetDistricts: true,
+	// Selected so the repo can derive `isPinLocked`; the hash itself is stripped
+	// before any freelancer-facing return (see `toFreelancerView`).
+	accessPinHash: true,
 	creditsExempt: true,
 	timeToComplete: true,
 	submissionDeadline: true,
@@ -70,8 +75,36 @@ export const selectForSponsor = {
 	updatedAt: true
 } satisfies Prisma.BountySelect;
 
-export type BountyForFreelancer = Prisma.BountyGetPayload<{ select: typeof selectForFreelancer }>;
+export type BountyFreelancerRow = Prisma.BountyGetPayload<{ select: typeof selectForFreelancer }>;
+
+/**
+ * Freelancer/public-facing shape. The raw `accessPinHash` is never exposed; it
+ * is collapsed into a boolean `isPinLocked` so cards/detail can show a lock
+ * badge without leaking the hash.
+ */
+export type BountyForFreelancer = Omit<BountyFreelancerRow, 'accessPinHash'> & {
+	isPinLocked: boolean;
+};
+
+export function toFreelancerView(row: BountyFreelancerRow): BountyForFreelancer {
+	const { accessPinHash, ...rest } = row;
+	return { ...rest, isPinLocked: !!accessPinHash };
+}
+
 export type BountyForSponsor = Prisma.BountyGetPayload<{ select: typeof selectForSponsor }>;
+
+/**
+ * Owner-facing list shape. Same as the sponsor view but with the raw PIN hash
+ * collapsed to `isPinLocked` so it never reaches the company dashboard client.
+ */
+export type BountyForSponsorList = Omit<BountyForSponsor, 'accessPinHash'> & {
+	isPinLocked: boolean;
+};
+
+function toSponsorListView(row: BountyForSponsor): BountyForSponsorList {
+	const { accessPinHash, ...rest } = row;
+	return { ...rest, isPinLocked: !!accessPinHash };
+}
 
 export async function findBountyById(id: string): Promise<BountyForSponsor | null> {
 	return prisma.bounty.findUnique({ where: { id }, select: selectForSponsor });
@@ -134,15 +167,16 @@ export async function listPublicBounties(
 		}),
 		prisma.bounty.count({ where })
 	]);
-	return { items, total };
+	return { items: items.map(toFreelancerView), total };
 }
 
-export async function listForCompany(companyProfileId: string): Promise<BountyForSponsor[]> {
-	return prisma.bounty.findMany({
+export async function listForCompany(companyProfileId: string): Promise<BountyForSponsorList[]> {
+	const rows = await prisma.bounty.findMany({
 		where: { companyProfileId },
 		select: selectForSponsor,
 		orderBy: { updatedAt: 'desc' }
 	});
+	return rows.map(toSponsorListView);
 }
 
 export type AdminBountyRow = {

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import ProjectForm from '$lib/components/projects/ProjectForm.svelte';
+	import { DRAFT_KEYS } from '$lib/constants/draft-keys';
 
 	let { data } = $props();
 </script>
@@ -20,7 +21,7 @@
 
 	<ProjectForm
 		categories={data.categories}
-		draftKey="project-create-form"
+		draftKey={DRAFT_KEYS.projectCreate}
 		submitLabel="Create draft"
 	/>
 </div>
