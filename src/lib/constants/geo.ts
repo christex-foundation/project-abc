@@ -107,3 +107,9 @@ export function provincesLabel(provinces: readonly Province[]): string {
 	if (provinces.length === 0) return 'Nationwide';
 	return provinces.map((p) => PROVINCE_LABEL[p]).join(', ');
 }
+
+/** Human-readable list, e.g. "Bombali, Kono". `[]` → "Nationwide". */
+export function districtsLabel(districts: readonly District[]): string {
+	if (districts.length === 0) return 'Nationwide';
+	return districts.map((d) => DISTRICT_LABEL[d]).join(', ');
+}

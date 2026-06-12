@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { PROVINCE_VALUES } from '$lib/constants/geo';
+import { PROVINCE_VALUES, DISTRICT_VALUES, districtBelongsToProvince } from '$lib/constants/geo';
 
 export const BountyType = z.enum(['BOUNTY', 'PROJECT']);
 export const CompensationType = z.enum(['FIXED', 'RANGE', 'VARIABLE']);
@@ -54,11 +54,13 @@ const bountyBaseShape = {
 	submissionDeadline: dateLike,
 	judgingDeadline: dateLike.nullish(),
 
-	// Access control. `targetProvinces` empty = open nationwide. `accessPin` is
-	// the raw PIN; the service hashes it before storage and never reads it back
-	// (on update, omit the key to leave the existing PIN unchanged, or send null
-	// / '' to clear it).
+	// Access control. `targetProvinces` empty = open nationwide. `targetDistricts`
+	// refines the provincial lock; every chosen district must belong to a chosen
+	// province (enforced in `refineBounty`). `accessPin` is the raw PIN; the
+	// service hashes it before storage and never reads it back (on update, omit the
+	// key to leave the existing PIN unchanged, or send null / '' to clear it).
 	targetProvinces: z.array(z.enum(PROVINCE_VALUES)).max(5).default([]),
+	targetDistricts: z.array(z.enum(DISTRICT_VALUES)).max(16).default([]),
 	accessPin: accessPinSchema.or(z.literal('')).nullish()
 };
 
@@ -84,6 +86,19 @@ function refineBounty<T extends z.ZodObject<typeof bountyBaseShape>>(schema: T) 
 				path: ['judgingDeadline'],
 				message: 'Judging deadline must be after the submission deadline.'
 			});
+		}
+
+		// Districts refine provinces: every targeted district must belong to a
+		// targeted province.
+		for (const district of data.targetDistricts) {
+			if (!data.targetProvinces.some((p) => districtBelongsToProvince(district, p))) {
+				ctx.addIssue({
+					code: 'custom',
+					path: ['targetDistricts'],
+					message: 'District does not belong to a selected province.'
+				});
+				break;
+			}
 		}
 
 		const positions = data.prizeTiers.map((t) => t.position);
