@@ -119,7 +119,7 @@ export const auth = betterAuth({
 	}
 });
 
-const PASSWORD_PATHS = ['/sign-up/email', '/reset-password'];
+const PASSWORD_PATHS = ['/sign-up/email', '/reset-password', '/change-password'];
 
 function passwordFromBody(body: unknown): string | null {
 	if (!body || typeof body !== 'object') return null;

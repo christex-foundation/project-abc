@@ -182,6 +182,7 @@
 				<DropdownItem href={profileHref}>Profile</DropdownItem>
 				<DropdownItem href="/notifications">Notifications</DropdownItem>
 				<DropdownItem href="/settings/account">Account &amp; data</DropdownItem>
+				<DropdownItem href="/settings/password">Change password</DropdownItem>
 				<DropdownItem href="/settings/notifications">Notification settings</DropdownItem>
 
 				{#if !isAdminHost && user.role === 'ADMIN' && adminUrl}
