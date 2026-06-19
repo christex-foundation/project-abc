@@ -2,6 +2,8 @@
 	import type { BountyForFreelancer } from '$lib/server/repositories/bounty.repo';
 	import { formatMoneyCompact } from '$lib/utils';
 	import { cn } from '$lib/utils';
+	import { PROVINCE_LABEL } from '$lib/constants/geo';
+	import Lock from '@lucide/svelte/icons/lock';
 
 	type Props = {
 		bounty: BountyForFreelancer;
@@ -64,6 +66,25 @@
 	>
 		{b.title}
 	</h3>
+
+	{#if b.isPinLocked || b.targetProvinces.length > 0}
+		<div class="flex flex-wrap items-center gap-1">
+			{#if b.isPinLocked}
+				<span
+					class="bg-ochre-soft text-clay inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium"
+				>
+					<Lock class="h-2.5 w-2.5" /> PIN
+				</span>
+			{/if}
+			{#each b.targetProvinces as p (p)}
+				<span
+					class="border-bone bg-paper text-ink-soft rounded-full border px-2 py-0.5 text-[10px] font-medium"
+				>
+					{PROVINCE_LABEL[p]}
+				</span>
+			{/each}
+		</div>
+	{/if}
 
 	<div class="mt-auto space-y-3">
 		<div class="flex items-end justify-between gap-3">

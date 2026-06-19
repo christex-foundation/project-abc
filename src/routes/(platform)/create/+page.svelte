@@ -11,14 +11,16 @@
 		Separator
 	} from '$lib/components/ui';
 	import type { ScopeResult } from '$lib/validators/ai';
+	import { DRAFT_STORAGE_KEYS } from '$lib/constants/draft-keys';
+	import { minorToMajor } from '$lib/utils';
 
 	let { data } = $props();
 
 	// localStorage keys the create forms read via useLocalDraft (which prefixes
 	// `fow:draft:` internally) — we write the prefixed key directly here.
 	const STORAGE = {
-		bounty: 'fow:draft:bounty-create-wizard-v2',
-		project: 'fow:draft:project-create-form'
+		bounty: DRAFT_STORAGE_KEYS.bountyCreate,
+		project: DRAFT_STORAGE_KEYS.projectCreate
 	} as const;
 
 	let need = $state('');
@@ -131,7 +133,8 @@
 			skills: s.skills,
 			compensationType: b?.compensationType ?? '',
 			currency: 'SLE',
-			totalPrizePool: b ? b.totalPrizePool : '',
+			// The form edits in major-unit Leones; the AI emits minor units, so convert.
+			totalPrizePool: b ? minorToMajor(b.totalPrizePool) : '',
 			minRewardAsk: '',
 			maxRewardAsk: '',
 			numberOfWinners: b?.numberOfWinners ?? 1,
@@ -139,14 +142,17 @@
 			prizeTiers: b
 				? b.prizeTiers.map((t) => ({
 						position: t.position,
-						amount: t.amount,
+						amount: minorToMajor(t.amount),
 						label: t.label ?? undefined
 					}))
 				: [],
 			eligibility: [],
 			timeToComplete: '',
 			submissionDeadline: b ? toLocalInput(b.submissionDeadline) : '',
-			judgingDeadline: ''
+			judgingDeadline: '',
+			targetProvinces: [],
+			targetDistricts: [],
+			accessPin: ''
 		};
 	}
 
@@ -157,7 +163,8 @@
 			p && p.milestones.length
 				? p.milestones.map((m) => ({
 						title: m.title,
-						amount: m.amount,
+						// Form edits in major-unit Leones; AI emits minor units, so convert.
+						amount: minorToMajor(m.amount),
 						description: m.description ?? '',
 						dueInDays: m.dueInDays ?? ''
 					}))

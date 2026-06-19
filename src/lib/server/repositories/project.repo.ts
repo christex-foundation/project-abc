@@ -17,6 +17,9 @@ export const selectPublic = {
 	status: true,
 	currency: true,
 	budgetCap: true,
+	// Public so applicants see which provinces may apply (empty = nationwide).
+	targetProvinces: true,
+	targetDistricts: true,
 	timeToComplete: true,
 	publishedAt: true,
 	awardedAt: true,
@@ -62,6 +65,10 @@ export const selectForCompany = {
 	...selectPublic,
 	companyProfileId: true,
 	awardedProposalId: true,
+	// Selected so the service can derive `isPinLocked` and verify unlock PINs; the
+	// hash itself is stripped before any client-facing return (see `toCompanyListView`
+	// and `project.service.toView`).
+	accessPinHash: true,
 	escrowFinancialAccountId: true,
 	escrowFundedAmount: true,
 	checkoutSessionId: true,
@@ -74,6 +81,19 @@ export const selectForCompany = {
 
 export type ProjectPublic = Prisma.ProjectGetPayload<{ select: typeof selectPublic }>;
 export type ProjectForCompany = Prisma.ProjectGetPayload<{ select: typeof selectForCompany }>;
+
+/**
+ * Owner-facing list shape. Same as the company view but with the raw PIN hash
+ * collapsed to `isPinLocked` so it never reaches the dashboard client.
+ */
+export type ProjectForCompanyList = Omit<ProjectForCompany, 'accessPinHash'> & {
+	isPinLocked: boolean;
+};
+
+function toCompanyListView(row: ProjectForCompany): ProjectForCompanyList {
+	const { accessPinHash, ...rest } = row;
+	return { ...rest, isPinLocked: !!accessPinHash };
+}
 
 export async function findProjectById(id: string): Promise<ProjectForCompany | null> {
 	return prisma.project.findUnique({ where: { id }, select: selectForCompany });
@@ -137,20 +157,24 @@ export async function listPublicProjects(
 	return { items, total };
 }
 
-export async function listForCompany(companyProfileId: string): Promise<ProjectForCompany[]> {
-	return prisma.project.findMany({
+export async function listForCompany(companyProfileId: string): Promise<ProjectForCompanyList[]> {
+	const rows = await prisma.project.findMany({
 		where: { companyProfileId },
 		select: selectForCompany,
 		orderBy: { updatedAt: 'desc' }
 	});
+	return rows.map(toCompanyListView);
 }
 
-export async function listForContractor(contractorProfileId: string): Promise<ProjectForCompany[]> {
-	return prisma.project.findMany({
+export async function listForContractor(
+	contractorProfileId: string
+): Promise<ProjectForCompanyList[]> {
+	const rows = await prisma.project.findMany({
 		where: { contractorProfileId },
 		select: selectForCompany,
 		orderBy: { updatedAt: 'desc' }
 	});
+	return rows.map(toCompanyListView);
 }
 
 export type AdminProjectRow = {

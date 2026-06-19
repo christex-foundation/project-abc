@@ -4,18 +4,26 @@ import { AppError } from '$lib/server/http';
 import * as bountyService from '$lib/server/services/bounty.service';
 import * as submissionService from '$lib/server/services/submission.service';
 import * as creditService from '$lib/server/services/credit.service';
+import { isUnlocked, readUnlockedIds } from '$lib/server/access-lock';
+import { majorToMinor } from '$lib/utils';
 import type { Actions, PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ params, locals }) => {
+export const load: PageServerLoad = async ({ params, locals, cookies }) => {
 	const caller = requireAuth(locals);
 	requireRole(caller, 'FREELANCER');
 
 	let bounty;
 	try {
-		bounty = await bountyService.getBounty(caller, params.slug);
+		bounty = await bountyService.getBounty(caller, params.slug, {
+			unlockedIds: readUnlockedIds(cookies)
+		});
 	} catch (e) {
 		if (e instanceof AppError && e.code === 'NOT_FOUND') throw error(404, e.message);
 		throw e;
+	}
+	// PIN-locked and not yet unlocked → send them to the detail page to enter it.
+	if (bounty.locked) {
+		throw redirect(303, `/bounties/${params.slug}`);
 	}
 	if (bounty.status !== 'ACTIVE') {
 		throw error(409, 'This bounty is not accepting submissions.');
@@ -23,12 +31,22 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 	if (new Date(bounty.submissionDeadline).getTime() <= Date.now()) {
 		throw error(409, 'The submission deadline has passed.');
 	}
+	// Provincial targeting (and a final PIN re-check) — block ineligible freelancers
+	// up front with a clear reason rather than only at submit time.
+	try {
+		await submissionService.assertCanSubmit(caller, bounty.id, {
+			unlocked: isUnlocked(cookies, bounty.id)
+		});
+	} catch (e) {
+		if (e instanceof AppError && e.code === 'FORBIDDEN') throw error(403, e.message);
+		throw e;
+	}
 	const credits = await creditService.getBalanceForCaller(caller);
 	return { bounty, credits };
 };
 
 export const actions: Actions = {
-	default: async ({ request, params, locals }) => {
+	default: async ({ request, params, locals, cookies }) => {
 		const caller = requireAuth(locals);
 
 		const form = await request.formData();
@@ -49,9 +67,14 @@ export const actions: Actions = {
 			link,
 			tweet: tweetRaw || null,
 			otherInfo: otherInfo || null,
-			ask: askRaw ? Number(askRaw) : null,
+			// The ask field is entered in major-unit Leones; store as minor units.
+			ask: askRaw ? majorToMinor(Number(askRaw)) : null,
 			eligibilityAnswers: answers
 		};
+
+		// On validation failure the form repopulates from `values`; echo the ask back
+		// in the major units the user typed, not the converted minor value.
+		const formValues = { ...payload, ask: askRaw || null };
 
 		// Look up the bounty by slug to translate it to the id the service needs.
 		let bounty;
@@ -59,19 +82,21 @@ export const actions: Actions = {
 			bounty = await bountyService.getBounty(caller, params.slug!);
 		} catch (e) {
 			if (e instanceof AppError) {
-				return fail(e.httpStatus, { message: e.message, values: payload });
+				return fail(e.httpStatus, { message: e.message, values: formValues });
 			}
 			throw e;
 		}
 
 		try {
-			await submissionService.create(caller, bounty.id, payload);
+			await submissionService.create(caller, bounty.id, payload, {
+				unlocked: isUnlocked(cookies, bounty.id)
+			});
 		} catch (e) {
 			if (e instanceof AppError) {
-				return fail(e.httpStatus, { message: e.message, values: payload });
+				return fail(e.httpStatus, { message: e.message, values: formValues });
 			}
 			console.error('[submit]', e);
-			return fail(500, { message: 'Something went wrong.', values: payload });
+			return fail(500, { message: 'Something went wrong.', values: formValues });
 		}
 
 		throw redirect(303, '/dashboard/freelancer/submissions');

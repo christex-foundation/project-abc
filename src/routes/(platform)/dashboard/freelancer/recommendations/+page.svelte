@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { Badge, Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui';
+	import { PROVINCE_LABEL } from '$lib/constants/geo';
+	import Lock from '@lucide/svelte/icons/lock';
 
 	let { data } = $props();
 
@@ -85,6 +87,16 @@
 								Closes in <strong>{daysUntil(r.bounty.submissionDeadline)}</strong>
 							</span>
 						</div>
+						{#if r.bounty.isPinLocked || r.bounty.targetProvinces.length > 0}
+							<div class="flex flex-wrap items-center gap-1.5">
+								{#if r.bounty.isPinLocked}
+									<Badge variant="secondary"><Lock class="mr-1 h-3 w-3" />PIN required</Badge>
+								{/if}
+								{#each r.bounty.targetProvinces as p (p)}
+									<Badge variant="outline">{PROVINCE_LABEL[p]}</Badge>
+								{/each}
+							</div>
+						{/if}
 						{#if r.bounty.skills.length > 0}
 							<div class="flex flex-wrap gap-1.5">
 								{#each r.bounty.skills.slice(0, 6) as bs (bs.id)}

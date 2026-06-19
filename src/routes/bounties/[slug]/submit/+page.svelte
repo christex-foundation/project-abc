@@ -13,6 +13,7 @@
 	} from '$lib/components/ui';
 	import RichTextEditor from '$lib/components/editor/LazyRichTextEditor.svelte';
 	import { trackSubmit } from '$lib/client/forms';
+	import { minorToMajor } from '$lib/utils';
 	import { untrack } from 'svelte';
 
 	let { data, form } = $props();
@@ -115,17 +116,18 @@
 				{#if bounty.compensationType !== 'FIXED'}
 					<div>
 						<Label for="ask">
-							Your ask in minor units (
+							Your ask in {bounty.currency} (
 							{bounty.compensationType === 'RANGE'
-								? `${bounty.minRewardAsk} – ${bounty.maxRewardAsk}`
+								? `${minorToMajor(bounty.minRewardAsk ?? 0)} – ${minorToMajor(bounty.maxRewardAsk ?? 0)}`
 								: 'propose any amount'})
 						</Label>
 						<Input
 							id="ask"
 							name="ask"
 							type="number"
-							min={bounty.minRewardAsk ?? 1}
-							max={bounty.maxRewardAsk ?? undefined}
+							step="0.01"
+							min={bounty.minRewardAsk != null ? minorToMajor(bounty.minRewardAsk) : 0.01}
+							max={bounty.maxRewardAsk != null ? minorToMajor(bounty.maxRewardAsk) : undefined}
 							required
 							value={(form?.values?.ask as number | null) ?? ''}
 						/>

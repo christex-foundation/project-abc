@@ -2,6 +2,7 @@ import { json } from '@sveltejs/kit';
 import { requireAuth } from '$lib/server/auth-helpers';
 import { respondError } from '$lib/server/http';
 import * as submissionService from '$lib/server/services/submission.service';
+import { isUnlocked } from '$lib/server/access-lock';
 import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async ({ params, url, locals }) => {
@@ -19,11 +20,13 @@ export const GET: RequestHandler = async ({ params, url, locals }) => {
 	}
 };
 
-export const POST: RequestHandler = async ({ request, params, locals }) => {
+export const POST: RequestHandler = async ({ request, params, locals, cookies }) => {
 	try {
 		const caller = requireAuth(locals);
 		const body = await request.json();
-		const submission = await submissionService.create(caller, params.bountyId, body);
+		const submission = await submissionService.create(caller, params.bountyId, body, {
+			unlocked: isUnlocked(cookies, params.bountyId)
+		});
 		return json({ submission }, { status: 201 });
 	} catch (e) {
 		return respondError(e);

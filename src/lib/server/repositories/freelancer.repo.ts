@@ -1,5 +1,5 @@
 import { prisma } from '../db';
-import type { FreelancerProfile, Prisma, PrismaClient } from '@prisma/client';
+import type { District, FreelancerProfile, Prisma, PrismaClient, Province } from '@prisma/client';
 
 export type FreelancerProfileWithSkills = Prisma.FreelancerProfileGetPayload<{
 	include: {
@@ -16,6 +16,8 @@ export type UpdateProfileInput = {
 	portfolio?: string | null;
 	experienceLevel?: string | null;
 	whatsappNumber?: string | null;
+	province?: Province | null;
+	district?: District | null;
 };
 
 export type FreelancerSkillInput = {

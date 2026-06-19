@@ -10,6 +10,7 @@ import * as freelancerRepo from '../repositories/freelancer.repo';
 import * as userRepo from '../repositories/user.repo';
 import * as creditService from './credit.service';
 import * as notification from './notification.service';
+import { enforceAccessGates } from './project.service';
 import { createProposalInput, type CreateProposalInput } from '$lib/validators/proposal';
 
 function appUrl(): string {
@@ -23,7 +24,12 @@ async function ownsProject(caller: AuthedUser, companyProfileId: string | null):
 	return !!profile && profile.id === companyProfileId;
 }
 
-export async function submit(caller: AuthedUser, projectId: string, raw: unknown) {
+export async function submit(
+	caller: AuthedUser,
+	projectId: string,
+	raw: unknown,
+	opts: { unlocked?: boolean } = {}
+) {
 	requireRole(caller, 'FREELANCER');
 	const parsed: CreateProposalInput = createProposalInput.parse(raw);
 
@@ -34,6 +40,9 @@ export async function submit(caller: AuthedUser, projectId: string, raw: unknown
 
 	const project = await projectRepo.findProjectById(projectId);
 	if (!project) throw new AppError('NOT_FOUND', 'Project not found.');
+	// Provincial + PIN gates (mirrors bounty submission). Hard-blocks ineligible
+	// freelancers before any credit spend or write.
+	enforceAccessGates(project, freelancer, opts.unlocked ?? false);
 	if (project.status !== ProjectStatus.OPEN) {
 		throw new AppError('CONFLICT', 'This project is not accepting proposals.');
 	}
@@ -76,6 +85,25 @@ export async function submit(caller: AuthedUser, projectId: string, raw: unknown
 	}
 
 	return proposalRepo.findByIdForFreelancer(proposal.id);
+}
+
+/**
+ * Pre-flight check used by the apply page load so an ineligible freelancer is
+ * told why before filling in the form. `submit` re-checks server-side.
+ */
+export async function assertCanApply(
+	caller: AuthedUser,
+	projectId: string,
+	opts: { unlocked?: boolean } = {}
+) {
+	requireRole(caller, 'FREELANCER');
+	const freelancer = await freelancerRepo.findByUserId(caller.id);
+	if (!freelancer) {
+		throw new AppError('CONFLICT', 'Complete your freelancer profile before applying.');
+	}
+	const project = await projectRepo.findProjectById(projectId);
+	if (!project) throw new AppError('NOT_FOUND', 'Project not found.');
+	enforceAccessGates(project, freelancer, opts.unlocked ?? false);
 }
 
 /** Whether the calling freelancer has already applied to a project. */

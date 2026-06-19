@@ -20,6 +20,19 @@ export function cloudinaryThumb(url: string | null | undefined, size = 64): stri
 	return url.replace('/upload/', `/upload/c_fill,f_auto,q_auto,dpr_auto,w_${size},h_${size}/`);
 }
 
+// Money is stored in minor units (CLAUDE.md hard rule), but ENTERED and shown in
+// forms as major-unit Leones — minor units are an internal storage detail and must
+// never surface in the UI. These two helpers are the conversion boundary: divide
+// when seeding an input from stored data, multiply (with rounding) when submitting.
+/** Minor-unit Int (stored) → major-unit Leones (for editing/display). */
+export function minorToMajor(minor: number): number {
+	return minor / 100;
+}
+/** Major-unit Leones (from an input) → minor-unit Int for storage. Rounds to a whole cent. */
+export function majorToMinor(major: number): number {
+	return Math.round(major * 100);
+}
+
 // Money is stored in minor units (CLAUDE.md hard rule). Format for display.
 export function formatMoney(minor: number, currency = 'SLE'): string {
 	const major = minor / 100;

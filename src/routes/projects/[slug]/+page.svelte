@@ -1,12 +1,23 @@
 <script lang="ts">
 	import { MetaTags } from 'svelte-meta-tags';
+	import { enhance } from '$app/forms';
 	import { page } from '$app/state';
+	import Lock from '@lucide/svelte/icons/lock';
 	import RichTextView from '$lib/components/editor/RichTextView.svelte';
 	import CoachPanel from '$lib/components/ai/CoachPanel.svelte';
-	import { Button, Card, CardContent, CardHeader, CardTitle, Badge } from '$lib/components/ui';
+	import {
+		Button,
+		Card,
+		CardContent,
+		CardHeader,
+		CardTitle,
+		Badge,
+		Input,
+		Label
+	} from '$lib/components/ui';
 	import { cloudinaryThumb } from '$lib/utils';
 
-	let { data } = $props();
+	let { data, form } = $props();
 	const p = $derived(data.project);
 
 	function formatMoney(minor: number, currency: string) {
@@ -67,110 +78,146 @@
 		</div>
 	</header>
 
-	<div class="grid gap-6 lg:grid-cols-[1fr_320px]">
-		<div class="space-y-6">
-			<Card>
-				<CardHeader><CardTitle>Overview</CardTitle></CardHeader>
-				<CardContent><RichTextView html={p.description} /></CardContent>
-			</Card>
-
-			{#if p.requirements}
-				<Card>
-					<CardHeader><CardTitle>Requirements</CardTitle></CardHeader>
-					<CardContent><RichTextView html={p.requirements} /></CardContent>
-				</Card>
-			{/if}
-
-			{#if p.deliverables}
-				<Card>
-					<CardHeader><CardTitle>Deliverables</CardTitle></CardHeader>
-					<CardContent><RichTextView html={p.deliverables} /></CardContent>
-				</Card>
-			{/if}
-
-			<Card>
-				<CardHeader><CardTitle>Milestones</CardTitle></CardHeader>
-				<CardContent>
-					<ul class="divide-y text-sm">
-						{#each p.milestones as m (m.id)}
-							<li class="flex items-start justify-between gap-3 py-2">
-								<div>
-									<div class="font-medium">{m.position}. {m.title}</div>
-									{#if m.dueInDays}<div class="text-ink-soft text-xs">~{m.dueInDays} days</div>{/if}
-								</div>
-								<span class="font-medium tabular-nums">{formatMoney(m.amount, p.currency)}</span>
-							</li>
-						{/each}
-					</ul>
-				</CardContent>
-			</Card>
-
-			<Card>
-				<CardContent class="text-ink-soft space-y-2 py-4 text-sm">
-					<p>
-						This is a <strong>project</strong>: the company set the milestone plan above. You apply
-						with a cover letter, the company picks one contractor, funds escrow, and releases each
-						milestone payment once it's approved.
-					</p>
-				</CardContent>
-			</Card>
-		</div>
-
-		<aside class="space-y-4">
-			<Card>
-				<CardHeader><CardTitle>Budget</CardTitle></CardHeader>
-				<CardContent class="space-y-2 text-sm">
-					<p class="text-xl font-semibold">{formatMoney(p.budgetCap, p.currency)}</p>
-					<p class="text-ink-soft">Total across all milestones, held in escrow.</p>
-					{#if p.timeToComplete}
-						<div class="pt-2">
-							<div class="text-ink-soft text-xs">Expected duration</div>
-							<div class="font-medium">{p.timeToComplete}</div>
-						</div>
+	{#if p.locked}
+		<Card class="mx-auto max-w-md">
+			<CardHeader>
+				<CardTitle class="flex items-center gap-2">
+					<Lock class="h-5 w-5" /> This project is PIN-protected
+				</CardTitle>
+			</CardHeader>
+			<CardContent class="space-y-4">
+				<p class="text-ink-soft text-sm">
+					The company shared an access PIN with eligible freelancers. Enter it to view the full
+					brief and apply.
+				</p>
+				<form method="POST" action="?/unlock" use:enhance class="space-y-3">
+					<div class="space-y-1">
+						<Label for="pin">Access PIN</Label>
+						<Input
+							id="pin"
+							name="pin"
+							inputmode="text"
+							autocomplete="off"
+							maxlength={8}
+							placeholder="••••"
+							required
+						/>
+					</div>
+					{#if form?.unlockError}
+						<p class="text-sm text-red-600">{form.unlockError}</p>
 					{/if}
-				</CardContent>
-			</Card>
-
-			{#if p.skills.length > 0}
+					<Button type="submit" class="w-full">Unlock project</Button>
+				</form>
+			</CardContent>
+		</Card>
+	{:else}
+		<div class="grid gap-6 lg:grid-cols-[1fr_320px]">
+			<div class="space-y-6">
 				<Card>
-					<CardHeader><CardTitle>Skills</CardTitle></CardHeader>
+					<CardHeader><CardTitle>Overview</CardTitle></CardHeader>
+					<CardContent><RichTextView html={p.description} /></CardContent>
+				</Card>
+
+				{#if p.requirements}
+					<Card>
+						<CardHeader><CardTitle>Requirements</CardTitle></CardHeader>
+						<CardContent><RichTextView html={p.requirements} /></CardContent>
+					</Card>
+				{/if}
+
+				{#if p.deliverables}
+					<Card>
+						<CardHeader><CardTitle>Deliverables</CardTitle></CardHeader>
+						<CardContent><RichTextView html={p.deliverables} /></CardContent>
+					</Card>
+				{/if}
+
+				<Card>
+					<CardHeader><CardTitle>Milestones</CardTitle></CardHeader>
 					<CardContent>
-						<div class="flex flex-wrap gap-1">
-							{#each p.skills as s (s.id)}
-								<Badge variant={s.isRequired ? 'default' : 'outline'}>
-									{s.skill.name}{s.isRequired ? ' *' : ''}
-								</Badge>
+						<ul class="divide-y text-sm">
+							{#each p.milestones as m (m.id)}
+								<li class="flex items-start justify-between gap-3 py-2">
+									<div>
+										<div class="font-medium">{m.position}. {m.title}</div>
+										{#if m.dueInDays}<div class="text-ink-soft text-xs">
+												~{m.dueInDays} days
+											</div>{/if}
+									</div>
+									<span class="font-medium tabular-nums">{formatMoney(m.amount, p.currency)}</span>
+								</li>
 							{/each}
-						</div>
-						<p class="text-ink-soft mt-2 text-xs">* = required</p>
+						</ul>
 					</CardContent>
 				</Card>
-			{/if}
 
-			{#if isFreelancer}
-				<CoachPanel kind="PROJECT" projectId={p.id} slug={p.slug} aiEnabled={data.aiEnabled} />
-			{/if}
+				<Card>
+					<CardContent class="text-ink-soft space-y-2 py-4 text-sm">
+						<p>
+							This is a <strong>project</strong>: the company set the milestone plan above. You
+							apply with a cover letter, the company picks one contractor, funds escrow, and
+							releases each milestone payment once it's approved.
+						</p>
+					</CardContent>
+				</Card>
+			</div>
 
-			{#if isOwner && (p.status === 'OPEN' || p.status === 'AWARDED')}
-				<Button class="w-full" href={`/dashboard/company/projects/${p.id}/proposals`}>
-					View proposals ({proposalCount})
-				</Button>
-			{:else if isOwner && (p.status === 'ACTIVE' || p.status === 'COMPLETED')}
-				<Button class="w-full" href={`/projects/${p.slug}/workspace`}>Open workspace</Button>
-			{:else if p.status === 'OPEN' && isFreelancer}
-				<Button class="w-full" href={`/projects/${p.slug}/apply`}>Apply with a proposal</Button>
-			{:else if p.status === 'OPEN' && !page.data.user}
-				<Button
-					class="w-full"
-					href={`/login?next=${encodeURIComponent(`/projects/${p.slug}/apply`)}`}
-				>
-					Sign in to apply
-				</Button>
-			{:else if p.status === 'OPEN'}
-				<Button class="w-full" disabled>Open to freelancers</Button>
-			{:else}
-				<Button class="w-full" disabled>Not accepting proposals</Button>
-			{/if}
-		</aside>
-	</div>
+			<aside class="space-y-4">
+				<Card>
+					<CardHeader><CardTitle>Budget</CardTitle></CardHeader>
+					<CardContent class="space-y-2 text-sm">
+						<p class="text-xl font-semibold">{formatMoney(p.budgetCap, p.currency)}</p>
+						<p class="text-ink-soft">Total across all milestones, held in escrow.</p>
+						{#if p.timeToComplete}
+							<div class="pt-2">
+								<div class="text-ink-soft text-xs">Expected duration</div>
+								<div class="font-medium">{p.timeToComplete}</div>
+							</div>
+						{/if}
+					</CardContent>
+				</Card>
+
+				{#if p.skills.length > 0}
+					<Card>
+						<CardHeader><CardTitle>Skills</CardTitle></CardHeader>
+						<CardContent>
+							<div class="flex flex-wrap gap-1">
+								{#each p.skills as s (s.id)}
+									<Badge variant={s.isRequired ? 'default' : 'outline'}>
+										{s.skill.name}{s.isRequired ? ' *' : ''}
+									</Badge>
+								{/each}
+							</div>
+							<p class="text-ink-soft mt-2 text-xs">* = required</p>
+						</CardContent>
+					</Card>
+				{/if}
+
+				{#if isFreelancer}
+					<CoachPanel kind="PROJECT" projectId={p.id} slug={p.slug} aiEnabled={data.aiEnabled} />
+				{/if}
+
+				{#if isOwner && (p.status === 'OPEN' || p.status === 'AWARDED')}
+					<Button class="w-full" href={`/dashboard/company/projects/${p.id}/proposals`}>
+						View proposals ({proposalCount})
+					</Button>
+				{:else if isOwner && (p.status === 'ACTIVE' || p.status === 'COMPLETED')}
+					<Button class="w-full" href={`/projects/${p.slug}/workspace`}>Open workspace</Button>
+				{:else if p.status === 'OPEN' && isFreelancer}
+					<Button class="w-full" href={`/projects/${p.slug}/apply`}>Apply with a proposal</Button>
+				{:else if p.status === 'OPEN' && !page.data.user}
+					<Button
+						class="w-full"
+						href={`/login?next=${encodeURIComponent(`/projects/${p.slug}/apply`)}`}
+					>
+						Sign in to apply
+					</Button>
+				{:else if p.status === 'OPEN'}
+					<Button class="w-full" disabled>Open to freelancers</Button>
+				{:else}
+					<Button class="w-full" disabled>Not accepting proposals</Button>
+				{/if}
+			</aside>
+		</div>
+	{/if}
 </article>

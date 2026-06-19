@@ -15,6 +15,15 @@
 		Separator
 	} from '$lib/components/ui';
 	import { createProjectInput } from '$lib/validators/project';
+	import {
+		PROVINCES,
+		PROVINCE_LABEL,
+		DISTRICT_LABEL,
+		districtsForProvince,
+		type Province,
+		type District
+	} from '$lib/constants/geo';
+	import { minorToMajor, majorToMinor } from '$lib/utils';
 
 	type SkillCategory = { id: string; name: string; skills: { id: string; name: string }[] };
 	type SkillSel = { skillId: string; isRequired: boolean };
@@ -33,6 +42,11 @@
 		timeToComplete: string;
 		skills: SkillSel[];
 		milestones: MilestoneRow[];
+		targetProvinces: Province[];
+		/** Districts refine the provincial lock; each must belong to a chosen province. */
+		targetDistricts: District[];
+		/** Always blank in edit mode — the stored PIN hash is never read back. */
+		accessPin: string;
 	};
 
 	type Props = {
@@ -40,6 +54,8 @@
 		/** When set, the form edits an existing project (PATCH) instead of creating. */
 		projectId?: string;
 		initial?: Initial;
+		/** Whether the edited project already has a PIN set (edit mode hint). */
+		isPinLocked?: boolean;
 		/** localStorage draft key; omit to disable draft autosave (edit mode). */
 		draftKey?: string;
 		submitLabel?: string;
@@ -50,6 +66,7 @@
 		categories,
 		projectId,
 		initial,
+		isPinLocked = false,
 		draftKey,
 		submitLabel = 'Create draft',
 		redirectTo = '/dashboard/company/projects'
@@ -63,10 +80,28 @@
 		currency: 'SLE',
 		timeToComplete: '',
 		skills: [],
-		milestones: [{ title: '', amount: '', description: '', dueInDays: '' }]
+		milestones: [{ title: '', amount: '', description: '', dueInDays: '' }],
+		targetProvinces: [],
+		targetDistricts: [],
+		accessPin: ''
 	};
 
-	let d = $state<Initial>(untrack(() => structuredClone(initial ?? blank)));
+	// `initial` (edit mode) arrives in minor units; the form edits milestone amounts
+	// in major-unit Leones, so convert on the way in. Create mode passes `blank`
+	// (empty amounts) which round-trips untouched. Autosaved and AI-seeded drafts
+	// are already stored in major units, so they skip this.
+	function toMajorInitial(init: Initial): Initial {
+		return {
+			...init,
+			milestones: init.milestones.map((m) => ({
+				...m,
+				amount: m.amount === '' ? '' : minorToMajor(m.amount)
+			}))
+		};
+	}
+	const seed: Initial = untrack(() => toMajorInitial(initial ?? blank));
+
+	let d = $state<Initial>(untrack(() => structuredClone(seed)));
 	let restorePrompt = $state(false);
 	// Bumped on restore to force the (uncontrolled, read-once) editors to remount
 	// and re-read their `initialHTML` from the restored draft.
@@ -75,7 +110,7 @@
 	const draftStore = untrack(() => (draftKey ? useLocalDraft<Initial>(draftKey) : null));
 	// Serialised pristine state; autosave is suppressed while `d` matches it so the
 	// effect can't clobber a stored draft before the user has edited (or resumed) it.
-	const pristine = untrack(() => JSON.stringify(initial ?? blank));
+	const pristine = untrack(() => JSON.stringify(seed));
 
 	onMount(() => {
 		const saved = draftStore?.load();
@@ -84,7 +119,9 @@
 		// directly and remount the editors, skipping the restore prompt. Drop the
 		// query param so a later refresh falls back to the normal restore flow.
 		if (new URLSearchParams(window.location.search).get('ai') === '1') {
-			d = saved;
+			// AI-built drafts may omit access fields; merge onto `blank` so arrays/PIN
+			// are never undefined.
+			d = { ...blank, ...saved };
 			editorNonce++;
 			history.replaceState({}, '', window.location.pathname);
 			return;
@@ -94,7 +131,7 @@
 
 	function restore() {
 		const saved = draftStore?.load();
-		if (saved) d = saved;
+		if (saved) d = { ...blank, ...saved };
 		restorePrompt = false;
 		editorNonce++;
 	}
@@ -106,6 +143,26 @@
 	$effect(() => {
 		const cur = JSON.stringify(d);
 		if (cur !== pristine) draftStore?.save(d);
+	});
+
+	function toggleProvince(p: Province) {
+		d.targetProvinces = d.targetProvinces.includes(p)
+			? d.targetProvinces.filter((x) => x !== p)
+			: [...d.targetProvinces, p];
+	}
+
+	function toggleDistrict(dist: District) {
+		d.targetDistricts = d.targetDistricts.includes(dist)
+			? d.targetDistricts.filter((x) => x !== dist)
+			: [...d.targetDistricts, dist];
+	}
+
+	// Prune any selected district whose province is no longer checked.
+	$effect(() => {
+		const allowed = new Set(d.targetProvinces.flatMap(districtsForProvince));
+		if (d.targetDistricts.some((x) => !allowed.has(x))) {
+			d.targetDistricts = d.targetDistricts.filter((x) => allowed.has(x));
+		}
 	});
 
 	function toggleSkill(id: string) {
@@ -125,10 +182,15 @@
 		d.milestones = d.milestones.filter((_, idx) => idx !== i);
 	}
 
+	// Major-unit Leones (milestone inputs hold major units).
 	const total = $derived(d.milestones.reduce((s, m) => s + Number(m.amount || 0), 0));
 
-	function formatMoney(minor: number) {
-		return `${d.currency} ${(minor / 100).toLocaleString()}`;
+	// `major` is already in Leones — format, don't divide.
+	function formatMoney(major: number) {
+		return `${d.currency} ${major.toLocaleString(undefined, {
+			minimumFractionDigits: 2,
+			maximumFractionDigits: 2
+		})}`;
 	}
 
 	let submitting = $state(false);
@@ -138,7 +200,14 @@
 		submitting = true;
 		submitError = null;
 		try {
-			const payload = {
+			const pin = d.accessPin.trim();
+			if (pin && !/^[A-Za-z0-9]{4,8}$/.test(pin)) {
+				submitError = 'PIN must be 4–8 letters or numbers.';
+				submitting = false;
+				return;
+			}
+
+			const payload: Record<string, unknown> = {
 				title: d.title,
 				description: d.description,
 				requirements: d.requirements || null,
@@ -149,10 +218,22 @@
 				milestones: d.milestones.map((m) => ({
 					title: m.title,
 					description: m.description || null,
-					amount: Number(m.amount || 0),
+					// Inputs hold major-unit Leones; convert to minor units for storage.
+					amount: majorToMinor(Number(m.amount || 0)),
 					dueInDays: m.dueInDays === '' ? null : Number(m.dueInDays)
-				}))
+				})),
+				targetProvinces: d.targetProvinces,
+				targetDistricts: d.targetDistricts
 			};
+
+			// PIN directive: on create, always send (set or null). On edit, omit the
+			// key when left blank so the existing PIN is preserved; send a value to
+			// change it. (Clearing an existing PIN is not offered in the UI.)
+			if (projectId) {
+				if (pin) payload.accessPin = pin;
+			} else {
+				payload.accessPin = pin || null;
+			}
 
 			const parsed = createProjectInput.safeParse(payload);
 			if (!parsed.success) {
@@ -239,8 +320,8 @@
 	<CardHeader><CardTitle>Milestones</CardTitle></CardHeader>
 	<CardContent class="space-y-4">
 		<p class="text-ink-soft text-xs">
-			Define the deliverables and payment for each stage. Amounts in minor units (SLE × 100). Each
-			milestone is escrowed up front and released when you approve it.
+			Define the deliverables and payment for each stage. Amounts in Leones (SLE). Each milestone is
+			escrowed up front and released when you approve it.
 		</p>
 		{#each d.milestones as _m, i (i)}
 			<div class="border-bone bg-paper space-y-2 rounded-xl border p-3">
@@ -252,7 +333,13 @@
 				</div>
 				<div class="grid gap-2 sm:grid-cols-[1fr_140px_120px]">
 					<Input bind:value={d.milestones[i].title} placeholder="Milestone title" />
-					<Input type="number" bind:value={d.milestones[i].amount} placeholder="Amount" />
+					<Input
+						type="number"
+						min="0"
+						step="0.01"
+						bind:value={d.milestones[i].amount}
+						placeholder="Amount"
+					/>
 					<Input type="number" bind:value={d.milestones[i].dueInDays} placeholder="Days" />
 				</div>
 				<Textarea
@@ -309,6 +396,91 @@
 				</div>
 			</details>
 		{/each}
+	</CardContent>
+</Card>
+
+<Card>
+	<CardHeader><CardTitle>Region &amp; access</CardTitle></CardHeader>
+	<CardContent class="space-y-5">
+		<div class="space-y-2">
+			<Label>Provinces</Label>
+			<p class="text-ink-soft text-sm">
+				Leave all unchecked to open this project nationwide. Select one or more provinces to
+				restrict who can apply — only freelancers in those provinces will be able to submit a
+				proposal.
+			</p>
+			<div class="grid gap-2 sm:grid-cols-2">
+				{#each PROVINCES as p (p.value)}
+					<label
+						class="border-bone hover:bg-paper flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-2 text-sm"
+					>
+						<input
+							type="checkbox"
+							checked={d.targetProvinces.includes(p.value)}
+							onchange={() => toggleProvince(p.value)}
+							class="border-bone text-terracotta h-4 w-4 rounded"
+						/>
+						<span>{p.label}</span>
+					</label>
+				{/each}
+			</div>
+			<p class="text-ink-soft text-xs">
+				{d.targetProvinces.length === 0
+					? 'Open to all of Sierra Leone.'
+					: `Restricted to ${d.targetProvinces.length} province${d.targetProvinces.length === 1 ? '' : 's'}.`}
+			</p>
+		</div>
+
+		{#if d.targetProvinces.length > 0}
+			<div class="space-y-2">
+				<Label>Districts (optional)</Label>
+				<p class="text-ink-soft text-sm">
+					Optionally narrow to districts within the selected provinces; leave blank to include the
+					whole province. Only freelancers in a chosen district will be able to apply.
+				</p>
+				{#each d.targetProvinces as province (province)}
+					<div class="space-y-2">
+						<p class="text-ink-soft text-xs font-medium">{PROVINCE_LABEL[province]}</p>
+						<div class="grid gap-2 sm:grid-cols-2">
+							{#each districtsForProvince(province) as dist (dist)}
+								<label
+									class="border-bone hover:bg-paper flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-2 text-sm"
+								>
+									<input
+										type="checkbox"
+										checked={d.targetDistricts.includes(dist)}
+										onchange={() => toggleDistrict(dist)}
+										class="border-bone text-terracotta h-4 w-4 rounded"
+									/>
+									<span>{DISTRICT_LABEL[dist]}</span>
+								</label>
+							{/each}
+						</div>
+					</div>
+				{/each}
+				<p class="text-ink-soft text-xs">
+					{d.targetDistricts.length === 0
+						? 'Open to the whole of each selected province.'
+						: `Restricted to ${d.targetDistricts.length} district${d.targetDistricts.length === 1 ? '' : 's'}.`}
+				</p>
+			</div>
+		{/if}
+
+		<Separator />
+
+		<div class="space-y-2">
+			<Label for="pin">Access PIN (optional)</Label>
+			<p class="text-ink-soft text-sm">
+				Set a PIN to keep this project private. The brief and proposal form stay hidden until a
+				freelancer enters the PIN you share with them. 4–8 letters or numbers.
+			</p>
+			{#if projectId && isPinLocked}
+				<p class="text-ink-soft text-xs">
+					A PIN is already set. Leave this blank to keep it, or type a new one to change it.
+				</p>
+			{/if}
+			<Input id="pin" bind:value={d.accessPin} maxlength={8} placeholder="e.g. 4827 or apex9" />
+		</div>
 	</CardContent>
 </Card>
 
