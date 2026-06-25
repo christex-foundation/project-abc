@@ -20,6 +20,7 @@
 		"db:studio": "prisma studio",
 		"seed:invite": "tsx scripts/seed-invite.ts",
 		"seed:projects": "tsx scripts/dev-projects.ts",
+		"wipe:bounties": "tsx scripts/wipe-test-bounties.ts",
 		"gen:icons": "tsx scripts/generate-pwa-icons.ts",
 		"ai:eval": "tsx scripts/ai-eval.ts"
 	},
