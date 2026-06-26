@@ -23,7 +23,8 @@
 		"seed:l2e": "tsx scripts/seed-learn2earn-bounties.ts",
 		"wipe:bounties": "tsx scripts/wipe-test-bounties.ts",
 		"gen:icons": "tsx scripts/generate-pwa-icons.ts",
-		"ai:eval": "tsx scripts/ai-eval.ts"
+		"ai:eval": "tsx scripts/ai-eval.ts",
+		"agent:poc": "tsx scripts/company-agent-poc.ts"
 	},
 	"prisma": {
 		"seed": "tsx prisma/seed.ts"
