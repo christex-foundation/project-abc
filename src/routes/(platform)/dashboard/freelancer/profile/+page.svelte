@@ -20,6 +20,7 @@
 		type Destination
 	} from '$lib/components/shared/WithdrawalDestination.svelte';
 	import AvatarUpload from '$lib/components/shared/AvatarUpload.svelte';
+	import ProfileShareCard from '$lib/components/shared/ProfileShareCard.svelte';
 	import ProofOfWorkCard from '$lib/components/freelancer/ProofOfWorkCard.svelte';
 	import {
 		PROVINCES,
@@ -45,6 +46,7 @@
 	let whatsappNumber = $state(untrack(() => data.profile.whatsappNumber ?? ''));
 	let province = $state<Province | ''>(untrack(() => data.profile.province ?? ''));
 	let district = $state<District | ''>(untrack(() => data.profile.district ?? ''));
+	let handle = $state(untrack(() => data.handle));
 
 	const districtOptions = $derived(province ? districtsForProvince(province) : []);
 	// Drop a stale district whenever the province changes to one that no longer
@@ -189,7 +191,8 @@
 					whatsappNumber: whatsappNumber || null,
 					province: province || null,
 					district: district || null,
-					skills: selected
+					skills: selected,
+					...(handle.trim() ? { handle: handle.trim() } : {})
 				})
 			});
 			if (!res.ok) {
@@ -223,6 +226,8 @@
 			label="Change photo"
 		/>
 	</header>
+
+	<ProfileShareCard bind:handle />
 
 	<Card>
 		<CardHeader>

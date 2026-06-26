@@ -16,10 +16,12 @@
 	} from '$lib/components/ui';
 	import WithdrawalForm from '$lib/components/shared/WithdrawalForm.svelte';
 	import AvatarUpload from '$lib/components/shared/AvatarUpload.svelte';
+	import ProfileShareCard from '$lib/components/shared/ProfileShareCard.svelte';
 
 	let { data } = $props();
 
 	let companyName = $state(untrack(() => data.profile.companyName ?? ''));
+	let handle = $state(untrack(() => data.handle));
 	let description = $state(untrack(() => data.profile.description ?? ''));
 	let website = $state(untrack(() => data.profile.website ?? ''));
 	let logo = $state(untrack(() => data.profile.logo ?? ''));
@@ -174,7 +176,8 @@
 					website: website || null,
 					logo: logo || null,
 					industry: industry || null,
-					country: country || 'SL'
+					country: country || 'SL',
+					...(handle.trim() ? { handle: handle.trim() } : {})
 				})
 			});
 			if (!res.ok) {
@@ -198,6 +201,8 @@
 			This is how freelancers see your company on bounty listings and detail pages.
 		</p>
 	</header>
+
+	<ProfileShareCard bind:handle />
 
 	<Card>
 		<CardHeader>
