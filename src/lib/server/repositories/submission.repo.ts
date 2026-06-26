@@ -148,6 +148,58 @@ export async function countSubmissionsForCompany(companyProfileId: string): Prom
 	});
 }
 
+export type FreelancerWin = {
+	submissionId: string;
+	bountySlug: string;
+	bountyTitle: string;
+	bountyType: string;
+	winnerPosition: number | null;
+	prizeAmount: number | null;
+	currency: string;
+	winnersAnnouncedAt: Date | null;
+};
+
+/**
+ * Public win history for a freelancer's profile: their winning submissions on
+ * bounties whose winners have been announced. Only public-safe bounty fields are
+ * exposed (no sponsor notes/labels).
+ */
+export async function listWinsForFreelancer(freelancerProfileId: string): Promise<FreelancerWin[]> {
+	const rows = await prisma.submission.findMany({
+		where: {
+			freelancerProfileId,
+			isWinner: true,
+			isActive: true,
+			bounty: { isWinnersAnnounced: true }
+		},
+		select: {
+			id: true,
+			winnerPosition: true,
+			prizeAmount: true,
+			bounty: {
+				select: {
+					slug: true,
+					title: true,
+					type: true,
+					currency: true,
+					winnersAnnouncedAt: true
+				}
+			}
+		},
+		orderBy: { createdAt: 'desc' }
+	});
+	return rows.map((r) => ({
+		submissionId: r.id,
+		bountySlug: r.bounty.slug,
+		bountyTitle: r.bounty.title,
+		bountyType: r.bounty.type,
+		winnerPosition: r.winnerPosition,
+		prizeAmount: r.prizeAmount,
+		currency: r.bounty.currency,
+		winnersAnnouncedAt: r.bounty.winnersAnnouncedAt
+	}));
+}
+
 export async function listWinners(bountyId: string): Promise<SubmissionForSponsor[]> {
 	return prisma.submission.findMany({
 		where: { bountyId, isWinner: true, isActive: true },

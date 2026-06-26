@@ -1,12 +1,44 @@
 import { prisma } from '../db';
+import { ensureHandle } from '../handle';
 import type { CompanyProfile, Prisma } from '@prisma/client';
+
+/** Public company profile shape for the shareable `/u/[handle]` page. */
+export const selectPublicProfile = {
+	id: true,
+	companyName: true,
+	description: true,
+	website: true,
+	logo: true,
+	industry: true,
+	country: true,
+	verified: true,
+	createdAt: true
+} satisfies Prisma.CompanyProfileSelect;
+
+export type CompanyPublicProfile = Prisma.CompanyProfileGetPayload<{
+	select: typeof selectPublicProfile;
+}>;
 
 export async function createEmpty(
 	userId: string,
 	companyName?: string | null
 ): Promise<CompanyProfile> {
-	return prisma.companyProfile.create({
+	const profile = await prisma.companyProfile.create({
 		data: { userId, companyName: companyName ?? '' }
+	});
+	// Best-effort public handle; never block provisioning on a handle failure.
+	try {
+		await ensureHandle(userId, companyName || 'company');
+	} catch (e) {
+		console.error('[company.repo] handle generation failed:', e);
+	}
+	return profile;
+}
+
+export async function findPublicByUserId(userId: string): Promise<CompanyPublicProfile | null> {
+	return prisma.companyProfile.findUnique({
+		where: { userId },
+		select: selectPublicProfile
 	});
 }
 

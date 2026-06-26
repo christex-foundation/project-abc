@@ -21,6 +21,32 @@ export async function setImage(id: string, image: string): Promise<User> {
 	return prisma.user.update({ where: { id }, data: { image } });
 }
 
+/** Minimal public identity used to resolve a `/u/[handle]` page to a profile. */
+export type PublicUserByHandle = {
+	id: string;
+	name: string | null;
+	image: string | null;
+	role: UserRole;
+	isActive: boolean;
+	handle: string | null;
+};
+
+export async function findByHandle(handle: string): Promise<PublicUserByHandle | null> {
+	return prisma.user.findUnique({
+		where: { handle },
+		select: { id: true, name: true, image: true, role: true, isActive: true, handle: true }
+	});
+}
+
+/**
+ * Pure write of the handle. Uniqueness + reserved-word checks live in the
+ * profile services (the repo stays a thin Prisma boundary); a duplicate slips
+ * through to the `@unique` index, which throws.
+ */
+export async function setHandle(id: string, handle: string): Promise<User> {
+	return prisma.user.update({ where: { id }, data: { handle } });
+}
+
 export async function findByCompanyProfileId(companyProfileId: string): Promise<User | null> {
 	const profile = await prisma.companyProfile.findUnique({
 		where: { id: companyProfileId },

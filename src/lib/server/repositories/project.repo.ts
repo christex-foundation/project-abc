@@ -113,6 +113,8 @@ export type ProjectListFilter = {
 	minBudget?: number;
 	maxBudget?: number;
 	search?: string;
+	/** Restrict to one company's projects (powers the public company profile). */
+	companyProfileId?: string;
 	page: number;
 	pageSize: number;
 };
@@ -130,6 +132,7 @@ export async function listPublicProjects(
 			in: [ProjectStatus.OPEN, ProjectStatus.AWARDED, ProjectStatus.ACTIVE, ProjectStatus.COMPLETED]
 		}
 	};
+	if (filter.companyProfileId) where.companyProfileId = filter.companyProfileId;
 	if (filter.minBudget !== undefined) where.budgetCap = { gte: filter.minBudget };
 	if (filter.maxBudget !== undefined) {
 		where.budgetCap = { ...(where.budgetCap as object), lte: filter.maxBudget };
