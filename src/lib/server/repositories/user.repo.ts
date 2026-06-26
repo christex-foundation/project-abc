@@ -21,6 +21,32 @@ export async function setImage(id: string, image: string): Promise<User> {
 	return prisma.user.update({ where: { id }, data: { image } });
 }
 
+/** Minimal public identity used to resolve a `/u/[handle]` page to a profile. */
+export type PublicUserByHandle = {
+	id: string;
+	name: string | null;
+	image: string | null;
+	role: UserRole;
+	isActive: boolean;
+	handle: string | null;
+};
+
+/** Handles of active freelancer/company accounts, for the public sitemap. */
+export async function listPublicHandles(): Promise<string[]> {
+	const rows = await prisma.user.findMany({
+		where: { isActive: true, handle: { not: null }, role: { in: ['FREELANCER', 'COMPANY'] } },
+		select: { handle: true }
+	});
+	return rows.map((r) => r.handle!).filter(Boolean);
+}
+
+export async function findByHandle(handle: string): Promise<PublicUserByHandle | null> {
+	return prisma.user.findUnique({
+		where: { handle },
+		select: { id: true, name: true, image: true, role: true, isActive: true, handle: true }
+	});
+}
+
 export async function findByCompanyProfileId(companyProfileId: string): Promise<User | null> {
 	const profile = await prisma.companyProfile.findUnique({
 		where: { id: companyProfileId },

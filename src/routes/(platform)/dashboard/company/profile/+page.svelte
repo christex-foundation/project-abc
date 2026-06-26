@@ -16,6 +16,7 @@
 	} from '$lib/components/ui';
 	import WithdrawalForm from '$lib/components/shared/WithdrawalForm.svelte';
 	import AvatarUpload from '$lib/components/shared/AvatarUpload.svelte';
+	import ProfileShareCard from '$lib/components/shared/ProfileShareCard.svelte';
 
 	let { data } = $props();
 
@@ -198,6 +199,8 @@
 			This is how freelancers see your company on bounty listings and detail pages.
 		</p>
 	</header>
+
+	<ProfileShareCard handle={data.handle} name={companyName} />
 
 	<Card>
 		<CardHeader>

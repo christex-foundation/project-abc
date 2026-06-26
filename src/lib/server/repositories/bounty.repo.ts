@@ -127,6 +127,8 @@ export type BountyListFilter = {
 	maxPrize?: number;
 	beforeDeadline?: Date;
 	search?: string;
+	/** Restrict to one company's bounties (powers the public company profile). */
+	companyProfileId?: string;
 	page: number;
 	pageSize: number;
 };
@@ -140,6 +142,7 @@ export async function listPublicBounties(
 	const where: Prisma.BountyWhereInput = {
 		status: { in: [BountyStatus.ACTIVE, BountyStatus.JUDGING, BountyStatus.COMPLETED] }
 	};
+	if (filter.companyProfileId) where.companyProfileId = filter.companyProfileId;
 	if (filter.type) where.type = filter.type;
 	if (filter.compensationType) where.compensationType = filter.compensationType;
 	if (filter.minPrize !== undefined) where.totalPrizePool = { gte: filter.minPrize };

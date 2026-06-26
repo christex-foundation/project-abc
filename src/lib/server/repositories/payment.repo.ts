@@ -101,6 +101,30 @@ export async function listEarningsForFreelancer(
 	}) as Promise<FreelancerEarningRow[]>;
 }
 
+/**
+ * Total settled earnings for a freelancer (minor units): COMPLETED bounty prize
+ * payouts plus COMPLETED project milestone payouts. Drives the public profile's
+ * "total earned" figure.
+ */
+export async function sumCompletedEarningsForFreelancer(
+	freelancerProfileId: string
+): Promise<number> {
+	const agg = await prisma.payment.aggregate({
+		where: {
+			status: PaymentStatus.COMPLETED,
+			OR: [
+				{ type: PaymentType.PRIZE_PAYOUT, submission: { freelancerProfileId } },
+				{
+					type: PaymentType.MILESTONE_PAYOUT,
+					project: { contractorProfileId: freelancerProfileId }
+				}
+			]
+		},
+		_sum: { amount: true }
+	});
+	return agg._sum.amount ?? 0;
+}
+
 type CreateDepositInput = {
 	bountyId: string;
 	amount: number;

@@ -189,6 +189,9 @@ model User {
   isActive      Boolean  @default(true)
   // Referral system — short shareable code (nullable until lazily generated)
   referralCode  String?  @unique
+  // Public profile handle for the shareable /u/[handle] page. Nullable until
+  // generated from the user's display/company name (lazily or at profile creation).
+  handle        String?  @unique
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 

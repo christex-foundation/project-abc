@@ -20,6 +20,7 @@
 		type Destination
 	} from '$lib/components/shared/WithdrawalDestination.svelte';
 	import AvatarUpload from '$lib/components/shared/AvatarUpload.svelte';
+	import ProfileShareCard from '$lib/components/shared/ProfileShareCard.svelte';
 	import ProofOfWorkCard from '$lib/components/freelancer/ProofOfWorkCard.svelte';
 	import {
 		PROVINCES,
@@ -223,6 +224,8 @@
 			label="Change photo"
 		/>
 	</header>
+
+	<ProfileShareCard handle={data.handle} name={displayName} />
 
 	<Card>
 		<CardHeader>
