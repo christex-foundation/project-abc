@@ -31,6 +31,15 @@ export type PublicUserByHandle = {
 	handle: string | null;
 };
 
+/** Handles of active freelancer/company accounts, for the public sitemap. */
+export async function listPublicHandles(): Promise<string[]> {
+	const rows = await prisma.user.findMany({
+		where: { isActive: true, handle: { not: null }, role: { in: ['FREELANCER', 'COMPANY'] } },
+		select: { handle: true }
+	});
+	return rows.map((r) => r.handle!).filter(Boolean);
+}
+
 export async function findByHandle(handle: string): Promise<PublicUserByHandle | null> {
 	return prisma.user.findUnique({
 		where: { handle },
