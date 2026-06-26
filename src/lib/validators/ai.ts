@@ -162,6 +162,56 @@ export type ScopeProjectResult = {
 export type ScopeResult = ScopeBountyResult | ScopeProjectResult;
 
 // ---------------------------------------------------------------------------
+// Flow 5 — Company agent: propose a BATCH of work from memory + source text
+// ---------------------------------------------------------------------------
+//
+// RESEARCH SPIKE (see company-agent-spike.md). A per-company "agent" that reads
+// the company's memory (what they do, past bounties, tone) plus recent source
+// snippets (website / blog / RSS, or pasted social posts) and proposes several
+// bounty/project drafts the company SHOULD post. It is draft-for-approval only:
+// nothing here writes the DB — each proposal reuses the Flow 1 draft shapes so an
+// approved one flows straight into the existing create paths. Same trust-boundary
+// rules as scopeOutput apply (bounded strings, skills reconciled by name later).
+
+// One proposal: a reason to act + which source(s) motivated it + the draft. The
+// model fills exactly the draft matching `kind`; `superRefine` enforces it
+// (same pattern as scopeOutput, applied per-proposal).
+const companyAgentProposal = z
+	.object({
+		kind: aiBountyType,
+		// Why the company should post this now, grounded in their memory/sources.
+		rationale: aiReasoning,
+		// Free-text pointers to the source snippet(s) that motivated this proposal
+		// (e.g. a post title or "website: services page"). Bounded, never persisted
+		// raw — for the human reviewer's context only.
+		sourceRefs: z.array(z.string().trim().min(1).max(300)).max(10).default([]),
+		bounty: scopeBountyDraft.nullish(),
+		project: scopeProjectDraft.nullish()
+	})
+	.superRefine((data, ctx) => {
+		if (data.kind === 'BOUNTY' && !data.bounty) {
+			ctx.addIssue({
+				code: 'custom',
+				path: ['bounty'],
+				message: 'bounty draft required when kind is BOUNTY.'
+			});
+		}
+		if (data.kind === 'PROJECT' && !data.project) {
+			ctx.addIssue({
+				code: 'custom',
+				path: ['project'],
+				message: 'project draft required when kind is PROJECT.'
+			});
+		}
+	});
+
+/** The model's tool output for the company-agent flow — an object root for clean tool-use. */
+export const companyAgentOutput = z.object({
+	proposals: z.array(companyAgentProposal).min(1).max(8)
+});
+export type CompanyAgentOutput = z.infer<typeof companyAgentOutput>;
+
+// ---------------------------------------------------------------------------
 // Flow 2 — Company proposal ranking / "AI shortlist" (Phase 2)
 // ---------------------------------------------------------------------------
 
