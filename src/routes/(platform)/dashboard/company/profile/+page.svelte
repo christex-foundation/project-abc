@@ -21,7 +21,6 @@
 	let { data } = $props();
 
 	let companyName = $state(untrack(() => data.profile.companyName ?? ''));
-	let handle = $state(untrack(() => data.handle));
 	let description = $state(untrack(() => data.profile.description ?? ''));
 	let website = $state(untrack(() => data.profile.website ?? ''));
 	let logo = $state(untrack(() => data.profile.logo ?? ''));
@@ -176,8 +175,7 @@
 					website: website || null,
 					logo: logo || null,
 					industry: industry || null,
-					country: country || 'SL',
-					...(handle.trim() ? { handle: handle.trim() } : {})
+					country: country || 'SL'
 				})
 			});
 			if (!res.ok) {
@@ -202,7 +200,7 @@
 		</p>
 	</header>
 
-	<ProfileShareCard bind:handle />
+	<ProfileShareCard handle={data.handle} name={companyName} />
 
 	<Card>
 		<CardHeader>

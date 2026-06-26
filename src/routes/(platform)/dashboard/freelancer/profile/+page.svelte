@@ -46,7 +46,6 @@
 	let whatsappNumber = $state(untrack(() => data.profile.whatsappNumber ?? ''));
 	let province = $state<Province | ''>(untrack(() => data.profile.province ?? ''));
 	let district = $state<District | ''>(untrack(() => data.profile.district ?? ''));
-	let handle = $state(untrack(() => data.handle));
 
 	const districtOptions = $derived(province ? districtsForProvince(province) : []);
 	// Drop a stale district whenever the province changes to one that no longer
@@ -191,8 +190,7 @@
 					whatsappNumber: whatsappNumber || null,
 					province: province || null,
 					district: district || null,
-					skills: selected,
-					...(handle.trim() ? { handle: handle.trim() } : {})
+					skills: selected
 				})
 			});
 			if (!res.ok) {
@@ -227,7 +225,7 @@
 		/>
 	</header>
 
-	<ProfileShareCard bind:handle />
+	<ProfileShareCard handle={data.handle} name={displayName} />
 
 	<Card>
 		<CardHeader>
