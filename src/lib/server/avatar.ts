@@ -14,3 +14,11 @@ export function avatarDataUri(seed: string): string {
 		'data:image/svg+xml;utf8,' + encodeURIComponent(createAvatar(adventurer, { seed }).toString())
 	);
 }
+
+/**
+ * Resolve the avatar to show for a user: their uploaded Cloudinary image when
+ * present, otherwise the deterministic DiceBear fallback seeded from `seed`.
+ */
+export function resolveAvatar(image: string | null | undefined, seed: string): string {
+	return image ?? avatarDataUri(seed);
+}

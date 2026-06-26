@@ -59,6 +59,7 @@ export async function getUserDetail(caller: AuthedUser, userId: string) {
 			id: true,
 			email: true,
 			name: true,
+			image: true,
 			role: true,
 			isActive: true,
 			emailVerified: true,
