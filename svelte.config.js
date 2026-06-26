@@ -16,7 +16,7 @@ const config = {
 				'style-src': ["'self'", "'unsafe-inline'"],
 				'img-src': ["'self'", 'data:', 'blob:', 'https://res.cloudinary.com'],
 				'font-src': ["'self'", 'data:'],
-				'connect-src': ["'self'", 'https://api.monime.io'],
+				'connect-src': ["'self'", 'https://api.monime.io', 'https://api.cloudinary.com'],
 				'worker-src': ["'self'"],
 				'manifest-src': ["'self'"],
 				'frame-ancestors': ["'none'"],
