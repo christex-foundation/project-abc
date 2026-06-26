@@ -6,4 +6,11 @@
 	let { src, size = 32, alt = '', class: cls = '' }: Props = $props();
 </script>
 
-<img {src} {alt} width={size} height={size} class="rounded-full {cls}" />
+<img
+	{src}
+	{alt}
+	width={size}
+	height={size}
+	style="width:{size}px;height:{size}px"
+	class="shrink-0 rounded-full object-cover {cls}"
+/>
