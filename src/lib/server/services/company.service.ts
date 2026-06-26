@@ -1,6 +1,7 @@
 import { AppError } from '../http';
 import { requireRole, type AuthedUser } from '../auth-helpers';
 import * as companyRepo from '../repositories/company.repo';
+import * as profileService from './profile.service';
 import { assertOwnedCloudinaryUrl } from '../cloudinary';
 import { updateCompanyProfileInput, type UpdateCompanyProfileInput } from '$lib/validators/company';
 
@@ -20,6 +21,11 @@ export async function updateProfile(caller: AuthedUser, raw: unknown) {
 	const profile = await companyRepo.findByUserId(caller.id);
 	if (!profile) {
 		throw new AppError('CONFLICT', 'Company profile not found for this account.');
+	}
+
+	// Claim/change the public handle first so a conflict aborts cleanly.
+	if (parsed.handle) {
+		await profileService.updateHandle(caller.id, parsed.handle);
 	}
 
 	// A logo URL must be one of our own Cloudinary uploads (uploaded via the

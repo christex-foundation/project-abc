@@ -4,6 +4,7 @@ import { requireRole, type AuthedUser } from '../auth-helpers';
 import * as freelancerRepo from '../repositories/freelancer.repo';
 import * as skillRepo from '../repositories/skill.repo';
 import * as matchingService from './matching.service';
+import * as profileService from './profile.service';
 import {
 	updateFreelancerProfileInput,
 	type UpdateFreelancerProfileInput
@@ -25,6 +26,12 @@ export async function updateProfile(caller: AuthedUser, raw: unknown) {
 	const profile = await freelancerRepo.findByUserId(caller.id);
 	if (!profile) {
 		throw new AppError('CONFLICT', 'Freelancer profile not found for this account.');
+	}
+
+	// Claim/change the public handle first — a conflict aborts before we touch
+	// the rest of the profile, so nothing is half-saved.
+	if (parsed.handle) {
+		await profileService.updateHandle(caller.id, parsed.handle);
 	}
 
 	const skillIds = parsed.skills.map((s) => s.skillId);
