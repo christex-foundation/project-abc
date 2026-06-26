@@ -69,6 +69,7 @@
 		"@vercel/analytics": "^2.0.1",
 		"@vite-pwa/sveltekit": "^1.1.0",
 		"better-auth": "^1.6.11",
+		"cloudinary": "^2.10.0",
 		"clsx": "^2.1.1",
 		"jszip": "^3.10.1",
 		"mobile-operator-lookup": "^2.0.2",

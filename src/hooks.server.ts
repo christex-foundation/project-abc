@@ -55,6 +55,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 			id: u.id,
 			email: u.email,
 			name: u.name ?? null,
+			image: u.image ?? null,
 			role: (u.role as UserRole) ?? 'FREELANCER',
 			isActive: u.isActive ?? true,
 			emailVerified: u.emailVerified ?? false

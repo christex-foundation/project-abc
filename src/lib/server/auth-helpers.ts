@@ -5,6 +5,7 @@ export type AuthedUser = {
 	id: string;
 	email: string;
 	name: string | null;
+	image: string | null;
 	role: UserRole;
 	isActive: boolean;
 	emailVerified: boolean;

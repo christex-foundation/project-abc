@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount, untrack } from 'svelte';
+	import { invalidateAll } from '$app/navigation';
 	import { apiFetch } from '$lib/client/net';
 	import {
 		Badge,
@@ -14,6 +15,7 @@
 		Textarea
 	} from '$lib/components/ui';
 	import WithdrawalForm from '$lib/components/shared/WithdrawalForm.svelte';
+	import AvatarUpload from '$lib/components/shared/AvatarUpload.svelte';
 
 	let { data } = $props();
 
@@ -21,12 +23,31 @@
 	let description = $state(untrack(() => data.profile.description ?? ''));
 	let website = $state(untrack(() => data.profile.website ?? ''));
 	let logo = $state(untrack(() => data.profile.logo ?? ''));
+	let logoAvatar = $state(untrack(() => data.logoAvatar));
 	let industry = $state(untrack(() => data.profile.industry ?? ''));
 	let country = $state(untrack(() => data.profile.country ?? 'SL'));
 
 	let saving = $state(false);
 	let savedAt = $state<Date | null>(null);
 	let errorMsg = $state<string | null>(null);
+
+	async function onLogoUploaded(url: string) {
+		// Show it immediately, then persist on its own (no full-form save needed).
+		logo = url;
+		logoAvatar = url;
+		const res = await fetch('/api/users/me/logo', {
+			method: 'PUT',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({ imageUrl: url })
+		});
+		if (!res.ok) {
+			const body = await res.json().catch(() => ({}));
+			errorMsg = body?.error?.message ?? `Couldn't save logo (${res.status}).`;
+			return;
+		}
+		// Refresh server load data so any logo-driven UI picks up the new image.
+		await invalidateAll();
+	}
 
 	// Wallet — the balance lives on Monime; we just fetch and render it.
 	let accountId = $state<string | null>(
@@ -204,7 +225,20 @@
 					placeholder="What your company does, who it serves, and the kind of work you post here."
 				/>
 			</div>
-			<div class="grid gap-4 sm:grid-cols-3">
+			<div class="space-y-1">
+				<Label>Logo</Label>
+				<AvatarUpload
+					current={logoAvatar}
+					purpose="logo"
+					alt={companyName}
+					onUploaded={onLogoUploaded}
+					label="Upload logo"
+				/>
+				<p class="text-ink-soft text-xs">
+					Shown on your bounty listings. Saved as soon as you upload.
+				</p>
+			</div>
+			<div class="grid gap-4 sm:grid-cols-2">
 				<div class="space-y-1">
 					<Label for="website">Website</Label>
 					<Input
@@ -213,16 +247,6 @@
 						bind:value={website}
 						maxlength={500}
 						placeholder="https://"
-					/>
-				</div>
-				<div class="space-y-1">
-					<Label for="logo">Logo URL</Label>
-					<Input
-						id="logo"
-						type="url"
-						bind:value={logo}
-						maxlength={500}
-						placeholder="Cloudinary URL"
 					/>
 				</div>
 				<div class="space-y-1">
