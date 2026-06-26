@@ -15,6 +15,48 @@ export function stripHtml(html: string | null | undefined, maxLength = 160): str
 	return plain.slice(0, maxLength - 1).trimEnd() + '…';
 }
 
+type PersonLdInput = {
+	displayName: string;
+	headline: string | null;
+	bio: string | null;
+	photo: string | null;
+	skills: { name: string }[];
+};
+
+/** Schema.org Person JSON-LD for a freelancer's public profile. */
+export function buildPersonJsonLd(p: PersonLdInput, url: string) {
+	return {
+		'@context': 'https://schema.org',
+		'@type': 'Person',
+		name: p.displayName,
+		url,
+		...(p.headline ? { jobTitle: p.headline } : {}),
+		...(p.bio ? { description: stripHtml(p.bio, 500) } : {}),
+		...(p.photo ? { image: p.photo } : {}),
+		...(p.skills.length ? { knowsAbout: p.skills.map((s) => s.name) } : {})
+	};
+}
+
+type OrganizationLdInput = {
+	companyName: string;
+	description: string | null;
+	website: string | null;
+	logo: string | null;
+};
+
+/** Schema.org Organization JSON-LD for a company's public profile. */
+export function buildOrganizationJsonLd(p: OrganizationLdInput, url: string) {
+	return {
+		'@context': 'https://schema.org',
+		'@type': 'Organization',
+		name: p.companyName,
+		url,
+		...(p.description ? { description: stripHtml(p.description, 500) } : {}),
+		...(p.logo ? { logo: p.logo } : {}),
+		...(p.website ? { sameAs: [p.website] } : {})
+	};
+}
+
 /**
  * Build Schema.org JobPosting JSON-LD for a bounty detail page. Monetary
  * values are reported in major units per Schema.org convention; the database
