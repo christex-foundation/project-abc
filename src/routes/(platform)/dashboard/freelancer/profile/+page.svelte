@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount, untrack } from 'svelte';
+	import { invalidateAll } from '$app/navigation';
 	import { apiFetch } from '$lib/client/net';
 	import {
 		Badge,
@@ -18,7 +19,7 @@
 	import WithdrawalDestination, {
 		type Destination
 	} from '$lib/components/shared/WithdrawalDestination.svelte';
-	import UserAvatar from '$lib/components/shared/UserAvatar.svelte';
+	import AvatarUpload from '$lib/components/shared/AvatarUpload.svelte';
 	import ProofOfWorkCard from '$lib/components/freelancer/ProofOfWorkCard.svelte';
 	import {
 		PROVINCES,
@@ -65,6 +66,23 @@
 	let saving = $state(false);
 	let savedAt = $state<Date | null>(null);
 	let errorMsg = $state<string | null>(null);
+
+	// Avatar (User.image, or DiceBear fallback from the server load).
+	let avatarSrc = $state(untrack(() => data.avatar));
+
+	async function onAvatarUploaded(url: string) {
+		const res = await fetch('/api/users/me/avatar', {
+			method: 'PUT',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({ imageUrl: url })
+		});
+		if (res.ok) {
+			avatarSrc = url;
+			// Refresh server load data (layout + page) so the TopNav avatar and any
+			// other profile-driven UI pick up the new image right away.
+			await invalidateAll();
+		}
+	}
 
 	// Wallet — the balance lives on Monime; we just fetch and render it.
 	let accountId = $state<string | null>(
@@ -189,8 +207,7 @@
 </script>
 
 <div class="space-y-6">
-	<header class="flex items-center gap-4">
-		<UserAvatar src={data.avatar} alt={displayName} size={96} class="border-bone border" />
+	<header class="space-y-4">
 		<div class="space-y-1">
 			<h1 class="fow-display text-ink text-3xl">Your profile</h1>
 			<p class="text-ink-soft text-sm">
@@ -198,6 +215,13 @@
 				<a href="/dashboard/freelancer/recommendations" class="underline">See your matches</a>.
 			</p>
 		</div>
+		<AvatarUpload
+			current={avatarSrc}
+			purpose="avatar"
+			alt={displayName}
+			onUploaded={onAvatarUploaded}
+			label="Change photo"
+		/>
 	</header>
 
 	<Card>
