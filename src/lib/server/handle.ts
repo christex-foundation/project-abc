@@ -26,9 +26,6 @@ export const RESERVED_HANDLES = new Set([
 	'support'
 ]);
 
-/** Valid edited handle: 3–40 chars, lowercase alnum + single hyphens, no edge hyphen. */
-export const HANDLE_REGEX = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-
 /**
  * Slugify a raw string (display name / company name) into a handle-safe token:
  * lowercase `a–z0–9`, words joined by single hyphens, 3–40 chars. Falls back to

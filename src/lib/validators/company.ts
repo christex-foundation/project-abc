@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { handleField } from './freelancer';
 
 const optionalNullableString = (max: number) =>
 	z
@@ -18,7 +17,6 @@ const optionalUrl = (max: number) =>
 
 export const updateCompanyProfileInput = z.object({
 	companyName: z.string().min(1).max(120),
-	handle: handleField,
 	description: optionalNullableString(5000),
 	website: optionalUrl(500),
 	logo: optionalUrl(500),

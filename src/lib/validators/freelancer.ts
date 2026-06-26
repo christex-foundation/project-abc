@@ -31,21 +31,9 @@ const districtField = z
 	.nullish()
 	.transform((v) => (v == null || v === '' ? null : v));
 
-// Public profile handle (`/u/[handle]`). Optional on update — only present when
-// the user edits it. Lowercase alnum + single hyphens, 3–40 chars.
-export const handleField = z
-	.string()
-	.trim()
-	.toLowerCase()
-	.min(3, 'Handle must be at least 3 characters.')
-	.max(40, 'Handle must be at most 40 characters.')
-	.regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Use lowercase letters, numbers and hyphens (no spaces).')
-	.optional();
-
 export const updateFreelancerProfileInput = z
 	.object({
 		displayName: z.string().min(1).max(120).optional(),
-		handle: handleField,
 		headline: optionalNullableString(200),
 		bio: optionalNullableString(5000),
 		portfolio: z

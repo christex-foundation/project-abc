@@ -1,7 +1,6 @@
 import { AppError } from '../http';
 import type { AuthedUser } from '../auth-helpers';
 import { resolveAvatar } from '../avatar';
-import { RESERVED_HANDLES } from '../handle';
 import * as userRepo from '../repositories/user.repo';
 import * as freelancerRepo from '../repositories/freelancer.repo';
 import * as companyRepo from '../repositories/company.repo';
@@ -15,24 +14,6 @@ import type { FreelancerWin } from '../repositories/submission.repo';
 
 // A profile view is read by anyone; cap the bounty/project lists shown on it.
 const LIST_PAGE_SIZE = 50;
-
-/**
- * Claim/change a user's public handle. Assumes `rawHandle` already passed the
- * shared format validator; enforces the reserved-word and uniqueness rules here.
- * Throws CONFLICT on a clash so the dashboard can surface it inline.
- */
-export async function updateHandle(userId: string, rawHandle: string): Promise<string> {
-	const handle = rawHandle.trim().toLowerCase();
-	if (RESERVED_HANDLES.has(handle)) {
-		throw new AppError('CONFLICT', 'That handle is reserved. Please choose another.');
-	}
-	const existing = await userRepo.findByHandle(handle);
-	if (existing && existing.id !== userId) {
-		throw new AppError('CONFLICT', 'That handle is already taken.');
-	}
-	await userRepo.setHandle(userId, handle);
-	return handle;
-}
 
 export type PublicFreelancerProfile = {
 	kind: 'freelancer';

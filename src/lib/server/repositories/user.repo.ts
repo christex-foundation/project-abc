@@ -38,15 +38,6 @@ export async function findByHandle(handle: string): Promise<PublicUserByHandle |
 	});
 }
 
-/**
- * Pure write of the handle. Uniqueness + reserved-word checks live in the
- * profile services (the repo stays a thin Prisma boundary); a duplicate slips
- * through to the `@unique` index, which throws.
- */
-export async function setHandle(id: string, handle: string): Promise<User> {
-	return prisma.user.update({ where: { id }, data: { handle } });
-}
-
 export async function findByCompanyProfileId(companyProfileId: string): Promise<User | null> {
 	const profile = await prisma.companyProfile.findUnique({
 		where: { id: companyProfileId },
