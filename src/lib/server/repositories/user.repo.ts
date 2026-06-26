@@ -17,6 +17,10 @@ export async function setActive(id: string, isActive: boolean): Promise<User> {
 	return prisma.user.update({ where: { id }, data: { isActive } });
 }
 
+export async function setImage(id: string, image: string): Promise<User> {
+	return prisma.user.update({ where: { id }, data: { image } });
+}
+
 export async function findByCompanyProfileId(companyProfileId: string): Promise<User | null> {
 	const profile = await prisma.companyProfile.findUnique({
 		where: { id: companyProfileId },
