@@ -117,7 +117,7 @@ export async function getMyReferralStatus(caller: AuthedUser): Promise<ReferralS
 /**
  * Called from the freelancer signup completion path. Best-effort: a malformed,
  * unknown, capped, or duplicate code does NOT block the signup — we just don't
- * attach a referrer. The user can still join FOW; they simply won't credit anyone.
+ * attach a referrer. The user can still join Learn2Earn; they simply won't credit anyone.
  */
 export async function applyReferralCodeAtSignup(
 	refereeUserId: string,

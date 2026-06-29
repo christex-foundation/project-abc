@@ -9,7 +9,7 @@
 </script>
 
 <h1 class="fow-display text-ink text-3xl">Create your account</h1>
-<p class="text-ink-soft mt-2 text-sm">Join FOW and start earning on your skills.</p>
+<p class="text-ink-soft mt-2 text-sm">Join Learn2Earn and start earning on your skills.</p>
 
 <div class="border-bone bg-paper mt-6 flex gap-1 rounded-full border p-1 text-sm">
 	<button
@@ -36,7 +36,7 @@
 
 {#if !data.companySelfRegisterEnabled}
 	<p class="text-ink-soft mt-2 text-xs">
-		Companies join FOW by invite only. Talk to your admin to get one.
+		Companies join Learn2Earn by invite only. Talk to your admin to get one.
 	</p>
 {/if}
 

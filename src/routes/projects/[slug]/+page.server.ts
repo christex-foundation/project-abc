@@ -31,7 +31,7 @@ export const load: PageServerLoad = async ({ params, locals, cookies }) => {
 			aiEnabled: await isAiEnabled(),
 			pageMetaTags: {
 				title: project.title,
-				description: stripHtml(project.description) || `Apply to ${project.title} on FOW.`
+				description: stripHtml(project.description) || `Apply to ${project.title} on Learn2Earn.`
 			}
 		};
 	} catch (e) {

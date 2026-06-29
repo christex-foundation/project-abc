@@ -89,7 +89,7 @@
 	<header>
 		<h1 class="fow-display text-ink text-3xl">Notifications</h1>
 		<p class="text-ink-soft mt-1 text-sm">
-			Choose how FOW keeps you posted on bounties, submissions, and payouts.
+			Choose how Learn2Earn keeps you posted on bounties, submissions, and payouts.
 		</p>
 	</header>
 

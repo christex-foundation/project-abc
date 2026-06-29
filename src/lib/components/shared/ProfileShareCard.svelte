@@ -19,7 +19,7 @@
 	let { handle, name }: { handle: string; name: string } = $props();
 
 	const url = $derived(`${page.url.origin}/u/${handle}`);
-	const shareText = $derived(`Check out ${name} on Future of Work`);
+	const shareText = $derived(`Check out ${name} on Learn2Earn`);
 
 	let copied = $state(false);
 	let canNativeShare = $state(false);

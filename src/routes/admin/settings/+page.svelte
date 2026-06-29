@@ -120,11 +120,11 @@
 	}
 
 	const SOCIAL_FIELDS: { key: keyof SocialLinks; label: string; placeholder: string }[] = [
-		{ key: 'twitter', label: 'Twitter / X', placeholder: 'https://x.com/fow' },
-		{ key: 'linkedin', label: 'LinkedIn', placeholder: 'https://linkedin.com/company/fow' },
-		{ key: 'facebook', label: 'Facebook', placeholder: 'https://facebook.com/fow' },
-		{ key: 'instagram', label: 'Instagram', placeholder: 'https://instagram.com/fow' },
-		{ key: 'youtube', label: 'YouTube', placeholder: 'https://youtube.com/@fow' },
+		{ key: 'twitter', label: 'Twitter / X', placeholder: 'https://x.com/learn2earn' },
+		{ key: 'linkedin', label: 'LinkedIn', placeholder: 'https://linkedin.com/company/learn2earn' },
+		{ key: 'facebook', label: 'Facebook', placeholder: 'https://facebook.com/learn2earn' },
+		{ key: 'instagram', label: 'Instagram', placeholder: 'https://instagram.com/learn2earn' },
+		{ key: 'youtube', label: 'YouTube', placeholder: 'https://youtube.com/@learn2earn' },
 		{ key: 'discord', label: 'Discord', placeholder: 'https://discord.gg/...' },
 		{ key: 'whatsapp', label: 'WhatsApp', placeholder: 'https://wa.me/...' }
 	];

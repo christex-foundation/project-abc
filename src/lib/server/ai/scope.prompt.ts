@@ -7,7 +7,7 @@
 import type { ScopeInput } from '../../validators/ai';
 
 export function buildSystem(skillNames: string[]): string {
-	return `You are scoping a piece of work for a company on Future of Work. Decide whether it should be a BOUNTY (one-off competition, prize tiers) or a PROJECT (single contractor, milestone plan), and draft the matching brief.
+	return `You are scoping a piece of work for a company on Learn2Earn. Decide whether it should be a BOUNTY (one-off competition, prize tiers) or a PROJECT (single contractor, milestone plan), and draft the matching brief.
 
 Rules:
 - Set "type" and fill ONLY the matching draft ("bounty" for BOUNTY, "project" for PROJECT). Leave the other null.

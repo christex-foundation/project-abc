@@ -8,7 +8,7 @@
 
 <h1 class="fow-display text-ink text-3xl">Set your password</h1>
 <p class="text-ink-soft mt-2 text-sm">
-	Welcome to FOW. Pick a password to finish setting up your company account.
+	Welcome to Learn2Earn. Pick a password to finish setting up your company account.
 </p>
 
 {#if !data.token}

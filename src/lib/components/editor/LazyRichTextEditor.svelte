@@ -1,7 +1,7 @@
 <!--
   Lazy wrapper around RichTextEditor. ProseKit (+ extensions) is ~30-50KB gzipped;
   this keeps that chunk out of the initial download on form-heavy pages (bounty
-  create/submit, project create/apply) which matters on the 3G connections FOW
+  create/submit, project create/apply) which matters on the 3G connections Learn2Earn
   targets. A drop-in replacement — same props as RichTextEditor.
 
   Strategy:

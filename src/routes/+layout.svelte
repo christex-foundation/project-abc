@@ -12,7 +12,7 @@
 	let { data, children } = $props();
 
 	// Passive connectivity indicator — a thin banner while offline, plus a toast on
-	// each transition. Crucial on the flaky mobile networks FOW targets so a failed
+	// each transition. Crucial on the flaky mobile networks Learn2Earn targets so a failed
 	// action reads as "you're offline" rather than "the app is broken".
 	let online = $state(true);
 	$effect(() => {
@@ -54,20 +54,20 @@
 </svelte:head>
 
 <MetaTags
-	title="FOW — Future of Work"
-	titleTemplate="%s · FOW"
+	title="Learn2Earn"
+	titleTemplate="%s · L2E"
 	description="Bounty platform for Sierra Leone. Companies post paid work; freelancers compete to win."
 	canonical={env.PUBLIC_APP_URL}
 	openGraph={{
 		type: 'website',
-		siteName: 'FOW — Future of Work',
+		siteName: 'Learn2Earn',
 		locale: 'en_SL',
 		images: [
 			{
 				url: `${page.url.origin}/og.png`,
 				width: 1200,
 				height: 630,
-				alt: 'Future of Work — Sierra Leone’s first digital job platform'
+				alt: 'Learn2Earn — Sierra Leone’s first digital job platform'
 			}
 		]
 	}}

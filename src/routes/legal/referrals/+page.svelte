@@ -2,7 +2,7 @@
 	<h1 class="fow-display text-ink text-4xl">Referral programme terms</h1>
 	<div class="text-ink-soft mt-6 space-y-6 text-sm leading-relaxed">
 		<p>
-			Future of Work freelancers can invite friends with a personal referral code. When that friend
+			Learn2Earn freelancers can invite friends with a personal referral code. When that friend
 			signs up using the code, verifies their email, and makes their first non-spam submission, the
 			referrer earns one submission credit. Each time the referred friend wins a bounty, the
 			referrer earns a bonus credit set by the platform.
@@ -29,8 +29,8 @@
 		<section class="space-y-2">
 			<h2 class="text-ink text-base font-semibold tracking-tight">Changes</h2>
 			<p>
-				Future of Work may adjust the cap, credit amounts, or terms of the programme at any time.
-				Earned credits already in your balance are not affected by future changes.
+				Learn2Earn may adjust the cap, credit amounts, or terms of the programme at any time. Earned
+				credits already in your balance are not affected by future changes.
 			</p>
 		</section>
 	</div>

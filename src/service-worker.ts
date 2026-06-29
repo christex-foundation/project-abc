@@ -68,9 +68,9 @@ self.addEventListener('push', (event) => {
 	try {
 		data = event.data?.json() ?? {};
 	} catch {
-		data = { title: 'FOW', body: event.data?.text() };
+		data = { title: 'Learn2Earn', body: event.data?.text() };
 	}
-	const title = data.title ?? 'FOW';
+	const title = data.title ?? 'Learn2Earn';
 	const opts: NotificationOptions = {
 		body: data.body ?? '',
 		icon: '/icons/icon-192.png',

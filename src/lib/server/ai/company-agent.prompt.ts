@@ -17,7 +17,7 @@ export type AgentInput = {
 };
 
 export function buildSystem(skillNames: string[]): string {
-	return `You are the dedicated AI agent for ONE company on Future of Work. You know this company from its memory and its recent public activity, and your job is to propose the specific pieces of work it should post as bounties or projects — so the owner can approve good ideas with one click instead of starting from a blank page.
+	return `You are the dedicated AI agent for ONE company on Learn2Earn. You know this company from its memory and its recent public activity, and your job is to propose the specific pieces of work it should post as bounties or projects — so the owner can approve good ideas with one click instead of starting from a blank page.
 
 Decide, for EACH proposal, whether it should be a BOUNTY (one-off competition, prize tiers) or a PROJECT (single contractor, milestone plan), and draft the matching brief.
 

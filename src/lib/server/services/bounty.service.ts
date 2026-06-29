@@ -449,7 +449,7 @@ async function fanOutBountyPublished(bountyId: string) {
 		matches.map((m) =>
 			notification.dispatch(m.userId, 'BOUNTY_PUBLISHED', {
 				title: 'New bounty matched to you',
-				message: `"${bounty.title}" is now live on FOW.`,
+				message: `"${bounty.title}" is now live on Learn2Earn.`,
 				link: `/bounties/${bounty.slug}`,
 				email: {
 					freelancerName: m.displayName,

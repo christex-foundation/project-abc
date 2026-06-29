@@ -102,7 +102,7 @@ export const auth = betterAuth({
 	plugins: [],
 
 	hooks: {
-		// Enforces the FOW password policy (plan §4: >=8 chars, ≥1 digit) at the
+		// Enforces the Learn2Earn password policy (plan §4: >=8 chars, ≥1 digit) at the
 		// Better Auth boundary, so direct POSTs to /api/auth/sign-up/email or the
 		// password-reset endpoint can't bypass the Zod schemas in our services.
 		before: createAuthMiddleware(async (ctx) => {

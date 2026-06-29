@@ -1,7 +1,7 @@
 /*
  * Placeholder PWA icon generator.
  *
- * Renders a minimal "FOW" monogram into three PNGs at the sizes required by
+ * Renders a minimal "L2E" monogram into three PNGs at the sizes required by
  * `static/manifest.webmanifest`. Run once after pulling the repo or whenever
  * the source design lands; outputs are committed so production builds never
  * depend on `sharp` (a heavy native binary that stays in devDependencies).
@@ -26,7 +26,7 @@ function monogramSvg(size: number, opts: { padding?: number } = {}): Buffer {
 	return Buffer.from(`<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
   <rect width="${size}" height="${size}" rx="${Math.round(size * 0.18)}" fill="${THEME_BG}"/>
-  <text x="50%" y="${cy}" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-weight="800" font-size="${fontSize}" fill="${FG}" letter-spacing="-2">FOW</text>
+  <text x="50%" y="${cy}" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-weight="800" font-size="${fontSize}" fill="${FG}" letter-spacing="-2">L2E</text>
 </svg>`);
 }
 
