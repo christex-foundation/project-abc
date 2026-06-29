@@ -34,7 +34,7 @@ async function ensureProjectEscrowAccount(
 ) {
 	if (currentId) return currentId;
 	const account = await monime.financialAccounts.create({
-		name: `FOW Project Escrow – ${title}`.slice(0, 80),
+		name: `Learn2Earn Project Escrow – ${title}`.slice(0, 80),
 		currency: 'SLE'
 	});
 	await projectRepo.setEscrowAccount(projectId, account.id);

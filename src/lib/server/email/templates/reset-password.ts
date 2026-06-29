@@ -2,7 +2,7 @@ export type ResetPasswordProps = { name: string; url: string };
 
 export function resetPassword({ name, url }: ResetPasswordProps) {
 	return {
-		subject: 'Reset your FOW password',
+		subject: 'Reset your Learn2Earn password',
 		text: `Hi ${name},\n\nUse the link below to reset your password:\n${url}\n\nIf you didn't request a reset, you can ignore this email.`,
 		html: `<p>Hi ${escapeHtml(name)},</p>
 <p>Use the link below to reset your password:</p>

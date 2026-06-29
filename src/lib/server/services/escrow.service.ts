@@ -37,7 +37,7 @@ async function loadOwnedBounty(caller: AuthedUser, bountyId: string) {
 async function ensureEscrowAccount(bountyId: string, currentId: string | null, title: string) {
 	if (currentId) return currentId;
 	const account = await monime.financialAccounts.create({
-		name: `FOW Escrow – ${title}`.slice(0, 80),
+		name: `Learn2Earn Escrow – ${title}`.slice(0, 80),
 		currency: 'SLE'
 	});
 	await bountyRepo.setEscrowAccount(bountyId, account.id);

@@ -458,7 +458,7 @@ async function fanOutProjectPublished(projectId: string) {
 		matches.map((m) =>
 			notification.dispatch(m.userId, 'PROJECT_PUBLISHED', {
 				title: 'New project matched to you',
-				message: `"${project.title}" is now open for proposals on FOW.`,
+				message: `"${project.title}" is now open for proposals on Learn2Earn.`,
 				link: `/projects/${project.slug}`,
 				email: {
 					freelancerName: m.displayName,

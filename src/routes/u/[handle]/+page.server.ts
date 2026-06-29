@@ -14,7 +14,7 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 			profile.kind === 'freelancer'
 				? (profile.headline ?? profile.bio ?? '')
 				: (profile.description ?? '');
-		const description = stripHtml(rawDescription) || `${title} on Future of Work.`;
+		const description = stripHtml(rawDescription) || `${title} on Learn2Earn.`;
 		// OG/Twitter images must be absolute http(s) URLs — the DiceBear fallback is
 		// a data URI, so only a real uploaded photo/logo is used (else site default).
 		const ogImage = profile.kind === 'freelancer' ? profile.photo : profile.logo;

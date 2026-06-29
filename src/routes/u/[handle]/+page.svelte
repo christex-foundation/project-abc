@@ -75,7 +75,7 @@
 			class="border-bone from-cream to-paper rounded-[var(--radius-card-lg)] border bg-gradient-to-br p-6 shadow-[var(--shadow-card)] sm:p-8"
 		>
 			<p class="text-ink-soft font-mono text-[11px] tracking-[0.18em] uppercase">
-				Freelancer · Future of Work
+				Freelancer · Learn2Earn
 			</p>
 			<div class="mt-4 flex flex-col gap-5 sm:flex-row sm:items-center">
 				<UserAvatar src={p.avatar} size={96} alt={p.displayName} class="ring-bone ring-4" />
@@ -211,7 +211,7 @@
 			class="border-bone from-cream to-paper rounded-[var(--radius-card-lg)] border bg-gradient-to-br p-6 shadow-[var(--shadow-card)] sm:p-8"
 		>
 			<p class="text-ink-soft font-mono text-[11px] tracking-[0.18em] uppercase">
-				Company · Future of Work
+				Company · Learn2Earn
 			</p>
 			<div class="mt-4 flex flex-col gap-5 sm:flex-row sm:items-center">
 				{#if p.logo}
@@ -313,7 +313,7 @@
 		class="border-bone bg-ink text-cream flex flex-col items-start gap-3 rounded-[var(--radius-card-lg)] border p-6 sm:flex-row sm:items-center sm:justify-between"
 	>
 		<div class="space-y-1">
-			<p class="fow-display text-2xl">Future of Work</p>
+			<p class="fow-display text-2xl">Learn2Earn</p>
 			<p class="text-cream/70 text-sm">
 				Sierra Leone's bounty platform. Companies post paid work; freelancers compete to win.
 			</p>

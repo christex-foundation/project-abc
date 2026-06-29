@@ -831,7 +831,7 @@ async function buildExportZip(
 	zip.file(
 		'README.txt',
 		[
-			'Future of Work — personal data export',
+			'Learn2Earn — personal data export',
 			'',
 			`Exported at: ${envelope.exportedAt}`,
 			`User ID: ${targetUserId}`,

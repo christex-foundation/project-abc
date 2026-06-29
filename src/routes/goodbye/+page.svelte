@@ -3,8 +3,8 @@
 >
 	<h1 class="fow-display text-ink text-4xl">Your account is gone.</h1>
 	<p class="text-ink-soft mt-3 text-sm">
-		We've erased your personal data from Future of Work. If you ever want to come back, you're
-		welcome to sign up again.
+		We've erased your personal data from Learn2Earn. If you ever want to come back, you're welcome
+		to sign up again.
 	</p>
 	<a
 		href="/"

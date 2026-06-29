@@ -1,4 +1,4 @@
-// Future of Work (FOW) — Prisma schema
+// Learn2Earn — Prisma schema
 // Source of truth: §3 of the Technical Implementation Plan.
 //
 // The full data model lands in the initial migration so subsequent phases

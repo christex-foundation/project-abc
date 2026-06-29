@@ -47,7 +47,7 @@ export async function registerFreelancer(input: {
 	});
 	const profile = await freelancerRepo.createEmpty(result.user.id, input.name);
 	// Best-effort referral attachment. Failures here (bad/expired/capped code)
-	// must never block account creation — the freelancer can still join FOW.
+	// must never block account creation — the freelancer can still join Learn2Earn.
 	try {
 		await referralService.applyReferralCodeAtSignup(
 			result.user.id,
@@ -70,7 +70,10 @@ export async function registerCompany(input: {
 }) {
 	const flag = (await getSetting<CompanySelfRegister>('COMPANY_SELF_REGISTER')) ?? null;
 	if (!flag?.enabled) {
-		throw new AppError('FORBIDDEN', 'Companies join FOW by invitation only. Contact your admin.');
+		throw new AppError(
+			'FORBIDDEN',
+			'Companies join Learn2Earn by invitation only. Contact your admin.'
+		);
 	}
 
 	const result = await signUpEmail(input);

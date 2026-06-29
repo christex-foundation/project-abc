@@ -9,8 +9,8 @@
 >
 	<h1 class="fow-display text-ink text-4xl">You're offline</h1>
 	<p class="text-ink-soft mt-3 text-sm">
-		Future of Work can't reach the network right now. Check your connection and try again. Pages
-		you've already opened still work offline.
+		Learn2Earn can't reach the network right now. Check your connection and try again. Pages you've
+		already opened still work offline.
 	</p>
 	<button
 		type="button"

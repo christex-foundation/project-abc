@@ -39,8 +39,8 @@ export default defineConfig({
 				includeVersionFile: true
 			},
 			manifest: {
-				name: 'FOW — Future of Work',
-				short_name: 'FOW',
+				name: 'Learn2Earn',
+				short_name: 'L2E',
 				description: 'Bounty platform for Sierra Leone. Post paid work; compete to win.',
 				theme_color: '#0f172a',
 				background_color: '#fafafa',

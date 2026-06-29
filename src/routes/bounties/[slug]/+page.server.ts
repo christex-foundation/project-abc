@@ -20,7 +20,7 @@ export const load: PageServerLoad = async ({ params, locals, cookies }) => {
 			jsonLd: buildBountyJsonLd(bounty, origin),
 			pageMetaTags: {
 				title: bounty.title,
-				description: stripHtml(bounty.description) || `Apply to ${bounty.title} on FOW.`
+				description: stripHtml(bounty.description) || `Apply to ${bounty.title} on Learn2Earn.`
 			}
 		};
 	} catch (e) {
